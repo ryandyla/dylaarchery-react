@@ -289,16 +289,6 @@ export default {
       };
       if (req.method === "OPTIONS") return new Response("", { status: 204, headers: corsHeaders });
 
-      // Landing page
-      if (req.method === "GET" && url.pathname === "/") {
-        return new Response(landingHtml(), {
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-store",
-          },
-        });
-      }
-
       // Ensure DB binding
       const DB = env.DB;
       if (!DB) {
