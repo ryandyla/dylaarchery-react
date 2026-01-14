@@ -119,10 +119,6 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) {
   };
 }
 
-function classNames(...xs: Array<string | false | null | undefined>) {
-  return xs.filter(Boolean).join(" ");
-}
-
 export default function ArrowBuilderPage() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
