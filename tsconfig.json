@@ -2,8 +2,6 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.worker.json" }
-  ],
-  "exclude": ["src/worker/index.ts"]
+    { "path": "./tsconfig.node.json" }
+  ]
 }
