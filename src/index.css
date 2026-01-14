@@ -2,17 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---- Global base styles (minimal, Tailwind-friendly) ---- */
-:root {
-  color-scheme: dark;
-}
-
-html, body, #root {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  background: #07070a;
-  color: white;
-}
+:root { color-scheme: dark; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: #07070a; color: white; }
