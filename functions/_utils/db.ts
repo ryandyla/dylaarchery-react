@@ -2,10 +2,10 @@ type D1Database = any;
 type D1PreparedStatement = any;
 
 export const BUILD_LABOR_PER_ARROW = 4.5;
-export const MIN_CUT_LENGTH = 24.0;
+export const MIN_CUT_LENGTH = 20.0;
 export const CUT_INCREMENT = 0.25;
 export const MICRO_OD_MAX = 0.265;
-export const MIN_QTY = 6;
+export const ALLOWED_QTYS = [6, 12] as const;
 
 export function json(obj: any, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(obj), {
@@ -70,7 +70,7 @@ export async function allRows(stmt: D1PreparedStatement) {
 
 // ---- DB fetchers ----
 export async function getCatalog(DB: D1Database) {
-  const [shafts, wraps, vanes, points, inserts] = await Promise.all([
+  const [shafts, wraps, vanes, points, inserts, nocks] = await Promise.all([
     allRows(
       DB.prepare(
         `SELECT id, brand, model, spine, gpi, inner_diameter, outer_diameter, max_length, straightness, price_per_shaft
@@ -107,9 +107,16 @@ export async function getCatalog(DB: D1Database) {
          ORDER BY brand, model`
       )
     ),
+    allRows(
+      DB.prepare(
+        `SELECT id, brand, model, system, style, price_per_arrow, active
+         FROM nocks WHERE active = 1
+         ORDER BY brand, model`
+      )
+    ),
   ]);
 
-  return { shafts, wraps, vanes, inserts, points };
+  return { shafts, wraps, vanes, inserts, points, nocks };
 }
 
 export async function getShaft(DB: D1Database, id: number) {
@@ -158,6 +165,24 @@ export async function listInsertsForSystem(DB: D1Database, system: string) {
   return r.results || [];
 }
 
+export async function getNock(DB: D1Database, id: number) {
+  return firstRow(
+    DB.prepare(
+      `SELECT id, brand, model, system, style, price_per_arrow, active
+       FROM nocks WHERE id = ?1`
+    ).bind(id)
+  );
+}
+
+export async function listNocksForSystem(DB: D1Database, system: string) {
+  const r = await DB.prepare(
+    `SELECT id, brand, model, system, style, price_per_arrow
+     FROM nocks
+     WHERE active = 1 AND system = ?1
+     ORDER BY brand, model`
+  ).bind(system).all();
+  return r.results || [];
+}
 
 export async function getPoint(DB: D1Database, id: number) {
   return firstRow(
@@ -170,32 +195,31 @@ export async function getPoint(DB: D1Database, id: number) {
 
 // ---- Validation + pricing ----
 export function validateBuild(args: any) {
-  const { shaft, wrap, vane, point, insert, cut_length, quantity, fletch_count } = args;
-
+  const { shaft, wrap, vane, point, insert, nock, cut_length, quantity, fletch_count } = args;
 
   if (!shaft) return { ok: false, field: "shaft_id", message: "Shaft selection is required." };
-  if (!vane) return { ok: false, field: "vane_id", message: "Vane selection is required." };
-  if (!point) return { ok: false, field: "point_id", message: "Point selection is required." };
-
   if (!isNumber(cut_length)) return { ok: false, field: "cut_length", message: "Cut length is required." };
   if (!isNumber(quantity)) return { ok: false, field: "quantity", message: "Quantity is required." };
 
   if (shaft.active !== 1) return { ok: false, field: "shaft_id", message: "Selected shaft is not available." };
   if (wrap && wrap.active !== 1) return { ok: false, field: "wrap_id", message: "Selected wrap is not available." };
-  if (vane.active !== 1) return { ok: false, field: "vane_id", message: "Selected vane is not available." };
-  if (point.active !== 1) return { ok: false, field: "point_id", message: "Selected point is not available." };
+  if (vane && vane.active !== 1) return { ok: false, field: "vane_id", message: "Selected vane is not available." };
+  if (insert && insert.active !== 1) return { ok: false, field: "insert_id", message: "Selected insert is not available." };
+  if (point && point.active !== 1) return { ok: false, field: "point_id", message: "Selected point is not available." };
+  if (nock && nock.active !== 1) return { ok: false, field: "nock_id", message: "Selected nock is not available." };
 
   if (cut_length > shaft.max_length) return { ok: false, field: "cut_length", message: "Cut length exceeds raw shaft length." };
   if (cut_length < MIN_CUT_LENGTH) return { ok: false, field: "cut_length", message: `Minimum cut length is ${MIN_CUT_LENGTH}".` };
   if (!isIncrement(cut_length, CUT_INCREMENT)) return { ok: false, field: "cut_length", message: `Cut length must be in ${CUT_INCREMENT}" increments.` };
 
-  if (insert && insert.active !== 1) return { ok:false, field:"insert_id", message:"Selected insert is not available." };
+  // qty must be exactly 6 or 12
+  if (quantity !== 6 && quantity !== 12) return { ok: false, field: "quantity", message: "Quantity must be 6 or 12." };
 
-  if (quantity < MIN_QTY) return { ok: false, field: "quantity", message: `Minimum order is ${MIN_QTY} arrows.` };
-  if (quantity % 2 !== 0) return { ok: false, field: "quantity", message: "Quantity must be an even number." };
+  if (!isNumber(fletch_count) || fletch_count !== 3) {
+    return { ok: false, field: "fletch_count", message: "Fletching count must be 3 for now." };
+  }
 
-  if (!isNumber(fletch_count) || fletch_count !== 3) return { ok: false, field: "fletch_count", message: "Fletching count must be 3 for now." };
-
+  // Wrap compatibility only if chosen
   if (wrap) {
     if (shaft.outer_diameter < wrap.min_outer_diameter || shaft.outer_diameter > wrap.max_outer_diameter) {
       return { ok: false, field: "wrap_id", message: "Wrap is not compatible with selected shaft." };
@@ -205,49 +229,71 @@ export function validateBuild(args: any) {
     }
   }
 
-  if (shaft.outer_diameter <= MICRO_OD_MAX && !vane.compatible_micro) {
-    return { ok: false, field: "vane_id", message: "Selected vane is not compatible with micro-diameter shafts." };
+  // Vane micro compatibility only if chosen
+  if (vane) {
+    if (shaft.outer_diameter <= MICRO_OD_MAX && !vane.compatible_micro) {
+      return { ok: false, field: "vane_id", message: "Selected vane is not compatible with micro-diameter shafts." };
+    }
   }
 
-  if (point.thread && point.thread !== "8-32") {
-    return { ok: false, field: "point_id", message: "Point thread type is not supported." };
+  // Point thread check only if chosen
+  if (point) {
+    if (point.thread && point.thread !== "8-32") {
+      return { ok: false, field: "point_id", message: "Point thread type is not supported." };
+    }
+  }
+
+  // Nock system compatibility only if chosen (recommended)
+  if (nock) {
+    // If you store shaft "system" somewhere, compare that.
+    // For now, a simple guard example if you add shaft.system later:
+    // if (shaft.system && nock.system !== shaft.system) return { ok:false, field:"nock_id", message:"Nock is not compatible with selected shaft system." };
   }
 
   return { ok: true };
 }
 
-export function calculatePrice(args: any) {
-const { shaft, wrap, vane, point, insert, fletch_count, quantity } = args;
-const insertPerArrow =
-  insert
-    ? Number(insert.price_per_arrow || 0) +
-      (insert.requires_collar ? Number(insert.collar_price_per_arrow || 0) : 0)
-    : 0;
 
-const per_arrow =
-  Number(shaft.price_per_shaft) +
-  (wrap ? Number(wrap.price_per_arrow) : 0) +
-  (Number(vane.price_per_arrow) * fletch_count) +
-  Number(point.price) +
-  insertPerArrow +
-  BUILD_LABOR_PER_ARROW;
+export function calculatePrice(args: any) {
+  const { shaft, wrap, vane, insert, point, nock, fletch_count, quantity } = args;
+
+  const per_arrow =
+    Number(shaft.price_per_shaft) +
+    (wrap ? Number(wrap.price_per_arrow) : 0) +
+    (vane ? Number(vane.price_per_arrow) * fletch_count : 0) +
+    (insert ? Number(insert.price_per_arrow) + (insert.requires_collar ? Number(insert.collar_price_per_arrow ?? 0) : 0) : 0) +
+    (point ? Number(point.price) : 0) +
+    (nock ? Number(nock.price_per_arrow) : 0) +
+    BUILD_LABOR_PER_ARROW;
 
   const per = round2(per_arrow);
   const subtotal = round2(per * quantity);
   return { per_arrow: per, subtotal };
 }
 
+
 export function buildSummary(args: any) {
-  const { shaft, wrap, vane, point, insert, cut_length, quantity } = args;
+  const { shaft, wrap, vane, point, insert, nock, cut_length, quantity } = args;
 
   const shaftLabel = `${shaft.brand} ${shaft.model} ${shaft.spine}`;
-  const wrapLabel = wrap ? wrap.name : "No wrap";
-  const vaneLabel = `${vane.brand} ${vane.model}`;
-  const pointLabel = `${point.brand || ""} ${point.model || ""}`.trim() || `${point.type} ${point.weight_grains}gr`;
-  const insertLabel = insert ? `${insert.brand} ${insert.model}` : "No insert";
+  const wrapLabel = wrap ? wrap.name : "None";
+  const vaneLabel = vane ? `${vane.brand} ${vane.model}` : "None";
+  const insertLabel = insert ? `${insert.brand} ${insert.model}${insert.requires_collar ? " (+collar)" : ""}` : "None";
+  const pointLabel = point ? (`${point.brand || ""} ${point.model || ""}`.trim() || `${point.type} ${point.weight_grains}gr`) : "None";
+  const nockLabel = nock ? `${nock.brand} ${nock.model}` : "None";
 
-  return { shaft: shaftLabel, cut_length, wrap: wrapLabel, vane: vaneLabel, point: pointLabel, insert: insertLabel, quantity };
+  return {
+    shaft: shaftLabel,
+    cut_length,
+    wrap: wrapLabel,
+    vane: vaneLabel,
+    insert: insertLabel,
+    point: pointLabel,
+    nock: nockLabel,
+    quantity,
+  };
 }
+
 
 
 // ---------------------- Orders helpers ----------------------
@@ -291,25 +337,30 @@ export async function createArrowBuild(
     order_id: number;
     shaft_id: number;
     wrap_id: number | null;
-    vane_id: number;
-    point_id: number;
+    vane_id: number | null;
+    insert_id: number | null;
+    point_id: number | null;
+    nock_id: number | null;
     cut_length: number;
     quantity: number;
     fletch_count: number;
     price_per_arrow: number;
   }
-) {
+) 
+ {
   const res = await DB.prepare(
     `INSERT INTO arrow_builds
-      (order_id, shaft_id, wrap_id, vane_id, point_id, cut_length, quantity, fletch_count, price_per_arrow)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
+      (order_id, shaft_id, wrap_id, vane_id, insert_id, point_id, nock_id, cut_length, quantity, fletch_count, price_per_arrow)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
   )
     .bind(
       args.order_id,
       args.shaft_id,
       args.wrap_id ?? null,
-      args.vane_id,
-      args.point_id,
+      args.vane_id ?? null,
+      args.insert_id ?? null,
+      args.point_id ?? null,
+      args.nock_id ?? null,
       args.cut_length,
       args.quantity,
       args.fletch_count,

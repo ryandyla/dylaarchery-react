@@ -87,22 +87,33 @@ type DraftResponse =
 
 type BuilderState = {
   shaft_id?: number;
-  cut_length?: number;
+
+  cut_mode: "uncut" | "cut";
+  cut_length?: number | null;      // only used if cut_mode==="cut"
+
+  nock_id?: number | null;
   wrap_id?: number | null;
-  vane_id?: number;
-  point_id?: number;
-  insert_id?: number | null; // ✅ NEW
-  quantity: number;
-  fletch_count: 3;
+
+  vane_id?: number | null;
+  fletch_count: 0 | 3 | 4;         // 0 means “no vanes”
+
+  insert_id?: number | null;
+  point_id?: number | null;
+
+  quantity: 6 | 12;                // only these two
 };
 
 const DEFAULT_STATE: BuilderState = {
-  quantity: 6,
-  fletch_count: 3,
+  cut_mode: "uncut",
+  cut_length: null,
+  nock_id: null,
   wrap_id: null,
-  insert_id: null, // ✅ NEW
+  vane_id: null,
+  fletch_count: 0,
+  insert_id: null,
+  point_id: null,
+  quantity: 6,
 };
-
 
 const API = {
   catalog: "/api/builder/catalog",
@@ -111,8 +122,7 @@ const API = {
 };
 
 // UX constants (match Worker)
-const MIN_QTY = 6
-const QTY_STEP = 6;
+const ALLOWED_QTYS = new Set([6, 12, 18, 24]);
 const CUT_STEP = 0.25;
 
 function formatMoney(n?: number) {
@@ -236,17 +246,25 @@ export default function ArrowBuilderPage() {
 
 
   // Step completion logic
-const stepDone = useMemo(() => {
+  const stepDone = useMemo(() => {
+  const hasShaft = !!state.shaft_id;
+  const cutOk = state.cut_mode === "uncut" || (state.cut_mode === "cut" && typeof state.cut_length === "number");
+
+  const canPrice = hasShaft && cutOk && (state.quantity === 6 || state.quantity === 12);  const hasCut = typeof state.cut_length === "number";
+  const hasVane = !!state.vane_id;
+  const hasPoint = !!state.point_id;
+
   return {
-    1: !!state.shaft_id,
-    2: !!state.shaft_id && typeof state.cut_length === "number",
-    3: !!state.shaft_id && typeof state.cut_length === "number", // wrap optional
-    4: !!state.vane_id,
-    5: true, // insert optional (always "done" once unlocked)
-    6: !!state.point_id,
-    7: !!state.point_id && !!state.vane_id && !!state.shaft_id && typeof state.cut_length === "number",
+    1: hasShaft,
+    2: hasShaft && hasCut,
+    3: hasShaft && hasCut, // wrap optional
+    4: hasVane,
+    5: hasVane,            // insert step is "done" once you reach it (optional choice)
+    6: hasPoint,
+    7: hasShaft && hasCut && hasVane && hasPoint,
   };
-}, [state]);
+}, [state.shaft_id, state.cut_length, state.vane_id, state.point_id]);
+
 
 
   // When shaft changes, clear downstream selections that might be incompatible
@@ -318,17 +336,28 @@ const stepDone = useMemo(() => {
       return;
     }
 
-    debouncedPrice({
-      shaft_id: state.shaft_id,
-      wrap_id: state.wrap_id ?? null,
-      vane_id: state.vane_id,
-      point_id: state.point_id,
-      insert_id: state.insert_id ?? null, // ✅ NEW
-      cut_length: state.cut_length,
-      quantity: state.quantity,
-      fletch_count: state.fletch_count,
-    });
-  }, [state, debouncedPrice]);
+if (!canPrice) {
+  setPricing({});
+  setServerErr(null);
+  return;
+}
+
+  debouncedPrice({
+    shaft_id: state.shaft_id,
+    cut_mode: state.cut_mode,
+    cut_length: state.cut_mode === "cut" ? state.cut_length : null,
+
+    nock_id: state.nock_id ?? null,
+    wrap_id: state.wrap_id ?? null,
+    vane_id: state.fletch_count === 0 ? null : (state.vane_id ?? null),
+    fletch_count: state.fletch_count,
+
+    insert_id: state.insert_id ?? null,
+    point_id: state.point_id ?? null,
+
+    quantity: state.quantity,
+  });
+
 
   // Helper: show error under a specific field
   const fieldError = (fieldName: string) => (serverErr?.field === fieldName ? serverErr.message : null);
@@ -397,16 +426,12 @@ const stepDone = useMemo(() => {
     }
   }
 
-  const canProceedToDraft =
-    !!state.shaft_id &&
-    !!state.vane_id &&
-    !!state.point_id &&
-    typeof state.cut_length === "number" &&
-    state.quantity >= MIN_QTY &&
-    customer.email.trim().length > 3 &&
-    !pricingBusy &&
-    !!pricing.per_arrow &&
-    !serverErr;
+const canProceedToDraft =
+  canPrice &&
+  customer.email.trim().length > 3 &&
+  !pricingBusy &&
+  !!pricing.per_arrow &&
+  !serverErr;
 
   // ---------------------- Render ----------------------
   if (loadingCatalog) {
@@ -633,65 +658,66 @@ const stepDone = useMemo(() => {
               </div>
             </Step>
 
-<Step
-  n={5}
-  title="Insert"
-  subtitle="Optional (adds weight + affects total arrow weight)"
-  open={openStep === 5}
-  done={stepDone[5]}
-  disabled={!stepDone[1]}
-  onToggle={() => setOpenStep(openStep === 5 ? 0 : 5)}
->
-  <div style={styles.cardInner}>
-    <div style={styles.row}>
-      <button
-        onClick={() => setState((s) => ({ ...s, insert_id: null }))}
-        style={pillStyle(state.insert_id == null)}
-      >
-        No insert
-      </button>
-
-      {inserts.map((ins) => (
-        <button
-          key={ins.id}
-          onClick={() => {
-            setState((s) => ({ ...s, insert_id: ins.id }));
-            setOpenStep(7);
-          }}
-          style={pillStyle(state.insert_id === ins.id)}
-        >
-          {ins.brand} {ins.model}
-          <span style={{ opacity: 0.8 }}>
-            {" "}• {ins.weight_grains}gr • +{formatMoney(ins.price_per_arrow)}/arrow
-            {ins.requires_collar ? ` • collar +${ins.collar_weight_grains ?? 0}gr` : ""}
-          </span>
-        </button>
-      ))}
-    </div>
-
-    <div style={styles.help}>
-      Inserts are optional in v1. If the insert requires a collar, it’s included automatically in weight/price.
-    </div>
-
-    {fieldError("insert_id") && <FieldError msg={fieldError("insert_id")!} />}
-
-    <div style={{ marginTop: 12 }}>
-      <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(7)}>
-        Continue
-      </button>
-    </div>
-  </div>
-</Step>
-
-
             <Step
+              n={5}
+              title="Insert"
+              subtitle="Optional (adds weight + affects total arrow weight)"
+              open={openStep === 5}
+              done={stepDone[5]}
+              disabled={!stepDone[4]}   // ✅ unlock after vanes
+              onToggle={() => setOpenStep(openStep === 5 ? 0 : 5)}
+            >
+              <div style={styles.cardInner}>
+                <div style={styles.row}>
+                  <button
+                    onClick={() => setState((s) => ({ ...s, insert_id: null }))}
+                    style={pillStyle(state.insert_id == null)}
+                  >
+                    No insert
+                  </button>
+
+                  {inserts.map((ins) => (
+                    <button
+                      key={ins.id}
+                      onClick={() => {
+                        setState((s) => ({ ...s, insert_id: ins.id }));
+                        setOpenStep(6); // ✅ go to Point next
+                      }}
+                      style={pillStyle(state.insert_id === ins.id)}
+                    >
+                      {ins.brand} {ins.model}
+                      <span style={{ opacity: 0.8 }}>
+                        {" "}• {ins.weight_grains}gr • +{formatMoney(ins.price_per_arrow)}/arrow
+                        {ins.requires_collar ? ` • collar +${ins.collar_weight_grains ?? 0}gr` : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div style={styles.help}>
+                  Inserts are optional in v1. If the insert requires a collar, it’s included automatically in weight/price.
+                </div>
+
+                {fieldError("insert_id") && <FieldError msg={fieldError("insert_id")!} />}
+
+                <div style={{ marginTop: 12 }}>
+                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(6)}>
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </Step>
+
+
+
+           <Step
               n={6}
               title="Point"
               subtitle="Choose field points or broadheads"
               open={openStep === 6}
               done={stepDone[6]}
-              disabled={!stepDone[5]}
-              onToggle={() => setOpenStep(openStep === 5 ? 0 : 5)}
+              disabled={!stepDone[4]} // ✅ insert optional, so only require vanes
+              onToggle={() => setOpenStep(openStep === 6 ? 0 : 6)} // ✅ fixed
             >
               <div style={styles.cardInner}>
                 <PointPicker
@@ -700,12 +726,13 @@ const stepDone = useMemo(() => {
                   selectedId={state.point_id}
                   onSelect={(id) => {
                     setState((s) => ({ ...s, point_id: id }));
-                    setOpenStep(6);
+                    setOpenStep(7); // ✅ go to Review next
                   }}
                 />
                 {fieldError("point_id") && <FieldError msg={fieldError("point_id")!} />}
               </div>
             </Step>
+
 
             <Step
               n={7}

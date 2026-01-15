@@ -3,6 +3,8 @@ import {
   buildSummary,
   calculatePrice,
   corsHeaders,
+  getInsert, 
+  getNock,
   getPoint,
   getShaft,
   getVane,
@@ -27,36 +29,47 @@ export const onRequest = async ({ request, env }: any) => {
 
     const shaft_id = Number(body.shaft_id);
     const wrap_id = body.wrap_id == null ? null : Number(body.wrap_id);
-    const vane_id = Number(body.vane_id);
-    const point_id = Number(body.point_id);
+    const vane_id = body.vane_id == null ? null : Number(body.vane_id);
+    const insert_id = body.insert_id == null ? null : Number(body.insert_id);
+    const point_id = body.point_id == null ? null : Number(body.point_id);
+    const nock_id = body.nock_id == null ? null : Number(body.nock_id);
     const cut_length = Number(body.cut_length);
     const quantity = Number(body.quantity);
     const fletch_count = body.fletch_count == null ? 3 : Number(body.fletch_count);
 
     if (!Number.isInteger(shaft_id)) return badRequest("shaft_id must be an integer.", "shaft_id");
     if (wrap_id != null && !Number.isInteger(wrap_id)) return badRequest("wrap_id must be an integer.", "wrap_id");
-    if (!Number.isInteger(vane_id)) return badRequest("vane_id must be an integer.", "vane_id");
-    if (!Number.isInteger(point_id)) return badRequest("point_id must be an integer.", "point_id");
+    if (vane_id != null && !Number.isInteger(vane_id)) return badRequest("vane_id must be an integer.", "vane_id");
+    if (insert_id != null && !Number.isInteger(insert_id)) return badRequest("insert_id must be an integer.", "insert_id");
+    if (point_id != null && !Number.isInteger(point_id)) return badRequest("point_id must be an integer.", "point_id");
+    if (nock_id != null && !Number.isInteger(nock_id)) return badRequest("nock_id must be an integer.", "nock_id");
 
-    const [shaft, wrap, vane, point] = await Promise.all([
-      getShaft(DB, shaft_id),
-      wrap_id != null ? getWrap(DB, wrap_id) : Promise.resolve(null),
-      getVane(DB, vane_id),
-      getPoint(DB, point_id),
-    ]);
 
-    if (!shaft) return badRequest("Selected shaft not found.", "shaft_id");
-    if (wrap_id != null && !wrap) return badRequest("Selected wrap not found.", "wrap_id");
-    if (!vane) return badRequest("Selected vane not found.", "vane_id");
-    if (!point) return badRequest("Selected point not found.", "point_id");
+const [shaft, wrap, vane, insert, point, nock] = await Promise.all([
+  getShaft(DB, shaft_id),
+  wrap_id != null ? getWrap(DB, wrap_id) : Promise.resolve(null),
+  vane_id != null ? getVane(DB, vane_id) : Promise.resolve(null),
+  insert_id != null ? getInsert(DB, insert_id) : Promise.resolve(null),
+  point_id != null ? getPoint(DB, point_id) : Promise.resolve(null),
+  nock_id != null ? getNock(DB, nock_id) : Promise.resolve(null),
+]);
 
-    const v = validateBuild({ shaft, wrap, vane, point, cut_length, quantity, fletch_count });
-    if (!v.ok) return json(v, 400, cors);
 
-    const price = calculatePrice({ shaft, wrap, vane, point, fletch_count, quantity });
-    const summary = buildSummary({ shaft, wrap, vane, point, cut_length, quantity });
+  if (!shaft) return badRequest("Selected shaft not found.", "shaft_id");
+  if (wrap_id != null && !wrap) return badRequest("Selected wrap not found.", "wrap_id");
+  if (vane_id != null && !vane) return badRequest("Selected vane not found.", "vane_id");
+  if (insert_id != null && !insert) return badRequest("Selected insert not found.", "insert_id");
+  if (point_id != null && !point) return badRequest("Selected point not found.", "point_id");
+  if (nock_id != null && !nock) return badRequest("Selected nock not found.", "nock_id");
 
-    return json({ ok: true, price, build: summary }, 200, cors);
+  const v = validateBuild({ shaft, wrap, vane, insert, point, nock, cut_length, quantity, fletch_count });
+  if (!v.ok) return json(v, 400, cors);
+
+  const price = calculatePrice({ shaft, wrap, vane, insert, point, nock, fletch_count, quantity });
+  const summary = buildSummary({ shaft, wrap, vane, insert, point, nock, cut_length, quantity });
+
+  return json({ ok: true, price, build: summary }, 200, cors);
+
   } catch (e: any) {
     return serverError(e?.message || "Unhandled error");
   }
