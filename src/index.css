@@ -1,9 +1,9 @@
+@source "../src/**/*.{ts,tsx,js,jsx}";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root { color-scheme: dark; }
 html, body, #root { height: 100%; }
-body { margin: 0; background: #07070a; color: white; }
-/* cache-bust marker */
-body { outline: 3px solid #ff00ff; }
+body { margin: 0; background: #07070a; color: #fff; }
