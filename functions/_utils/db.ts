@@ -195,36 +195,45 @@ export async function getPoint(DB: D1Database, id: number) {
 
 // ---- Validation + pricing ----
 export function validateBuild(args: any) {
-  const { shaft, wrap, vane, point, insert, nock, cut_length, quantity, fletch_count } = args;
+  const { shaft, wrap, vane, point, insert, nock, cut_mode, cut_length, quantity, fletch_count } = args;
 
   if (!shaft) return { ok: false, field: "shaft_id", message: "Shaft selection is required." };
-  if (!isNumber(cut_length)) return { ok: false, field: "cut_length", message: "Cut length is required." };
   if (!isNumber(quantity)) return { ok: false, field: "quantity", message: "Quantity is required." };
 
-  if (shaft.active !== 1) return { ok: false, field: "shaft_id", message: "Selected shaft is not available." };
-  if (wrap && wrap.active !== 1) return { ok: false, field: "wrap_id", message: "Selected wrap is not available." };
-  if (vane && vane.active !== 1) return { ok: false, field: "vane_id", message: "Selected vane is not available." };
-  if (insert && insert.active !== 1) return { ok: false, field: "insert_id", message: "Selected insert is not available." };
-  if (point && point.active !== 1) return { ok: false, field: "point_id", message: "Selected point is not available." };
-  if (nock && nock.active !== 1) return { ok: false, field: "nock_id", message: "Selected nock is not available." };
+  const mode: "uncut" | "cut" = cut_mode === "cut" ? "cut" : "uncut";
 
-  if (cut_length > shaft.max_length) return { ok: false, field: "cut_length", message: "Cut length exceeds raw shaft length." };
-  if (cut_length < MIN_CUT_LENGTH) return { ok: false, field: "cut_length", message: `Minimum cut length is ${MIN_CUT_LENGTH}".` };
-  if (!isIncrement(cut_length, CUT_INCREMENT)) return { ok: false, field: "cut_length", message: `Cut length must be in ${CUT_INCREMENT}" increments.` };
+  if (mode === "cut") {
+    if (!isNumber(cut_length)) return { ok: false, field: "cut_length", message: "Cut length is required." };
+    if (cut_length > shaft.max_length) return { ok: false, field: "cut_length", message: "Cut length exceeds raw shaft length." };
+    if (cut_length < MIN_CUT_LENGTH) return { ok: false, field: "cut_length", message: `Minimum cut length is ${MIN_CUT_LENGTH}".` };
+    if (!isIncrement(cut_length, CUT_INCREMENT)) return { ok: false, field: "cut_length", message: `Cut length must be in ${CUT_INCREMENT}" increments.` };
+  } else {
+    // uncut
+    if (cut_length != null) {
+      return { ok: false, field: "cut_length", message: "For uncut builds, cut_length must be null." };
+    }
+  }
 
   // qty must be exactly 6 or 12
   if (quantity !== 6 && quantity !== 12) return { ok: false, field: "quantity", message: "Quantity must be 6 or 12." };
 
-  if (!isNumber(fletch_count) || fletch_count !== 3) {
-    return { ok: false, field: "fletch_count", message: "Fletching count must be 3 for now." };
+  // fletch_count: allow 0/3/4
+  if (![0, 3, 4].includes(Number(fletch_count))) {
+    return { ok: false, field: "fletch_count", message: "Fletching count must be 0, 3, or 4." };
+  }
+  // if fletching requested, vane required; if not, vane must be null
+  if (Number(fletch_count) === 0) {
+    if (vane) return { ok: false, field: "vane_id", message: "If fletch_count is 0, vane must be empty." };
+  } else {
+    if (!vane) return { ok: false, field: "vane_id", message: "Vane selection is required when fletching is enabled." };
   }
 
   // Wrap compatibility only if chosen
-  if (wrap) {
+  if (wrap && mode === "cut") {
     if (shaft.outer_diameter < wrap.min_outer_diameter || shaft.outer_diameter > wrap.max_outer_diameter) {
       return { ok: false, field: "wrap_id", message: "Wrap is not compatible with selected shaft." };
     }
-    if (wrap.length >= cut_length) {
+    if (isNumber(cut_length) && wrap.length >= cut_length) {
       return { ok: false, field: "wrap_id", message: "Wrap length exceeds arrow length." };
     }
   }
@@ -243,16 +252,8 @@ export function validateBuild(args: any) {
     }
   }
 
-  // Nock system compatibility only if chosen (recommended)
-  if (nock) {
-    // If you store shaft "system" somewhere, compare that.
-    // For now, a simple guard example if you add shaft.system later:
-    // if (shaft.system && nock.system !== shaft.system) return { ok:false, field:"nock_id", message:"Nock is not compatible with selected shaft system." };
-  }
-
   return { ok: true };
 }
-
 
 export function calculatePrice(args: any) {
   const { shaft, wrap, vane, insert, point, nock, fletch_count, quantity } = args;
@@ -273,18 +274,27 @@ export function calculatePrice(args: any) {
 
 
 export function buildSummary(args: any) {
-  const { shaft, wrap, vane, point, insert, nock, cut_length, quantity } = args;
+  const { shaft, wrap, vane, point, insert, nock, cut_mode, cut_length, quantity, fletch_count } = args;
 
   const shaftLabel = `${shaft.brand} ${shaft.model} ${shaft.spine}`;
   const wrapLabel = wrap ? wrap.name : "None";
-  const vaneLabel = vane ? `${vane.brand} ${vane.model}` : "None";
+  const vaneLabel =
+    fletch_count === 0
+      ? "None"
+      : vane
+      ? `${vane.brand} ${vane.model} (${fletch_count}-fletch)`
+      : "None";
+
   const insertLabel = insert ? `${insert.brand} ${insert.model}${insert.requires_collar ? " (+collar)" : ""}` : "None";
   const pointLabel = point ? (`${point.brand || ""} ${point.model || ""}`.trim() || `${point.type} ${point.weight_grains}gr`) : "None";
   const nockLabel = nock ? `${nock.brand} ${nock.model}` : "None";
 
+  const mode: "uncut" | "cut" = cut_mode === "cut" ? "cut" : "uncut";
+
   return {
     shaft: shaftLabel,
-    cut_length,
+    cut_mode: mode,
+    cut_length: mode === "cut" ? cut_length : null,
     wrap: wrapLabel,
     vane: vaneLabel,
     insert: insertLabel,
@@ -293,8 +303,6 @@ export function buildSummary(args: any) {
     quantity,
   };
 }
-
-
 
 // ---------------------- Orders helpers ----------------------
 export async function upsertCustomer(DB: any, { email, name }: { email: string; name?: string }) {

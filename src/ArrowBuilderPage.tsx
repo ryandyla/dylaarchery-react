@@ -1,4 +1,25 @@
+// src/ArrowBuilderPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+
+/**
+ * READY-TO-PASTE ArrowBuilderPage.tsx
+ *
+ * Goals:
+ * - Only SHAFT is required.
+ * - Everything else optional: cut, wrap, vanes (0/3/4), insert, point.
+ * - Quantity is ONLY 6 or 12 (no other qty allowed).
+ * - Pricing calls the API with nullable component ids.
+ *
+ * Notes:
+ * - This file expects your existing endpoints:
+ *   - GET  /api/builder/catalog
+ *   - POST /api/builder/price
+ *   - POST /api/builder/draft
+ * - If your backend still REQUIRES vane/point/cut_length, it will return errors.
+ *   This UI is now correctly “all optional”.
+ */
+
+// ---------------------- Types ----------------------
 
 type Shaft = {
   id: number;
@@ -48,13 +69,22 @@ type Insert = {
   id: number;
   brand: string;
   model: string;
-  system: string; // e.g. ".204", ".166", etc (whatever you used)
-  type: string;   // HIT, half-out, etc
+  system: string;
+  type: string;
   weight_grains: number;
   price_per_arrow: number;
-  requires_collar: number; // 0/1 if coming from D1
+  requires_collar: number; // 0/1
   collar_weight_grains: number | null;
   collar_price_per_arrow: number | null;
+};
+
+// If you haven’t added nocks to catalog yet, leave this as-is; step will just show “Not wired yet”.
+type Nock = {
+  id: number;
+  brand: string;
+  model: string;
+  system: string; // e.g. "standard", "pin", etc
+  price_per_arrow: number;
 };
 
 type CatalogResponse = {
@@ -64,20 +94,15 @@ type CatalogResponse = {
   vanes: Vane[];
   points: Point[];
   inserts: Insert[];
+  // Optional – only if/when you add it to /api/builder/catalog
+  nocks?: Nock[];
 };
 
 type PriceResponse =
   | {
       ok: true;
       price: { per_arrow: number; subtotal: number };
-      build: {
-        shaft: string;
-        cut_length: number;
-        wrap: string;
-        vane: string;
-        point: string;
-        quantity: number;
-      };
+      build: Record<string, any>;
     }
   | { ok: false; field?: string; message: string };
 
@@ -85,33 +110,39 @@ type DraftResponse =
   | { ok: true; order_id: number; build_id: number; status: string; price: { per_arrow: number; subtotal: number } }
   | { ok: false; field?: string; message: string };
 
+// ---------------------- Builder state ----------------------
+
 type BuilderState = {
   shaft_id?: number;
 
   cut_mode: "uncut" | "cut";
-  cut_length?: number | null;      // only used if cut_mode==="cut"
+  cut_length: number | null;
 
-  nock_id?: number | null;
-  wrap_id?: number | null;
+  nock_id: number | null;
+  wrap_id: number | null;
 
-  vane_id?: number | null;
-  fletch_count: 0 | 3 | 4;         // 0 means “no vanes”
+  vane_id: number | null;
+  fletch_count: 0 | 3 | 4;
 
-  insert_id?: number | null;
-  point_id?: number | null;
+  insert_id: number | null;
+  point_id: number | null;
 
-  quantity: 6 | 12;                // only these two
+  quantity: 6 | 12;
 };
 
 const DEFAULT_STATE: BuilderState = {
   cut_mode: "uncut",
   cut_length: null,
+
   nock_id: null,
   wrap_id: null,
+
   vane_id: null,
   fletch_count: 0,
+
   insert_id: null,
   point_id: null,
+
   quantity: 6,
 };
 
@@ -121,21 +152,14 @@ const API = {
   draft: "/api/builder/draft",
 };
 
-// UX constants (match Worker)
-const ALLOWED_QTYS = new Set([6, 12, 18, 24]);
+// UX constants
 const CUT_STEP = 0.25;
+
+// ---------------------- Helpers ----------------------
 
 function formatMoney(n?: number) {
   if (n == null || !Number.isFinite(n)) return "—";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
-}
-
-function clampQty(q: number) {
-  if (!Number.isFinite(q)) return MIN_QTY;
-  let v = Math.max(MIN_QTY, Math.round(q));
-  // enforce even
-  if (v % 2 !== 0) v += 1;
-  return v;
 }
 
 function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) {
@@ -145,6 +169,21 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) {
     t = setTimeout(() => fn(...args), ms);
   };
 }
+
+function groupShafts(shafts: Shaft[]) {
+  const map = new Map<string, Shaft[]>();
+  for (const s of shafts) {
+    const key = `${s.brand} ${s.model}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+  return Array.from(map.entries()).map(([key, items]) => ({
+    key,
+    items: items.slice().sort((a, b) => a.spine - b.spine),
+  }));
+}
+
+// ---------------------- Page ----------------------
 
 export default function ArrowBuilderPage() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
@@ -161,7 +200,6 @@ export default function ArrowBuilderPage() {
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftResult, setDraftResult] = useState<{ order_id: number } | null>(null);
 
-  // for smooth step progression
   const [openStep, setOpenStep] = useState<number>(1);
 
   // Fetch catalog on mount
@@ -187,23 +225,32 @@ export default function ArrowBuilderPage() {
   const vanes = catalog?.vanes ?? [];
   const inserts = catalog?.inserts ?? [];
   const points = catalog?.points ?? [];
+  const nocks = catalog?.nocks ?? [];
 
   const selectedShaft = useMemo(
-    () => shafts.find((s) => s.id === state.shaft_id),
+    () => shafts.find((s) => s.id === state.shaft_id) ?? null,
     [shafts, state.shaft_id]
   );
   const selectedWrap = useMemo(
-    () => (state.wrap_id ? wraps.find((w) => w.id === state.wrap_id) : null),
+    () => (state.wrap_id ? wraps.find((w) => w.id === state.wrap_id) ?? null : null),
     [wraps, state.wrap_id]
   );
-  const selectedVane = useMemo(() => vanes.find((v) => v.id === state.vane_id), [vanes, state.vane_id]);
-
+  const selectedVane = useMemo(
+    () => (state.vane_id ? vanes.find((v) => v.id === state.vane_id) ?? null : null),
+    [vanes, state.vane_id]
+  );
   const selectedInsert = useMemo(
-  () => (state.insert_id ? inserts.find((i) => i.id === state.insert_id) : null),
-  [inserts, state.insert_id]
-);
-
-  const selectedPoint = useMemo(() => points.find((p) => p.id === state.point_id), [points, state.point_id]);
+    () => (state.insert_id ? inserts.find((i) => i.id === state.insert_id) ?? null : null),
+    [inserts, state.insert_id]
+  );
+  const selectedPoint = useMemo(
+    () => (state.point_id ? points.find((p) => p.id === state.point_id) ?? null : null),
+    [points, state.point_id]
+  );
+  const selectedNock = useMemo(
+    () => (state.nock_id ? nocks.find((n) => n.id === state.nock_id) ?? null : null),
+    [nocks, state.nock_id]
+  );
 
   // Filter wraps by shaft OD
   const compatibleWraps = useMemo(() => {
@@ -223,79 +270,90 @@ export default function ArrowBuilderPage() {
   const fieldPoints = useMemo(() => points.filter((p) => p.type === "field"), [points]);
   const broadheads = useMemo(() => points.filter((p) => p.type === "broadhead"), [points]);
 
+  // Estimated total arrow weight (only meaningful if cut length is known)
   const estimatedTAW = useMemo(() => {
-  if (!selectedShaft || typeof state.cut_length !== "number") return null;
+    if (!selectedShaft) return null;
+    const cutLen = state.cut_mode === "cut" ? state.cut_length : null;
+    if (typeof cutLen !== "number") return null;
 
-  const shaftGrains = Number(selectedShaft.gpi) * Number(state.cut_length);
+    const shaftGrains = Number(selectedShaft.gpi) * Number(cutLen);
+    const vaneGrains =
+      state.fletch_count > 0 && selectedVane?.weight_grains
+        ? Number(selectedVane.weight_grains) * state.fletch_count
+        : 0;
 
-  const vaneGrains = selectedVane?.weight_grains ? Number(selectedVane.weight_grains) * 3 : 0;
-
-  const insertGrains =
-    selectedInsert
-      ? Number(selectedInsert.weight_grains) + (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
+    const insertGrains = selectedInsert
+      ? Number(selectedInsert.weight_grains) +
+        (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
       : 0;
 
-  const pointGrains = selectedPoint ? Number(selectedPoint.weight_grains) : 0;
+    const pointGrains = selectedPoint ? Number(selectedPoint.weight_grains) : 0;
+    const wrapGrains = 0;
 
-  // wraps table doesn’t include grains yet; treat as 0 for now
-  const wrapGrains = 0;
+    const total = shaftGrains + vaneGrains + insertGrains + pointGrains + wrapGrains;
+    return Math.round(total);
+  }, [selectedShaft, state.cut_mode, state.cut_length, state.fletch_count, selectedVane, selectedInsert, selectedPoint]);
 
-  const total = shaftGrains + vaneGrains + insertGrains + pointGrains + wrapGrains;
-  return Math.round(total);
-}, [selectedShaft, state.cut_length, selectedVane, selectedInsert, selectedPoint]);
-
-
-  // Step completion logic
+  // Step completion logic (only Shaft required; Cut can be uncut)
   const stepDone = useMemo(() => {
-  const hasShaft = !!state.shaft_id;
-  const cutOk = state.cut_mode === "uncut" || (state.cut_mode === "cut" && typeof state.cut_length === "number");
+    const hasShaft = !!state.shaft_id;
+    const cutOk =
+      state.cut_mode === "uncut" || (state.cut_mode === "cut" && typeof state.cut_length === "number");
 
-  const canPrice = hasShaft && cutOk && (state.quantity === 6 || state.quantity === 12);  const hasCut = typeof state.cut_length === "number";
-  const hasVane = !!state.vane_id;
-  const hasPoint = !!state.point_id;
+    // Steps are “done” when the user can proceed; optional steps are considered done once unlocked
+    return {
+      1: hasShaft,
+      2: hasShaft && cutOk,
+      3: hasShaft, // nock optional
+      4: hasShaft, // wrap optional
+      5: hasShaft, // vanes optional
+      6: hasShaft, // insert optional
+      7: hasShaft, // point optional
+      8: hasShaft && cutOk, // review requires shaft + valid cut selection
+    } as Record<number, boolean>;
+  }, [state.shaft_id, state.cut_mode, state.cut_length]);
 
-  return {
-    1: hasShaft,
-    2: hasShaft && hasCut,
-    3: hasShaft && hasCut, // wrap optional
-    4: hasVane,
-    5: hasVane,            // insert step is "done" once you reach it (optional choice)
-    6: hasPoint,
-    7: hasShaft && hasCut && hasVane && hasPoint,
-  };
-}, [state.shaft_id, state.cut_length, state.vane_id, state.point_id]);
-
-
-
-  // When shaft changes, clear downstream selections that might be incompatible
+  // When shaft changes, clear incompatible selections
   useEffect(() => {
-    // If shaft changed, invalidate wrap/vane/point if not compatible
-    // Simple approach: clear wrap always; clear vane/point if not found in compatible lists
     setState((prev) => {
       if (!prev.shaft_id) return prev;
       const next: BuilderState = { ...prev };
 
-      // clear wrap if it's not compatible
-      if (next.wrap_id) {
+      // Wrap compatibility
+      if (next.wrap_id && selectedShaft) {
         const w = wraps.find((x) => x.id === next.wrap_id);
-        if (!w || (selectedShaft && !(selectedShaft.outer_diameter >= w.min_outer_diameter && selectedShaft.outer_diameter <= w.max_outer_diameter))) {
-          next.wrap_id = null;
+        const ok = !!w && selectedShaft.outer_diameter >= w.min_outer_diameter && selectedShaft.outer_diameter <= w.max_outer_diameter;
+        if (!ok) next.wrap_id = null;
+      }
+
+      // Vane compatibility
+      if (next.vane_id && selectedShaft) {
+        const v = vanes.find((x) => x.id === next.vane_id);
+        const isMicro = selectedShaft.outer_diameter <= 0.265;
+        if (!v || (isMicro && v.compatible_micro !== 1)) {
+          next.vane_id = null;
+          next.fletch_count = 0;
         }
       }
 
-      // clear vane if not compatible
-      if (next.vane_id) {
-        const v = vanes.find((x) => x.id === next.vane_id);
-        const isMicro = selectedShaft ? selectedShaft.outer_diameter <= 0.265 : false;
-        if (!v || (isMicro && v.compatible_micro !== 1)) {
-          next.vane_id = undefined;
-        }
+      // Cut length must be <= new shaft max
+      if (next.cut_mode === "cut" && typeof next.cut_length === "number" && selectedShaft) {
+        if (next.cut_length > selectedShaft.max_length) next.cut_length = null;
       }
 
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.shaft_id]);
+
+  // Pricing conditions
+  const canPrice = useMemo(() => {
+    const hasShaft = !!state.shaft_id;
+    const cutOk =
+      state.cut_mode === "uncut" || (state.cut_mode === "cut" && typeof state.cut_length === "number");
+    const qtyOk = state.quantity === 6 || state.quantity === 12;
+    return hasShaft && cutOk && qtyOk;
+  }, [state.shaft_id, state.cut_mode, state.cut_length, state.quantity]);
 
   // Debounced pricing call
   const debouncedPrice = useRef(
@@ -325,41 +383,36 @@ export default function ArrowBuilderPage() {
     }, 300)
   ).current;
 
-  // Trigger pricing whenever build becomes priceable-ish
+  // Trigger pricing whenever build becomes priceable
   useEffect(() => {
     setDraftResult(null);
 
-    // Only call price when we have enough inputs to matter
-    if (!state.shaft_id || !state.vane_id || !state.point_id || typeof state.cut_length !== "number") {
+    if (!canPrice) {
       setPricing({});
       setServerErr(null);
       return;
     }
 
-if (!canPrice) {
-  setPricing({});
-  setServerErr(null);
-  return;
-}
+    debouncedPrice({
+      shaft_id: state.shaft_id,
 
-  debouncedPrice({
-    shaft_id: state.shaft_id,
-    cut_mode: state.cut_mode,
-    cut_length: state.cut_mode === "cut" ? state.cut_length : null,
+      cut_mode: state.cut_mode,
+      cut_length: state.cut_mode === "cut" ? state.cut_length : null,
 
-    nock_id: state.nock_id ?? null,
-    wrap_id: state.wrap_id ?? null,
-    vane_id: state.fletch_count === 0 ? null : (state.vane_id ?? null),
-    fletch_count: state.fletch_count,
+      nock_id: state.nock_id ?? null,
+      wrap_id: state.wrap_id ?? null,
 
-    insert_id: state.insert_id ?? null,
-    point_id: state.point_id ?? null,
+      // If no vanes, force vane_id null
+      vane_id: state.fletch_count === 0 ? null : (state.vane_id ?? null),
+      fletch_count: state.fletch_count,
 
-    quantity: state.quantity,
-  });
+      insert_id: state.insert_id ?? null,
+      point_id: state.point_id ?? null,
 
+      quantity: state.quantity,
+    });
+  }, [state, canPrice, debouncedPrice]);
 
-  // Helper: show error under a specific field
   const fieldError = (fieldName: string) => (serverErr?.field === fieldName ? serverErr.message : null);
 
   // UI actions
@@ -367,19 +420,36 @@ if (!canPrice) {
     setState((s) => ({
       ...DEFAULT_STATE,
       shaft_id: id,
-      quantity: s.quantity || MIN_QTY,
-      fletch_count: 3,
+      // keep qty if already 12
+      quantity: s.quantity === 12 ? 12 : 6,
     }));
     setOpenStep(2);
   }
 
-  function setCutLength(v: string) {
-    const n = Number(v);
-    setState((s) => ({ ...s, cut_length: Number.isFinite(n) ? n : undefined }));
+  function setCutMode(mode: "uncut" | "cut") {
+    setState((s) => ({
+      ...s,
+      cut_mode: mode,
+      cut_length: mode === "uncut" ? null : s.cut_length,
+    }));
   }
 
-  function setQuantity(q: number) {
-    setState((s) => ({ ...s, quantity: clampQty(q) }));
+  function setCutLength(v: string) {
+    const n = Number(v);
+    setState((s) => ({ ...s, cut_length: Number.isFinite(n) ? n : null }));
+  }
+
+  function setQty(q: 6 | 12) {
+    setState((s) => ({ ...s, quantity: q }));
+  }
+
+  function setFletchCount(n: 0 | 3 | 4) {
+    setState((s) => {
+      // If switching to none, clear vane_id
+      if (n === 0) return { ...s, fletch_count: 0, vane_id: null };
+      // If switching on fletching but no vane selected yet, keep vane_id null and user will pick
+      return { ...s, fletch_count: n };
+    });
   }
 
   async function createDraft() {
@@ -398,13 +468,20 @@ if (!canPrice) {
           },
           build: {
             shaft_id: state.shaft_id,
+
+            cut_mode: state.cut_mode,
+            cut_length: state.cut_mode === "cut" ? state.cut_length : null,
+
+            nock_id: state.nock_id ?? null,
             wrap_id: state.wrap_id ?? null,
-            vane_id: state.vane_id,
-            insert_id: state.insert_id ?? null, // ✅ NEW
-            point_id: state.point_id,
-            cut_length: state.cut_length,
-            quantity: state.quantity,
+
+            vane_id: state.fletch_count === 0 ? null : (state.vane_id ?? null),
             fletch_count: state.fletch_count,
+
+            insert_id: state.insert_id ?? null,
+            point_id: state.point_id ?? null,
+
+            quantity: state.quantity,
           },
         }),
       });
@@ -412,13 +489,14 @@ if (!canPrice) {
       const data = (await res.json()) as DraftResponse;
 
       if (!res.ok || !data.ok) {
-        setServerErr({ field: (data as any)?.field, message: (data as any)?.message || "Unable to create draft order." });
+        setServerErr({
+          field: (data as any)?.field,
+          message: (data as any)?.message || "Unable to create draft order.",
+        });
         return;
       }
 
       setDraftResult({ order_id: data.order_id });
-      // In v1 you can redirect to a checkout/draft page later:
-      // window.location.href = `/checkout?order_id=${data.order_id}`;
     } catch (e: any) {
       setServerErr({ message: e?.message || "Draft request failed." });
     } finally {
@@ -426,14 +504,17 @@ if (!canPrice) {
     }
   }
 
-const canProceedToDraft =
-  canPrice &&
-  customer.email.trim().length > 3 &&
-  !pricingBusy &&
-  !!pricing.per_arrow &&
-  !serverErr;
+  const canProceedToDraft =
+    canPrice &&
+    customer.email.trim().length > 3 &&
+    !pricingBusy &&
+    !!pricing.per_arrow &&
+    !serverErr &&
+    // If fletching is enabled, require a vane selected
+    (state.fletch_count === 0 || !!state.vane_id);
 
   // ---------------------- Render ----------------------
+
   if (loadingCatalog) {
     return (
       <div style={styles.page}>
@@ -470,16 +551,17 @@ const canProceedToDraft =
         <div style={styles.grid}>
           {/* LEFT: steps */}
           <div style={styles.left}>
+            {/* 1) Shaft */}
             <Step
               n={1}
               title="Shaft"
-              subtitle="Choose your foundation (brand/model/spine)"
+              subtitle="Choose brand/model/spine"
               open={openStep === 1}
               done={stepDone[1]}
               onToggle={() => setOpenStep(openStep === 1 ? 0 : 1)}
             >
               <div style={styles.cardInner}>
-                <div style={styles.cardHint}>Pick a premium shaft first — everything else will auto-filter.</div>
+                <div style={styles.cardHint}>Pick a shaft first — everything else is optional.</div>
                 <div style={styles.cards}>
                   {groupShafts(shafts).map(({ key, items }) => (
                     <div key={key} style={{ marginBottom: 14 }}>
@@ -488,11 +570,7 @@ const canProceedToDraft =
                         {items.map((s) => {
                           const selected = s.id === state.shaft_id;
                           return (
-                            <button
-                              key={s.id}
-                              onClick={() => selectShaft(s.id)}
-                              style={cardButtonStyle(selected)}
-                            >
+                            <button key={s.id} onClick={() => selectShaft(s.id)} style={cardButtonStyle(selected)}>
                               <div style={styles.cardTop}>
                                 <div style={styles.cardTitle}>
                                   {s.brand} {s.model}
@@ -502,7 +580,7 @@ const canProceedToDraft =
                               <div style={styles.cardMeta}>
                                 <span>{s.gpi} GPI</span>
                                 <span>•</span>
-                                <span>{s.straightness || ".—"}</span>
+                                <span>{s.straightness || "—"}</span>
                                 <span>•</span>
                                 <span>Max {s.max_length}"</span>
                               </div>
@@ -518,10 +596,11 @@ const canProceedToDraft =
               </div>
             </Step>
 
+            {/* 2) Cut */}
             <Step
               n={2}
-              title="Cut length"
-              subtitle="Inches (¼″ increments)"
+              title="Length"
+              subtitle="Uncut or cut to length"
               open={openStep === 2}
               done={stepDone[2]}
               disabled={!stepDone[1]}
@@ -529,68 +608,124 @@ const canProceedToDraft =
             >
               <div style={styles.cardInner}>
                 <div style={styles.row}>
-                  <div style={{ flex: 1 }}>
-                    <label style={styles.label}>Cut length (inches)</label>
-                    <input
-                      style={inputStyle(!!fieldError("cut_length"))}
-                      type="number"
-                      step={CUT_STEP}
-                      min={0}
-                      placeholder="28.75"
-                      value={state.cut_length ?? ""}
-                      onChange={(e) => setCutLength(e.target.value)}
-                    />
-                    <div style={styles.help}>
-                      Measured from nock throat to cut end. Must be ≤{" "}
-                      {selectedShaft ? `${selectedShaft.max_length}"` : "shaft max"}.
-                    </div>
-                    {fieldError("cut_length") && <FieldError msg={fieldError("cut_length")!} />}
-                  </div>
-
-                  <div style={styles.sideBox}>
-                    <div style={styles.sideTitle}>Shaft details</div>
-                    {selectedShaft ? (
-                      <div style={styles.sideText}>
-                        <div>
-                          <b>{selectedShaft.brand} {selectedShaft.model}</b> (Spine {selectedShaft.spine})
-                        </div>
-                        <div style={{ marginTop: 6, opacity: 0.85 }}>
-                          OD {selectedShaft.outer_diameter} • Max length {selectedShaft.max_length}"
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={styles.sideText}>Select a shaft first.</div>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => setCutMode("uncut")}
+                    style={pillStyle(state.cut_mode === "uncut")}
+                  >
+                    Uncut (full length)
+                  </button>
+                  <button
+                    onClick={() => setCutMode("cut")}
+                    style={pillStyle(state.cut_mode === "cut")}
+                  >
+                    Cut to length
+                  </button>
                 </div>
 
+                {state.cut_mode === "cut" && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={styles.row}>
+                      <div style={{ flex: 1, minWidth: 240 }}>
+                        <label style={styles.label}>Cut length (inches)</label>
+                        <input
+                          style={inputStyle(!!fieldError("cut_length"))}
+                          type="number"
+                          step={CUT_STEP}
+                          min={0}
+                          placeholder="28.75"
+                          value={state.cut_length ?? ""}
+                          onChange={(e) => setCutLength(e.target.value)}
+                        />
+                        <div style={styles.help}>
+                          Must be ≤ {selectedShaft ? `${selectedShaft.max_length}"` : "shaft max"} and in ¼″ increments.
+                        </div>
+                        {fieldError("cut_length") && <FieldError msg={fieldError("cut_length")!} />}
+                      </div>
+
+                      <div style={styles.sideBox}>
+                        <div style={styles.sideTitle}>Shaft details</div>
+                        {selectedShaft ? (
+                          <div style={styles.sideText}>
+                            <div>
+                              <b>
+                                {selectedShaft.brand} {selectedShaft.model}
+                              </b>{" "}
+                              (Spine {selectedShaft.spine})
+                            </div>
+                            <div style={{ marginTop: 6, opacity: 0.85 }}>
+                              OD {selectedShaft.outer_diameter} • Max {selectedShaft.max_length}"
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={styles.sideText}>Select a shaft first.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ marginTop: 12 }}>
-                  <button
-                    style={primaryButtonStyle(!!state.cut_length)}
-                    onClick={() => setOpenStep(3)}
-                    disabled={!state.cut_length}
-                  >
+                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(3)}>
                     Continue
                   </button>
                 </div>
               </div>
             </Step>
 
+            {/* 3) Nock (optional) */}
             <Step
               n={3}
-              title="Wrap"
-              subtitle="Optional (filtered by shaft diameter)"
+              title="Nock"
+              subtitle="Optional upgrade / pin system"
               open={openStep === 3}
               done={stepDone[3]}
-              disabled={!stepDone[2]}
+              disabled={!stepDone[1]}
               onToggle={() => setOpenStep(openStep === 3 ? 0 : 3)}
             >
               <div style={styles.cardInner}>
+                {nocks.length === 0 ? (
+                  <div style={styles.help}>
+                    Nocks aren’t in the catalog response yet. (UI is ready—add <code>nocks</code> to /catalog and wire pricing later.)
+                  </div>
+                ) : (
+                  <div style={styles.row}>
+                    <button onClick={() => setState((s) => ({ ...s, nock_id: null }))} style={pillStyle(state.nock_id == null)}>
+                      Default / None
+                    </button>
+                    {nocks.map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => setState((s) => ({ ...s, nock_id: n.id }))}
+                        style={pillStyle(state.nock_id === n.id)}
+                      >
+                        {n.brand} {n.model}{" "}
+                        <span style={{ opacity: 0.8 }}>• +{formatMoney(n.price_per_arrow)}/arrow</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ marginTop: 12 }}>
+                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(4)}>
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </Step>
+
+            {/* 4) Wrap (optional) */}
+            <Step
+              n={4}
+              title="Wrap"
+              subtitle="Optional (filtered by shaft diameter)"
+              open={openStep === 4}
+              done={stepDone[4]}
+              disabled={!stepDone[1]}
+              onToggle={() => setOpenStep(openStep === 4 ? 0 : 4)}
+            >
+              <div style={styles.cardInner}>
                 <div style={styles.row}>
-                  <button
-                    onClick={() => setState((s) => ({ ...s, wrap_id: null }))}
-                    style={pillStyle(state.wrap_id == null)}
-                  >
+                  <button onClick={() => setState((s) => ({ ...s, wrap_id: null }))} style={pillStyle(state.wrap_id == null)}>
                     No wrap
                   </button>
                   {compatibleWraps.map((w) => (
@@ -603,102 +738,78 @@ const canProceedToDraft =
                     </button>
                   ))}
                 </div>
-                <div style={styles.help}>
-                  Wraps are filtered automatically for your selected shaft OD.
-                </div>
-                {fieldError("wrap_id") && <FieldError msg={fieldError("wrap_id")!} />}
+                <div style={styles.help}>Wraps auto-filter to your selected shaft OD.</div>
 
                 <div style={{ marginTop: 12 }}>
-                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(4)}>
+                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(5)}>
                     Continue
                   </button>
                 </div>
               </div>
             </Step>
 
-            <Step
-              n={4}
-              title="Vanes"
-              subtitle="3-fletch (v1), broadhead-friendly options"
-              open={openStep === 4}
-              done={stepDone[4]}
-              disabled={!stepDone[2]}
-              onToggle={() => setOpenStep(openStep === 4 ? 0 : 4)}
-            >
-              <div style={styles.cardInner}>
-                <div style={styles.cards}>
-                  {compatibleVanes.map((v) => {
-                    const selected = v.id === state.vane_id;
-                    return (
-                      <button
-                        key={v.id}
-                        onClick={() => {
-                          setState((s) => ({ ...s, vane_id: v.id }));
-                          setOpenStep(5);
-                        }}
-                        style={cardButtonStyle(selected)}
-                      >
-                        <div style={styles.cardTop}>
-                          <div style={styles.cardTitle}>{v.brand} {v.model}</div>
-                          <div style={styles.badge}>3-fletch</div>
-                        </div>
-                        <div style={styles.cardMeta}>
-                          <span>{v.profile || "profile"}</span>
-                          <span>•</span>
-                          <span>Micro {v.compatible_micro ? "OK" : "No"}</span>
-                        </div>
-                        <div style={styles.cardPrice}>
-                          +{formatMoney(v.price_per_arrow * 3)} / arrow
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {fieldError("vane_id") && <FieldError msg={fieldError("vane_id")!} />}
-              </div>
-            </Step>
-
+            {/* 5) Vanes (optional; 0/3/4) */}
             <Step
               n={5}
-              title="Insert"
-              subtitle="Optional (adds weight + affects total arrow weight)"
+              title="Vanes"
+              subtitle="None, 3-fletch, or 4-fletch"
               open={openStep === 5}
               done={stepDone[5]}
-              disabled={!stepDone[4]}   // ✅ unlock after vanes
+              disabled={!stepDone[1]}
               onToggle={() => setOpenStep(openStep === 5 ? 0 : 5)}
             >
               <div style={styles.cardInner}>
                 <div style={styles.row}>
-                  <button
-                    onClick={() => setState((s) => ({ ...s, insert_id: null }))}
-                    style={pillStyle(state.insert_id == null)}
-                  >
-                    No insert
+                  <button onClick={() => setFletchCount(0)} style={pillStyle(state.fletch_count === 0)}>
+                    None
                   </button>
-
-                  {inserts.map((ins) => (
-                    <button
-                      key={ins.id}
-                      onClick={() => {
-                        setState((s) => ({ ...s, insert_id: ins.id }));
-                        setOpenStep(6); // ✅ go to Point next
-                      }}
-                      style={pillStyle(state.insert_id === ins.id)}
-                    >
-                      {ins.brand} {ins.model}
-                      <span style={{ opacity: 0.8 }}>
-                        {" "}• {ins.weight_grains}gr • +{formatMoney(ins.price_per_arrow)}/arrow
-                        {ins.requires_collar ? ` • collar +${ins.collar_weight_grains ?? 0}gr` : ""}
-                      </span>
-                    </button>
-                  ))}
+                  <button onClick={() => setFletchCount(3)} style={pillStyle(state.fletch_count === 3)}>
+                    3-fletch
+                  </button>
+                  <button onClick={() => setFletchCount(4)} style={pillStyle(state.fletch_count === 4)}>
+                    4-fletch
+                  </button>
                 </div>
 
-                <div style={styles.help}>
-                  Inserts are optional in v1. If the insert requires a collar, it’s included automatically in weight/price.
-                </div>
+                {state.fletch_count > 0 && (
+                  <>
+                    <div style={{ marginTop: 10, ...styles.help }}>
+                      Select a vane (filtered for micro shafts when needed).
+                    </div>
 
-                {fieldError("insert_id") && <FieldError msg={fieldError("insert_id")!} />}
+                    <div style={{ marginTop: 10 }} />
+                    <div style={styles.cards}>
+                      {compatibleVanes.map((v) => {
+                        const selected = v.id === state.vane_id;
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => setState((s) => ({ ...s, vane_id: v.id }))}
+                            style={cardButtonStyle(selected)}
+                          >
+                            <div style={styles.cardTop}>
+                              <div style={styles.cardTitle}>
+                                {v.brand} {v.model}
+                              </div>
+                              <div style={styles.badge}>{state.fletch_count}-fletch</div>
+                            </div>
+                            <div style={styles.cardMeta}>
+                              <span>{v.profile || "profile"}</span>
+                              <span>•</span>
+                              <span>Micro {v.compatible_micro ? "OK" : "No"}</span>
+                            </div>
+                            <div style={styles.cardPrice}>
+                              +{formatMoney(v.price_per_arrow * state.fletch_count)} / arrow
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {state.fletch_count > 0 && !state.vane_id && (
+                      <FieldError msg="Pick a vane (or switch to None)." />
+                    )}
+                  </>
+                )}
 
                 <div style={{ marginTop: 12 }}>
                   <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(6)}>
@@ -708,67 +819,105 @@ const canProceedToDraft =
               </div>
             </Step>
 
-
-
-           <Step
+            {/* 6) Insert (optional) */}
+            <Step
               n={6}
-              title="Point"
-              subtitle="Choose field points or broadheads"
+              title="Insert"
+              subtitle="Optional (adds weight)"
               open={openStep === 6}
               done={stepDone[6]}
-              disabled={!stepDone[4]} // ✅ insert optional, so only require vanes
-              onToggle={() => setOpenStep(openStep === 6 ? 0 : 6)} // ✅ fixed
+              disabled={!stepDone[1]}
+              onToggle={() => setOpenStep(openStep === 6 ? 0 : 6)}
             >
               <div style={styles.cardInner}>
-                <PointPicker
-                  fieldPoints={fieldPoints}
-                  broadheads={broadheads}
-                  selectedId={state.point_id}
-                  onSelect={(id) => {
-                    setState((s) => ({ ...s, point_id: id }));
-                    setOpenStep(7); // ✅ go to Review next
-                  }}
-                />
-                {fieldError("point_id") && <FieldError msg={fieldError("point_id")!} />}
+                <div style={styles.row}>
+                  <button onClick={() => setState((s) => ({ ...s, insert_id: null }))} style={pillStyle(state.insert_id == null)}>
+                    No insert
+                  </button>
+
+                  {inserts.map((ins) => (
+                    <button
+                      key={ins.id}
+                      onClick={() => setState((s) => ({ ...s, insert_id: ins.id }))}
+                      style={pillStyle(state.insert_id === ins.id)}
+                    >
+                      {ins.brand} {ins.model}
+                      <span style={{ opacity: 0.8 }}>
+                        {" "}
+                        • {ins.weight_grains}gr • +{formatMoney(ins.price_per_arrow)}/arrow
+                        {ins.requires_collar ? ` • collar +${ins.collar_weight_grains ?? 0}gr` : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(7)}>
+                    Continue
+                  </button>
+                </div>
               </div>
             </Step>
 
-
+            {/* 7) Point (optional) */}
             <Step
               n={7}
-              title="Review"
-              subtitle="Confirm + create a draft order"
+              title="Point"
+              subtitle="None, field points, or broadheads"
               open={openStep === 7}
-              done={false}
-              disabled={!stepDone[6]}
+              done={stepDone[7]}
+              disabled={!stepDone[1]}
               onToggle={() => setOpenStep(openStep === 7 ? 0 : 7)}
+            >
+              <div style={styles.cardInner}>
+                <div style={styles.row}>
+                  <button onClick={() => setState((s) => ({ ...s, point_id: null }))} style={pillStyle(state.point_id == null)}>
+                    None
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 10 }} />
+                <PointPicker
+                  fieldPoints={fieldPoints}
+                  broadheads={broadheads}
+                  selectedId={state.point_id ?? undefined}
+                  onSelect={(id) => setState((s) => ({ ...s, point_id: id }))}
+                />
+
+                <div style={{ marginTop: 12 }}>
+                  <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(8)}>
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </Step>
+
+            {/* 8) Review */}
+            <Step
+              n={8}
+              title="Review"
+              subtitle="Choose pack size + create a draft order"
+              open={openStep === 8}
+              done={false}
+              disabled={!stepDone[2]}
+              onToggle={() => setOpenStep(openStep === 8 ? 0 : 8)}
             >
               <div style={styles.cardInner}>
                 <div style={styles.reviewGrid}>
                   <div>
-                    <div style={styles.label}>Quantity (min {MIN_QTY}, even)</div>
-                    <div style={styles.qtyRow}>
-                      <button
-                        style={qtyBtnStyle()}
-                        onClick={() => setQuantity(state.quantity - QTY_STEP)}
-                        disabled={state.quantity <= MIN_QTY}
-                      >
-                        −
+                    <div style={styles.label}>Pack size</div>
+                    <div style={styles.row}>
+                      <button onClick={() => setQty(6)} style={pillStyle(state.quantity === 6)}>
+                        6 pack
                       </button>
-                      <input
-                        style={styles.qtyInput}
-                        type="number"
-                        value={state.quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
-                      />
-                      <button
-                        style={qtyBtnStyle()}
-                        onClick={() => setQuantity(state.quantity + QTY_STEP)}
-                      >
-                        +
+                      <button onClick={() => setQty(12)} style={pillStyle(state.quantity === 12)}>
+                        12 pack
                       </button>
                     </div>
-                    {fieldError("quantity") && <FieldError msg={fieldError("quantity")!} />}
+
+                    <div style={{ marginTop: 10, ...styles.help }}>
+                      You’ll only stock shafts in boxes of 12—customers can order 6 or 12.
+                    </div>
                   </div>
 
                   <div style={styles.sideBox}>
@@ -800,7 +949,7 @@ const canProceedToDraft =
                     {draftBusy ? "Creating draft…" : "Add to cart (draft)"}
                   </button>
                   <div style={{ color: "rgba(255,255,255,.7)", fontSize: 12 }}>
-                    We’ll cut, build, validate straightness, and QC every arrow.
+                    Shafts-only orders are allowed (uncut or cut). Components optional.
                   </div>
                 </div>
 
@@ -811,9 +960,7 @@ const canProceedToDraft =
                 )}
 
                 {draftResult && (
-                  <div style={styles.successBox}>
-                    Draft created. Order #{draftResult.order_id}. (Next step: checkout page / Stripe)
-                  </div>
+                  <div style={styles.successBox}>Draft created. Order #{draftResult.order_id}.</div>
                 )}
               </div>
             </Step>
@@ -826,19 +973,58 @@ const canProceedToDraft =
 
               <div style={styles.summaryPriceRow}>
                 <div>
-                  <div style={styles.bigPrice}>{formatMoney(pricing.per_arrow)} <span style={{ fontSize: 12, opacity: 0.7 }}>/ arrow</span></div>
-                  <div style={styles.summarySub}>Built • Cut • Tuned • QC’d</div>
+                  <div style={styles.bigPrice}>
+                    {formatMoney(pricing.per_arrow)} <span style={{ fontSize: 12, opacity: 0.7 }}>/ arrow</span>
+                  </div>
+                  <div style={styles.summarySub}>{state.cut_mode === "uncut" ? "Uncut" : "Cut"} • Live pricing</div>
                 </div>
                 <div style={styles.smallBadge}>{pricingBusy ? "Pricing…" : "Live price"}</div>
               </div>
 
               <div style={styles.summaryList}>
-                <SummaryLine label="Shaft" value={selectedShaft ? `${selectedShaft.brand} ${selectedShaft.model} ${selectedShaft.spine}` : "—"} />
-                <SummaryLine label="Cut length" value={typeof state.cut_length === "number" ? `${state.cut_length}"` : "—"} />
-                <SummaryLine label="Wrap" value={selectedWrap ? selectedWrap.name : "No wrap"} />
-                <SummaryLine label="Vanes" value={selectedVane ? `${selectedVane.brand} ${selectedVane.model} (3-fletch)` : "—"} />
-                <SummaryLine label="Insert" value={selectedInsert ? `${selectedInsert.brand} ${selectedInsert.model}${selectedInsert.requires_collar ? " (+collar)" : ""}` : "No insert"} />
-                <SummaryLine label="Point" value={selectedPoint ? `${selectedPoint.brand || ""} ${selectedPoint.model || ""}`.trim() || `${selectedPoint.type}` : "—"} />
+                <SummaryLine
+                  label="Shaft"
+                  value={selectedShaft ? `${selectedShaft.brand} ${selectedShaft.model} ${selectedShaft.spine}` : "—"}
+                />
+                <SummaryLine
+                  label="Length"
+                  value={
+                    state.cut_mode === "uncut"
+                      ? "Uncut"
+                      : typeof state.cut_length === "number"
+                      ? `${state.cut_length}"`
+                      : "—"
+                  }
+                />
+                <SummaryLine label="Nock" value={selectedNock ? `${selectedNock.brand} ${selectedNock.model}` : "Default / None"} />
+                <SummaryLine label="Wrap" value={selectedWrap ? selectedWrap.name : "None"} />
+                <SummaryLine
+                  label="Vanes"
+                  value={
+                    state.fletch_count === 0
+                      ? "None"
+                      : selectedVane
+                      ? `${selectedVane.brand} ${selectedVane.model} (${state.fletch_count}-fletch)`
+                      : `${state.fletch_count}-fletch (pick vane)`
+                  }
+                />
+                <SummaryLine
+                  label="Insert"
+                  value={
+                    selectedInsert
+                      ? `${selectedInsert.brand} ${selectedInsert.model}${selectedInsert.requires_collar ? " (+collar)" : ""}`
+                      : "None"
+                  }
+                />
+                <SummaryLine
+                  label="Point"
+                  value={
+                    selectedPoint
+                      ? (`${selectedPoint.brand || ""} ${selectedPoint.model || ""}`.trim() ||
+                        `${selectedPoint.type} ${selectedPoint.weight_grains}gr`)
+                      : "None"
+                  }
+                />
                 <SummaryLine label="Est. TAW" value={estimatedTAW != null ? `${estimatedTAW} gr` : "—"} />
                 <SummaryLine label="Quantity" value={`${state.quantity}`} />
               </div>
@@ -860,26 +1046,22 @@ const canProceedToDraft =
               <div style={styles.includedBox}>
                 <div style={{ fontWeight: 900, marginBottom: 6 }}>What’s included</div>
                 <ul style={styles.ul}>
-                  <li>Cut to length</li>
-                  <li>Component install</li>
-                  <li>Straightness validation</li>
+                  <li>Shafts packed safely</li>
+                  <li>Cut-to-length when selected</li>
+                  <li>Component install (when selected)</li>
                   <li>QC + packing</li>
                 </ul>
-                <div style={styles.microNote}>
-                  Hardcore-spec builds: correct spine, FOC-minded setups, and broadhead-true tuning.
-                </div>
+                <div style={styles.microNote}>Hardcore-spec builds: correct spine, FOC-minded setups, and broadhead-true tuning.</div>
               </div>
 
               <div style={{ marginTop: 10, fontSize: 12, color: "rgba(255,255,255,.65)" }}>
-                Tip: start with a proven hunting shaft, then tune vane/point selection to match your broadhead plan.
+                Tip: shafts-only is a great way to start—add components later.
               </div>
             </div>
 
             <div style={styles.brandNote}>
               <div style={{ fontWeight: 900 }}>Dyla Archery</div>
-              <div style={{ opacity: 0.75, marginTop: 4 }}>
-                Premium custom builds. Tight specs. Zero guesswork.
-              </div>
+              <div style={{ opacity: 0.75, marginTop: 4 }}>Premium custom builds. Tight specs. Zero guesswork.</div>
             </div>
           </div>
         </div>
@@ -898,7 +1080,7 @@ function Header() {
       </div>
       <div>
         <div style={styles.hTitle}>Build Your Arrows</div>
-        <div style={styles.hSub}>Shaft → cut length → wrap → vanes → point → review</div>
+        <div style={styles.hSub}>Shaft → length → nock → wrap → vanes → insert → point → review</div>
       </div>
       <div style={{ marginLeft: "auto" }}>
         <span style={styles.topPill}>Black • Yellow • Orange • Hardcore Spec</span>
@@ -940,11 +1122,7 @@ function Step(props: {
       </button>
 
       {open && !disabled && <div style={styles.stepBody}>{children}</div>}
-      {disabled && (
-        <div style={styles.stepDisabled}>
-          Complete the previous step to unlock this.
-        </div>
-      )}
+      {disabled && <div style={styles.stepDisabled}>Complete the previous step to unlock this.</div>}
     </div>
   );
 }
@@ -992,7 +1170,9 @@ function PointPicker(props: {
       <div style={styles.cards}>
         {items.map((p) => {
           const selected = p.id === selectedId;
-          const label = `${p.brand || ""} ${p.model || ""}`.trim() || (p.type === "field" ? "Field point" : "Broadhead");
+          const label =
+            `${p.brand || ""} ${p.model || ""}`.trim() ||
+            (p.type === "field" ? "Field point" : "Broadhead");
           return (
             <button key={p.id} onClick={() => onSelect(p.id)} style={cardButtonStyle(selected)}>
               <div style={styles.cardTop}>
@@ -1064,12 +1244,6 @@ function tabStyle(active: boolean): React.CSSProperties {
   };
 }
 
-function qtyBtnStyle(): React.CSSProperties {
-  return {
-    ...styles.qtyBtn,
-  };
-}
-
 function classNamesButton(...flags: string[]) {
   const disabled = flags.includes("disabled");
   const open = flags.includes("open");
@@ -1081,19 +1255,7 @@ function classNamesButton(...flags: string[]) {
   } as React.CSSProperties;
 }
 
-function groupShafts(shafts: Shaft[]) {
-  const map = new Map<string, Shaft[]>();
-  for (const s of shafts) {
-    const key = `${s.brand} ${s.model}`;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
-  }
-  return Array.from(map.entries()).map(([key, items]) => ({
-    key,
-    items: items.slice().sort((a, b) => a.spine - b.spine),
-  }));
-}
-
+// Minimal card style used in loading/error
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
@@ -1109,6 +1271,13 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: 1180,
     margin: "0 auto",
     padding: "28px 18px 60px",
+  },
+  card: {
+    borderRadius: 18,
+    border: "1px solid rgba(255,255,255,.12)",
+    background: "rgba(255,255,255,.04)",
+    boxShadow: "0 18px 70px rgba(0,0,0,.45)",
+    padding: 14,
   },
   header: {
     display: "flex",
@@ -1346,28 +1515,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
   },
 
-  qtyRow: { display: "flex", gap: 8, alignItems: "center" },
-  qtyBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,.14)",
-    background: "rgba(0,0,0,.18)",
-    color: "rgba(255,255,255,.92)",
-    fontSize: 16,
-    cursor: "pointer",
-  },
-  qtyInput: {
-    width: 90,
-    padding: "10px 10px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,.16)",
-    background: "rgba(255,255,255,.06)",
-    color: "rgba(255,255,255,.92)",
-    fontSize: 14,
-    textAlign: "center",
-  },
-
   successBox: {
     marginTop: 12,
     padding: "10px 10px",
@@ -1433,6 +1580,3 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
   },
 };
-
-// Responsive tweak: if you want, move to CSS. For now we keep it simple.
-// In a real app, you’d add media queries so cards become 1-col on mobile.
