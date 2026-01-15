@@ -70,7 +70,7 @@ export async function allRows(stmt: D1PreparedStatement) {
 
 // ---- DB fetchers ----
 export async function getCatalog(DB: D1Database) {
-  const [shafts, wraps, vanes, points] = await Promise.all([
+  const [shafts, wraps, vanes, points, inserts] = await Promise.all([
     allRows(
       DB.prepare(
         `SELECT id, brand, model, spine, gpi, inner_diameter, outer_diameter, max_length, straightness, price_per_shaft
@@ -99,9 +99,17 @@ export async function getCatalog(DB: D1Database) {
          ORDER BY type, brand, model, weight_grains`
       )
     ),
+    allRows(
+      DB.prepare(
+        `SELECT id, brand, model, system, type, weight_grains, price_per_arrow, requires_collar,
+                collar_weight_grains, collar_price_per_arrow
+         FROM inserts WHERE active = 1
+         ORDER BY brand, model`
+      )
+    ),
   ]);
 
-  return { shafts, wraps, vanes, points };
+  return { shafts, wraps, vanes, inserts, points };
 }
 
 export async function getShaft(DB: D1Database, id: number) {
@@ -131,6 +139,26 @@ export async function getVane(DB: D1Database, id: number) {
   );
 }
 
+export async function getInsert(DB: D1Database, id: number) {
+  return (await DB.prepare(
+    `SELECT id, brand, model, system, type, weight_grains, price_per_arrow, requires_collar,
+            collar_weight_grains, collar_price_per_arrow, active
+     FROM inserts WHERE id = ?1`
+  ).bind(id).first()) || null;
+}
+
+export async function listInsertsForSystem(DB: D1Database, system: string) {
+  const r = await DB.prepare(
+    `SELECT id, brand, model, system, type, weight_grains, price_per_arrow, requires_collar,
+            collar_weight_grains, collar_price_per_arrow
+     FROM inserts
+     WHERE active = 1 AND system = ?1
+     ORDER BY brand, model`
+  ).bind(system).all();
+  return r.results || [];
+}
+
+
 export async function getPoint(DB: D1Database, id: number) {
   return firstRow(
     DB.prepare(
@@ -142,7 +170,8 @@ export async function getPoint(DB: D1Database, id: number) {
 
 // ---- Validation + pricing ----
 export function validateBuild(args: any) {
-  const { shaft, wrap, vane, point, cut_length, quantity, fletch_count } = args;
+  const { shaft, wrap, vane, point, insert, cut_length, quantity, fletch_count } = args;
+
 
   if (!shaft) return { ok: false, field: "shaft_id", message: "Shaft selection is required." };
   if (!vane) return { ok: false, field: "vane_id", message: "Vane selection is required." };
@@ -159,6 +188,8 @@ export function validateBuild(args: any) {
   if (cut_length > shaft.max_length) return { ok: false, field: "cut_length", message: "Cut length exceeds raw shaft length." };
   if (cut_length < MIN_CUT_LENGTH) return { ok: false, field: "cut_length", message: `Minimum cut length is ${MIN_CUT_LENGTH}".` };
   if (!isIncrement(cut_length, CUT_INCREMENT)) return { ok: false, field: "cut_length", message: `Cut length must be in ${CUT_INCREMENT}" increments.` };
+
+  if (insert && insert.active !== 1) return { ok:false, field:"insert_id", message:"Selected insert is not available." };
 
   if (quantity < MIN_QTY) return { ok: false, field: "quantity", message: `Minimum order is ${MIN_QTY} arrows.` };
   if (quantity % 2 !== 0) return { ok: false, field: "quantity", message: "Quantity must be an even number." };
@@ -186,14 +217,20 @@ export function validateBuild(args: any) {
 }
 
 export function calculatePrice(args: any) {
-  const { shaft, wrap, vane, point, fletch_count, quantity } = args;
+const { shaft, wrap, vane, point, insert, fletch_count, quantity } = args;
+const insertPerArrow =
+  insert
+    ? Number(insert.price_per_arrow || 0) +
+      (insert.requires_collar ? Number(insert.collar_price_per_arrow || 0) : 0)
+    : 0;
 
-  const per_arrow =
-    Number(shaft.price_per_shaft) +
-    (wrap ? Number(wrap.price_per_arrow) : 0) +
-    (Number(vane.price_per_arrow) * fletch_count) +
-    Number(point.price) +
-    BUILD_LABOR_PER_ARROW;
+const per_arrow =
+  Number(shaft.price_per_shaft) +
+  (wrap ? Number(wrap.price_per_arrow) : 0) +
+  (Number(vane.price_per_arrow) * fletch_count) +
+  Number(point.price) +
+  insertPerArrow +
+  BUILD_LABOR_PER_ARROW;
 
   const per = round2(per_arrow);
   const subtotal = round2(per * quantity);
@@ -201,15 +238,17 @@ export function calculatePrice(args: any) {
 }
 
 export function buildSummary(args: any) {
-  const { shaft, wrap, vane, point, cut_length, quantity } = args;
+  const { shaft, wrap, vane, point, insert, cut_length, quantity } = args;
 
   const shaftLabel = `${shaft.brand} ${shaft.model} ${shaft.spine}`;
   const wrapLabel = wrap ? wrap.name : "No wrap";
   const vaneLabel = `${vane.brand} ${vane.model}`;
   const pointLabel = `${point.brand || ""} ${point.model || ""}`.trim() || `${point.type} ${point.weight_grains}gr`;
+  const insertLabel = insert ? `${insert.brand} ${insert.model}` : "No insert";
 
-  return { shaft: shaftLabel, cut_length, wrap: wrapLabel, vane: vaneLabel, point: pointLabel, quantity };
+  return { shaft: shaftLabel, cut_length, wrap: wrapLabel, vane: vaneLabel, point: pointLabel, insert: insertLabel, quantity };
 }
+
 
 // ---------------------- Orders helpers ----------------------
 export async function upsertCustomer(DB: any, { email, name }: { email: string; name?: string }) {
