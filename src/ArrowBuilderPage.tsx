@@ -44,12 +44,26 @@ type Point = {
   price: number;
 };
 
+type Insert = {
+  id: number;
+  brand: string;
+  model: string;
+  system: string; // e.g. ".204", ".166", etc (whatever you used)
+  type: string;   // HIT, half-out, etc
+  weight_grains: number;
+  price_per_arrow: number;
+  requires_collar: number; // 0/1 if coming from D1
+  collar_weight_grains: number | null;
+  collar_price_per_arrow: number | null;
+};
+
 type CatalogResponse = {
   ok: true;
   shafts: Shaft[];
   wraps: Wrap[];
   vanes: Vane[];
   points: Point[];
+  inserts: Insert[];
 };
 
 type PriceResponse =
@@ -77,6 +91,7 @@ type BuilderState = {
   wrap_id?: number | null;
   vane_id?: number;
   point_id?: number;
+  insert_id?: number | null; // ✅ NEW
   quantity: number;
   fletch_count: 3;
 };
@@ -85,7 +100,9 @@ const DEFAULT_STATE: BuilderState = {
   quantity: 6,
   fletch_count: 3,
   wrap_id: null,
+  insert_id: null, // ✅ NEW
 };
+
 
 const API = {
   catalog: "/api/builder/catalog",
@@ -94,8 +111,8 @@ const API = {
 };
 
 // UX constants (match Worker)
-const MIN_QTY = 6;
-const QTY_STEP = 2;
+const MIN_QTY = 6
+const QTY_STEP = 6;
 const CUT_STEP = 0.25;
 
 function formatMoney(n?: number) {
@@ -158,6 +175,7 @@ export default function ArrowBuilderPage() {
   const shafts = catalog?.shafts ?? [];
   const wraps = catalog?.wraps ?? [];
   const vanes = catalog?.vanes ?? [];
+  const inserts = catalog?.inserts ?? [];
   const points = catalog?.points ?? [];
 
   const selectedShaft = useMemo(
@@ -169,6 +187,12 @@ export default function ArrowBuilderPage() {
     [wraps, state.wrap_id]
   );
   const selectedVane = useMemo(() => vanes.find((v) => v.id === state.vane_id), [vanes, state.vane_id]);
+
+  const selectedInsert = useMemo(
+  () => (state.insert_id ? inserts.find((i) => i.id === state.insert_id) : null),
+  [inserts, state.insert_id]
+);
+
   const selectedPoint = useMemo(() => points.find((p) => p.id === state.point_id), [points, state.point_id]);
 
   // Filter wraps by shaft OD
@@ -189,17 +213,41 @@ export default function ArrowBuilderPage() {
   const fieldPoints = useMemo(() => points.filter((p) => p.type === "field"), [points]);
   const broadheads = useMemo(() => points.filter((p) => p.type === "broadhead"), [points]);
 
+  const estimatedTAW = useMemo(() => {
+  if (!selectedShaft || typeof state.cut_length !== "number") return null;
+
+  const shaftGrains = Number(selectedShaft.gpi) * Number(state.cut_length);
+
+  const vaneGrains = selectedVane?.weight_grains ? Number(selectedVane.weight_grains) * 3 : 0;
+
+  const insertGrains =
+    selectedInsert
+      ? Number(selectedInsert.weight_grains) + (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
+      : 0;
+
+  const pointGrains = selectedPoint ? Number(selectedPoint.weight_grains) : 0;
+
+  // wraps table doesn’t include grains yet; treat as 0 for now
+  const wrapGrains = 0;
+
+  const total = shaftGrains + vaneGrains + insertGrains + pointGrains + wrapGrains;
+  return Math.round(total);
+}, [selectedShaft, state.cut_length, selectedVane, selectedInsert, selectedPoint]);
+
+
   // Step completion logic
-  const stepDone = useMemo(() => {
-    return {
-      1: !!state.shaft_id,
-      2: !!state.shaft_id && typeof state.cut_length === "number",
-      3: !!state.shaft_id && typeof state.cut_length === "number", // wrap optional
-      4: !!state.vane_id,
-      5: !!state.point_id,
-      6: !!state.point_id && !!state.vane_id && !!state.shaft_id && typeof state.cut_length === "number",
-    };
-  }, [state]);
+const stepDone = useMemo(() => {
+  return {
+    1: !!state.shaft_id,
+    2: !!state.shaft_id && typeof state.cut_length === "number",
+    3: !!state.shaft_id && typeof state.cut_length === "number", // wrap optional
+    4: !!state.vane_id,
+    5: true, // insert optional (always "done" once unlocked)
+    6: !!state.point_id,
+    7: !!state.point_id && !!state.vane_id && !!state.shaft_id && typeof state.cut_length === "number",
+  };
+}, [state]);
+
 
   // When shaft changes, clear downstream selections that might be incompatible
   useEffect(() => {
@@ -275,6 +323,7 @@ export default function ArrowBuilderPage() {
       wrap_id: state.wrap_id ?? null,
       vane_id: state.vane_id,
       point_id: state.point_id,
+      insert_id: state.insert_id ?? null, // ✅ NEW
       cut_length: state.cut_length,
       quantity: state.quantity,
       fletch_count: state.fletch_count,
@@ -322,6 +371,7 @@ export default function ArrowBuilderPage() {
             shaft_id: state.shaft_id,
             wrap_id: state.wrap_id ?? null,
             vane_id: state.vane_id,
+            insert_id: state.insert_id ?? null, // ✅ NEW
             point_id: state.point_id,
             cut_length: state.cut_length,
             quantity: state.quantity,
@@ -583,13 +633,64 @@ export default function ArrowBuilderPage() {
               </div>
             </Step>
 
+<Step
+  n={5}
+  title="Insert"
+  subtitle="Optional (adds weight + affects total arrow weight)"
+  open={openStep === 5}
+  done={stepDone[5]}
+  disabled={!stepDone[1]}
+  onToggle={() => setOpenStep(openStep === 5 ? 0 : 5)}
+>
+  <div style={styles.cardInner}>
+    <div style={styles.row}>
+      <button
+        onClick={() => setState((s) => ({ ...s, insert_id: null }))}
+        style={pillStyle(state.insert_id == null)}
+      >
+        No insert
+      </button>
+
+      {inserts.map((ins) => (
+        <button
+          key={ins.id}
+          onClick={() => {
+            setState((s) => ({ ...s, insert_id: ins.id }));
+            setOpenStep(7);
+          }}
+          style={pillStyle(state.insert_id === ins.id)}
+        >
+          {ins.brand} {ins.model}
+          <span style={{ opacity: 0.8 }}>
+            {" "}• {ins.weight_grains}gr • +{formatMoney(ins.price_per_arrow)}/arrow
+            {ins.requires_collar ? ` • collar +${ins.collar_weight_grains ?? 0}gr` : ""}
+          </span>
+        </button>
+      ))}
+    </div>
+
+    <div style={styles.help}>
+      Inserts are optional in v1. If the insert requires a collar, it’s included automatically in weight/price.
+    </div>
+
+    {fieldError("insert_id") && <FieldError msg={fieldError("insert_id")!} />}
+
+    <div style={{ marginTop: 12 }}>
+      <button style={primaryButtonStyle(true)} onClick={() => setOpenStep(7)}>
+        Continue
+      </button>
+    </div>
+  </div>
+</Step>
+
+
             <Step
-              n={5}
+              n={6}
               title="Point"
               subtitle="Choose field points or broadheads"
-              open={openStep === 5}
-              done={stepDone[5]}
-              disabled={!stepDone[4]}
+              open={openStep === 6}
+              done={stepDone[6]}
+              disabled={!stepDone[5]}
               onToggle={() => setOpenStep(openStep === 5 ? 0 : 5)}
             >
               <div style={styles.cardInner}>
@@ -607,13 +708,13 @@ export default function ArrowBuilderPage() {
             </Step>
 
             <Step
-              n={6}
+              n={7}
               title="Review"
               subtitle="Confirm + create a draft order"
-              open={openStep === 6}
+              open={openStep === 7}
               done={false}
-              disabled={!stepDone[5]}
-              onToggle={() => setOpenStep(openStep === 6 ? 0 : 6)}
+              disabled={!stepDone[6]}
+              onToggle={() => setOpenStep(openStep === 7 ? 0 : 7)}
             >
               <div style={styles.cardInner}>
                 <div style={styles.reviewGrid}>
@@ -709,7 +810,9 @@ export default function ArrowBuilderPage() {
                 <SummaryLine label="Cut length" value={typeof state.cut_length === "number" ? `${state.cut_length}"` : "—"} />
                 <SummaryLine label="Wrap" value={selectedWrap ? selectedWrap.name : "No wrap"} />
                 <SummaryLine label="Vanes" value={selectedVane ? `${selectedVane.brand} ${selectedVane.model} (3-fletch)` : "—"} />
+                <SummaryLine label="Insert" value={selectedInsert ? `${selectedInsert.brand} ${selectedInsert.model}${selectedInsert.requires_collar ? " (+collar)" : ""}` : "No insert"} />
                 <SummaryLine label="Point" value={selectedPoint ? `${selectedPoint.brand || ""} ${selectedPoint.model || ""}`.trim() || `${selectedPoint.type}` : "—"} />
+                <SummaryLine label="Est. TAW" value={estimatedTAW != null ? `${estimatedTAW} gr` : "—"} />
                 <SummaryLine label="Quantity" value={`${state.quantity}`} />
               </div>
 
