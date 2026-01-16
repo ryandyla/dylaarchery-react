@@ -689,7 +689,14 @@ function imagesFor(type: ProductType, id?: number | null) {
                         {items.map((s) => {
                           const selected = s.id === state.shaft_id;
                           return (
-                            <button key={s.id} onClick={() => selectShaft(s.id)} style={cardButtonStyle(selected)}>
+                            <button
+                                  key={s.id}
+                                  onClick={() => {
+                                    selectShaft(s.id);
+                                    setModal({ type: "shaft", id: s.id, title: `${s.brand} ${s.model} • Spine ${s.spine}` });
+                                  }}
+                                  style={cardButtonStyle(selected)}
+                                >
                               <div style={styles.cardTop}>
                                 <div style={styles.cardTitle}>
                                   {s.brand} {s.model}
@@ -847,15 +854,43 @@ function imagesFor(type: ProductType, id?: number | null) {
                   <button onClick={() => setState((s) => ({ ...s, wrap_id: null }))} style={pillStyle(state.wrap_id == null)}>
                     No wrap
                   </button>
-                  {compatibleWraps.map((w) => (
-                    <button
-                      key={w.id}
-                      onClick={() => setState((s) => ({ ...s, wrap_id: w.id }))}
-                      style={pillStyle(state.wrap_id === w.id)}
-                    >
-                      {w.name} <span style={{ opacity: 0.8 }}>• +{formatMoney(w.price_per_arrow)}/arrow</span>
-                    </button>
-                  ))}
+                    {compatibleWraps.map((w) => {
+                      const active = state.wrap_id === w.id;
+
+                      return (
+                        <div key={w.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <button
+                            onClick={() => {
+                                setState((s) => ({ ...s, wrap_id: w.id }));
+                                setModal({ type: "wrap", id: w.id, title: `${w.name} • ${w.length}"` });
+                              }}
+                            style={pillStyle(active)}
+                          >
+                            {w.name} <span style={{ opacity: 0.8 }}>• +{formatMoney(w.price_per_arrow)}/arrow</span>
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              setModal({
+                                type: "wrap",
+                                id: w.id,
+                                title: `${w.name} • ${w.length}"`,
+                              })
+                            }
+                            style={{
+                              ...miniBtnStyle(),
+                              width: 44,
+                            }}
+                            aria-label={`View ${w.name} images`}
+                            title="View images"
+                          >
+                            📷
+                          </button>
+                        </div>
+                      );
+                    })}
+
+
                 </div>
                 <div style={styles.help}>Wraps auto-filter to your selected shaft OD.</div>
 
@@ -903,7 +938,10 @@ function imagesFor(type: ProductType, id?: number | null) {
                         return (
                           <button
                             key={v.id}
-                            onClick={() => setState((s) => ({ ...s, vane_id: v.id }))}
+                            onClick={() => {
+                                setState((s) => ({ ...s, vane_id: v.id }));
+                                setModal({ type: "vane", id: v.id, title: `${v.brand} ${v.model}` });
+                              }}
                             style={cardButtonStyle(selected)}
                           >
                             <div style={styles.cardTop}>
@@ -957,7 +995,11 @@ function imagesFor(type: ProductType, id?: number | null) {
                   {inserts.map((ins) => (
                     <button
                       key={ins.id}
-                      onClick={() => setState((s) => ({ ...s, insert_id: ins.id }))}
+
+                        onClick={() => {
+                         setState((s) => ({ ...s, insert_id: ins.id }));
+                         setModal({ type: "insert", id: ins.id, title: `${ins.brand} ${ins.model}` });
+                              }}
                       style={pillStyle(state.insert_id === ins.id)}
                     >
                       {ins.brand} {ins.model}
@@ -1186,7 +1228,18 @@ function imagesFor(type: ProductType, id?: number | null) {
           </div>
         </div>
       </div>
+            {modal && (
+                <ProductModal title={modal.title} onClose={() => setModal(null)}>
+                  <ImageCarousel images={imagesFor(modal.type, modal.id)} height={280} />
+                  <div style={{ marginTop: 12, fontSize: 12, opacity: 0.8 }}>
+                    Images are tied to <b>{modal.type}</b> #{modal.id}.
+                  </div>
+                </ProductModal>
+              )}
+
     </div>
+
+    
   );
 }
 
@@ -1312,18 +1365,6 @@ function PointPicker(props: {
     </div>
   );
 }
-
-{modal && (
-  <ProductModal
-    title={modal.title}
-    onClose={() => setModal(null)}
-  >
-    <ImageCarousel images={imagesFor(modal.type, modal.id)} height={280} />
-    <div style={{ marginTop: 12, fontSize: 12, opacity: 0.8 }}>
-      Images are tied to <b>{modal.type}</b> #{modal.id}.
-    </div>
-  </ProductModal>
-)}
 
 function ProductModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
