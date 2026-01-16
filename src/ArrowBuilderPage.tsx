@@ -124,6 +124,21 @@ type DraftResponse =
   | { ok: true; order_id: number; build_id: number; status: string; price: { per_arrow: number; subtotal: number } }
   | { ok: false; field?: string; message: string };
 
+const VANE_COLORS = [
+  "White",
+  "Blue",
+  "Teal",
+  "Green (Fluorescent)",
+  "Pink (Fluorescent)",
+  "Orange (Fluorescent)",
+  "Yellow (Fluorescent)",
+  "Red (Fluorescent)",
+  "Purple",
+  "Black",
+] as const;
+
+type VaneColor = (typeof VANE_COLORS)[number];
+
 // ---------------------- Builder state ----------------------
 
 type BuilderState = {
@@ -173,21 +188,6 @@ const API = {
 // UX constants
 const CUT_STEP = 0.25;
 
-const VANE_COLORS = [
-  "White",
-  "Blue",
-  "Teal",
-  "Green (Fluorescent)",
-  "Pink (Fluorescent)",
-  "Orange (Fluorescent)",
-  "Yellow (Fluorescent)",
-  "Red (Fluorescent)",
-  "Purple",
-  "Black",
-] as const;
-
-type VaneColor = (typeof VANE_COLORS)[number];
-
 
 // ---------------------- Helpers ----------------------
 
@@ -204,18 +204,18 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) {
   };
 }
 
-function groupShafts(shafts: Shaft[]) {
-  const map = new Map<string, Shaft[]>();
-  for (const s of shafts) {
-    const key = `${s.brand} ${s.model}`;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
-  }
-  return Array.from(map.entries()).map(([key, items]) => ({
-    key,
-    items: items.slice().sort((a, b) => a.spine - b.spine),
-  }));
-}
+// function groupShafts(shafts: Shaft[]) {
+//   const map = new Map<string, Shaft[]>();
+//   for (const s of shafts) {
+//     const key = `${s.brand} ${s.model}`;
+//     if (!map.has(key)) map.set(key, []);
+//     map.get(key)!.push(s);
+//   }
+//   return Array.from(map.entries()).map(([key, items]) => ({
+//     key,
+//     items: items.slice().sort((a, b) => a.spine - b.spine),
+//   }));
+// }
 
 function groupShaftsByBrandModel(shafts: Shaft[]) {
   // brand -> model -> Shaft[]
@@ -253,6 +253,14 @@ function groupShaftsByBrandModel(shafts: Shaft[]) {
 
   return out;
 }
+
+  const shafts = catalog?.shafts ?? [];
+  const wraps = catalog?.wraps ?? [];
+  const vanes = catalog?.vanes ?? [];
+  const inserts = catalog?.inserts ?? [];
+  const points = catalog?.points ?? [];
+  const nocks = catalog?.nocks ?? [];
+  const productImages = catalog?.product_images ?? [];
 
 // ---------------------- Page ----------------------
 
@@ -313,13 +321,7 @@ export default function ArrowBuilderPage() {
     })();
   }, []);
 
-  const shafts = catalog?.shafts ?? [];
-  const wraps = catalog?.wraps ?? [];
-  const vanes = catalog?.vanes ?? [];
-  const inserts = catalog?.inserts ?? [];
-  const points = catalog?.points ?? [];
-  const nocks = catalog?.nocks ?? [];
-  const productImages = catalog?.product_images ?? [];
+
 
 const imagesByKey = useMemo(() => {
   const m = new Map<string, ProductImage[]>();
@@ -1271,13 +1273,14 @@ function imagesFor(type: ProductType, id?: number | null) {
           </div>
 
           {/* RIGHT: sticky summary */}
+
+          <div style={styles.right}>
+
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontWeight: 950, marginBottom: 8 }}>Model preview</div>
                   <ImageCarousel images={imagesFor("shaft", state.shaft_id ?? null)} height={220} />
                 </div>
 
-
-          <div style={styles.right}>
             <div style={styles.summaryCard}>
               <div style={styles.summaryTitle}>Build summary</div>
 
