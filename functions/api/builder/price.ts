@@ -61,7 +61,6 @@ export const onRequest = async ({ request, env }: any) => {
 
     // Only validate cut_length as a number when cutting
     const mode: "uncut" | "cut" = cut_mode === "cut" ? "cut" : "uncut";
-    const UN = args.uncut_sentinel ?? 99;
 
     if (cut_mode === "cut" && cut_length != null && !Number.isFinite(cut_length)) {
       return badRequest("cut_length must be a number.", "cut_length");
