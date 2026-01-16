@@ -1,0 +1,12 @@
+name = "dylaarchery-react"
+main = "src/main.tsx" # change to your actual Worker entry (or functions entry)
+compatibility_date = "2026-01-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dylaarchery" # change to your actual D1 name
+database_id = "56fe49d2-c37b-43b1-bbcc-ac63ebccf7b8"       # from CF dashboard
+
+[[r2_buckets]]
+binding = "PRODUCT_IMAGES"
+bucket_name = "dylaarchery-images"
