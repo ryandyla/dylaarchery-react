@@ -271,115 +271,91 @@ export default function ArrowBuilderPage() {
   const fieldPoints = useMemo(() => points.filter((p) => p.type === "field"), [points]);
   const broadheads = useMemo(() => points.filter((p) => p.type === "broadhead"), [points]);
 
-  // Estimated total arrow weight (only meaningful if cut length is known)
-  const estimatedTAW = useMemo(() => {
-    if (!selectedShaft) return null;
-    const cutLen = state.cut_mode === "cut" ? state.cut_length : null;
-    if (typeof cutLen !== "number") return null;
+  // Estimated total arrow weight and FOC calculator (only meaningful if cut length is known)
+ const VANE_CENTER_FROM_NOCK_IN = 1.75; // tweak 1.5–2.0 to your preference
 
-    const VANE_CENTER_FROM_NOCK_IN = 1.75; // tweak 1.5–2.0 to your preference
+  const estimated = useMemo(() => {
+    // Need a length to compute weight/FOC.
+    // If "uncut", we can either show null or use shaft.max_length as an estimate.
+    if (!selectedShaft) return { taw: null as number | null, foc: null as number | null };
 
-    // Estimated TAW and FOC calculation
-    const estimated = useMemo(() => {
-      // Need a length to compute weight/FOC.
-      // If "uncut", we can either show null or use shaft.max_length as an estimate.
-      if (!selectedShaft) return { taw: null as number | null, foc: null as number | null };
+    const L =
+      state.cut_mode === "cut" && typeof state.cut_length === "number"
+        ? Number(state.cut_length)
+        : null;
 
-      const L =
-        state.cut_mode === "cut" && typeof state.cut_length === "number"
-          ? Number(state.cut_length)
-          : null;
+    if (!L || !Number.isFinite(L) || L <= 0) {
+      // Uncut or missing length → no FOC/TAW
+      return { taw: null, foc: null };
+    }
 
-      if (!L || !Number.isFinite(L) || L <= 0) {
-        // Uncut or missing length → no FOC/TAW
-        return { taw: null, foc: null };
-      }
+    // --- weights (grains) ---
+    const shaftGr = Number(selectedShaft.gpi) * L;
 
-      // --- weights (grains) ---
-      const shaftGr = Number(selectedShaft.gpi) * L;
+    const wrapGr = selectedWrap ? Number(selectedWrap.weight_grains || 0) : 0;
 
-      const wrapGr = selectedWrap ? Number(selectedWrap.weight_grains || 0) : 0;
+    const vaneEach = selectedVane?.weight_grains ? Number(selectedVane.weight_grains) : 0;
+    const vaneGr =
+      state.fletch_count === 0 ? 0 : vaneEach * Number(state.fletch_count || 0);
 
-      const vaneEach = selectedVane?.weight_grains ? Number(selectedVane.weight_grains) : 0;
-      const vaneGr =
-        state.fletch_count === 0 ? 0 : vaneEach * Number(state.fletch_count || 0);
+    const nockGr = selectedNock ? Number(selectedNock.weight_grains || 0) : 0;
 
-      const nockGr = selectedNock ? Number(selectedNock.weight_grains || 0) : 0;
-
-      const insertGr =
-        selectedInsert
-          ? Number(selectedInsert.weight_grains) +
-            (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
-          : 0;
-
-      const pointGr = selectedPoint ? Number(selectedPoint.weight_grains || 0) : 0;
-
-      const totalGr = shaftGr + wrapGr + vaneGr + nockGr + insertGr + pointGr;
-      const taw = Number.isFinite(totalGr) ? Math.round(totalGr) : null;
-
-      if (!taw || taw <= 0) return { taw: null, foc: null };
-
-      // --- positions (inches from nock throat) ---
-      // Shaft is distributed: COG at L/2
-      const shaftX = L / 2;
-
-      // Wrap is distributed from 0..wrapLen => COG at wrapLen/2
-      const wrapLen = selectedWrap ? Number(selectedWrap.length || 0) : 0;
-      const wrapX = wrapLen > 0 ? wrapLen / 2 : 0;
-
-      // Vanes: assume their mass is centered around a fixed distance from nock
-      const vaneX = VANE_CENTER_FROM_NOCK_IN;
-
-      // Nock at 0
-      const nockX = 0;
-
-      // Insert + point near the front (very good approximation)
-      const frontX = L;
-
-      // Weighted average for balance point (COG)
-      const sumWX =
-        shaftGr * shaftX +
-        wrapGr * wrapX +
-        vaneGr * vaneX +
-        nockGr * nockX +
-        insertGr * frontX +
-        pointGr * frontX;
-
-      const balance = sumWX / totalGr;
-
-      const foc = ((balance - L / 2) / L) * 100;
-      const focRounded = Number.isFinite(foc) ? Math.round(foc * 10) / 10 : null;
-
-      return { taw, foc: focRounded };
-    }, [
-      selectedShaft,
-      selectedWrap,
-      selectedVane,
-      selectedNock,
-      selectedInsert,
-      selectedPoint,
-      state.cut_mode,
-      state.cut_length,
-      state.fletch_count,
-    ]);
-
-    const shaftGrains = Number(selectedShaft.gpi) * Number(cutLen);
-    const vaneGrains =
-      state.fletch_count > 0 && selectedVane?.weight_grains
-        ? Number(selectedVane.weight_grains) * state.fletch_count
+    const insertGr =
+      selectedInsert
+        ? Number(selectedInsert.weight_grains) +
+          (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
         : 0;
 
-    const insertGrains = selectedInsert
-      ? Number(selectedInsert.weight_grains) +
-        (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
-      : 0;
+    const pointGr = selectedPoint ? Number(selectedPoint.weight_grains || 0) : 0;
 
-    const pointGrains = selectedPoint ? Number(selectedPoint.weight_grains) : 0;
-    const wrapGrains = 0;
+    const totalGr = shaftGr + wrapGr + vaneGr + nockGr + insertGr + pointGr;
+    const taw = Number.isFinite(totalGr) ? Math.round(totalGr) : null;
 
-    const total = shaftGrains + vaneGrains + insertGrains + pointGrains + wrapGrains;
-    return Math.round(total);
-  }, [selectedShaft, state.cut_mode, state.cut_length, state.fletch_count, selectedVane, selectedInsert, selectedPoint]);
+    if (!taw || taw <= 0) return { taw: null, foc: null };
+
+    // --- positions (inches from nock throat) ---
+    // Shaft is distributed: COG at L/2
+    const shaftX = L / 2;
+
+    // Wrap is distributed from 0..wrapLen => COG at wrapLen/2
+    const wrapLen = selectedWrap ? Number(selectedWrap.length || 0) : 0;
+    const wrapX = wrapLen > 0 ? wrapLen / 2 : 0;
+
+    // Vanes: assume their mass is centered around a fixed distance from nock
+    const vaneX = VANE_CENTER_FROM_NOCK_IN;
+
+    // Nock at 0
+    const nockX = 0;
+
+    // Insert + point near the front (very good approximation)
+    const frontX = L;
+
+    // Weighted average for balance point (COG)
+    const sumWX =
+      shaftGr * shaftX +
+      wrapGr * wrapX +
+      vaneGr * vaneX +
+      nockGr * nockX +
+      insertGr * frontX +
+      pointGr * frontX;
+
+    const balance = sumWX / totalGr;
+
+    const foc = ((balance - L / 2) / L) * 100;
+    const focRounded = Number.isFinite(foc) ? Math.round(foc * 10) / 10 : null;
+
+    return { taw, foc: focRounded };
+  }, [
+    selectedShaft,
+    selectedWrap,
+    selectedVane,
+    selectedNock,
+    selectedInsert,
+    selectedPoint,
+    state.cut_mode,
+    state.cut_length,
+    state.fletch_count,
+  ]);
 
   // Step completion logic (only Shaft required; Cut can be uncut)
   const stepDone = useMemo(() => {
