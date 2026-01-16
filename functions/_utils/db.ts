@@ -71,6 +71,7 @@ export async function allRows(stmt: D1PreparedStatement) {
 // ---- DB fetchers ----
 export async function getCatalog(DB: D1Database) {
   const [shafts, wraps, vanes, points, inserts, nocks] = await Promise.all([
+    // shafts
     allRows(
       DB.prepare(
         `SELECT id, brand, model, spine, gpi, inner_diameter, outer_diameter, max_length, straightness, price_per_shaft
@@ -78,13 +79,15 @@ export async function getCatalog(DB: D1Database) {
          ORDER BY brand, model, spine`
       )
     ),
+    // wraps
     allRows(
       DB.prepare(
-        `SELECT id, name, length, min_outer_diameter, max_outer_diameter, price_per_arrow
-         FROM wraps WHERE active = 1
-         ORDER BY name`
+        `SELECT id, name, length, min_outer_diameter, max_outer_diameter, weight_grains, price_per_arrow
+        FROM wraps WHERE active = 1
+        ORDER BY name`
       )
     ),
+    // vanes
     allRows(
       DB.prepare(
         `SELECT id, brand, model, length, height, weight_grains, profile, compatible_micro, price_per_arrow
@@ -92,6 +95,7 @@ export async function getCatalog(DB: D1Database) {
          ORDER BY brand, model`
       )
     ),
+    // points
     allRows(
       DB.prepare(
         `SELECT id, type, brand, model, weight_grains, thread, price
@@ -99,6 +103,7 @@ export async function getCatalog(DB: D1Database) {
          ORDER BY type, brand, model, weight_grains`
       )
     ),
+    // inserts
     allRows(
       DB.prepare(
         `SELECT id, brand, model, system, type, weight_grains, price_per_arrow, requires_collar,
@@ -107,11 +112,12 @@ export async function getCatalog(DB: D1Database) {
          ORDER BY brand, model`
       )
     ),
+    // nocks
     allRows(
       DB.prepare(
-        `SELECT id, brand, model, system, style, price_per_arrow, active
-         FROM nocks WHERE active = 1
-         ORDER BY brand, model`
+        `SELECT id, brand, model, system, style, weight_grains, price_per_arrow, active
+        FROM nocks WHERE active = 1
+        ORDER BY brand, model`
       )
     ),
   ]);

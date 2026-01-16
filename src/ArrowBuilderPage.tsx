@@ -40,6 +40,7 @@ type Wrap = {
   length: number;
   min_outer_diameter: number;
   max_outer_diameter: number;
+  weight_grains: number;      // ✅ NEW
   price_per_arrow: number;
 };
 
@@ -78,12 +79,13 @@ type Insert = {
   collar_price_per_arrow: number | null;
 };
 
-// If you haven’t added nocks to catalog yet, leave this as-is; step will just show “Not wired yet”.
 type Nock = {
   id: number;
   brand: string;
   model: string;
-  system: string; // e.g. "standard", "pin", etc
+  system: string;
+  style: string;
+  weight_grains: number;      
   price_per_arrow: number;
 };
 
@@ -94,8 +96,7 @@ type CatalogResponse = {
   vanes: Vane[];
   points: Point[];
   inserts: Insert[];
-  // Optional – only if/when you add it to /api/builder/catalog
-  nocks?: Nock[];
+  nocks: Nock[];              
 };
 
 type PriceResponse =
@@ -248,7 +249,7 @@ export default function ArrowBuilderPage() {
     [points, state.point_id]
   );
   const selectedNock = useMemo(
-    () => (state.nock_id ? nocks.find((n) => n.id === state.nock_id) ?? null : null),
+    () => (state.nock_id ? nocks.find((n) => n.id === state.nock_id) : null),
     [nocks, state.nock_id]
   );
 
@@ -275,6 +276,92 @@ export default function ArrowBuilderPage() {
     if (!selectedShaft) return null;
     const cutLen = state.cut_mode === "cut" ? state.cut_length : null;
     if (typeof cutLen !== "number") return null;
+
+    const VANE_CENTER_FROM_NOCK_IN = 1.75; // tweak 1.5–2.0 to your preference
+
+    // Estimated TAW and FOC calculation
+    const estimated = useMemo(() => {
+      // Need a length to compute weight/FOC.
+      // If "uncut", we can either show null or use shaft.max_length as an estimate.
+      if (!selectedShaft) return { taw: null as number | null, foc: null as number | null };
+
+      const L =
+        state.cut_mode === "cut" && typeof state.cut_length === "number"
+          ? Number(state.cut_length)
+          : null;
+
+      if (!L || !Number.isFinite(L) || L <= 0) {
+        // Uncut or missing length → no FOC/TAW
+        return { taw: null, foc: null };
+      }
+
+      // --- weights (grains) ---
+      const shaftGr = Number(selectedShaft.gpi) * L;
+
+      const wrapGr = selectedWrap ? Number(selectedWrap.weight_grains || 0) : 0;
+
+      const vaneEach = selectedVane?.weight_grains ? Number(selectedVane.weight_grains) : 0;
+      const vaneGr =
+        state.fletch_count === 0 ? 0 : vaneEach * Number(state.fletch_count || 0);
+
+      const nockGr = selectedNock ? Number(selectedNock.weight_grains || 0) : 0;
+
+      const insertGr =
+        selectedInsert
+          ? Number(selectedInsert.weight_grains) +
+            (selectedInsert.requires_collar ? Number(selectedInsert.collar_weight_grains ?? 0) : 0)
+          : 0;
+
+      const pointGr = selectedPoint ? Number(selectedPoint.weight_grains || 0) : 0;
+
+      const totalGr = shaftGr + wrapGr + vaneGr + nockGr + insertGr + pointGr;
+      const taw = Number.isFinite(totalGr) ? Math.round(totalGr) : null;
+
+      if (!taw || taw <= 0) return { taw: null, foc: null };
+
+      // --- positions (inches from nock throat) ---
+      // Shaft is distributed: COG at L/2
+      const shaftX = L / 2;
+
+      // Wrap is distributed from 0..wrapLen => COG at wrapLen/2
+      const wrapLen = selectedWrap ? Number(selectedWrap.length || 0) : 0;
+      const wrapX = wrapLen > 0 ? wrapLen / 2 : 0;
+
+      // Vanes: assume their mass is centered around a fixed distance from nock
+      const vaneX = VANE_CENTER_FROM_NOCK_IN;
+
+      // Nock at 0
+      const nockX = 0;
+
+      // Insert + point near the front (very good approximation)
+      const frontX = L;
+
+      // Weighted average for balance point (COG)
+      const sumWX =
+        shaftGr * shaftX +
+        wrapGr * wrapX +
+        vaneGr * vaneX +
+        nockGr * nockX +
+        insertGr * frontX +
+        pointGr * frontX;
+
+      const balance = sumWX / totalGr;
+
+      const foc = ((balance - L / 2) / L) * 100;
+      const focRounded = Number.isFinite(foc) ? Math.round(foc * 10) / 10 : null;
+
+      return { taw, foc: focRounded };
+    }, [
+      selectedShaft,
+      selectedWrap,
+      selectedVane,
+      selectedNock,
+      selectedInsert,
+      selectedPoint,
+      state.cut_mode,
+      state.cut_length,
+      state.fletch_count,
+    ]);
 
     const shaftGrains = Number(selectedShaft.gpi) * Number(cutLen);
     const vaneGrains =
@@ -1025,7 +1112,8 @@ export default function ArrowBuilderPage() {
                       : "None"
                   }
                 />
-                <SummaryLine label="Est. TAW" value={estimatedTAW != null ? `${estimatedTAW} gr` : "—"} />
+                <SummaryLine label="Est. TAW" value={estimated.taw != null ? `${estimated.taw} gr` : "—"} />
+                <SummaryLine label="Est. FOC" value={estimated.foc != null ? `${estimated.foc}%` : "—"} />
                 <SummaryLine label="Quantity" value={`${state.quantity}`} />
               </div>
 

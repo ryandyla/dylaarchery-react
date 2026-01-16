@@ -17,8 +17,6 @@ import {
   validateBuild,
 } from "../../_utils/db";
 
-const UNCUT_SENTINEL = 99;
-
 export const onRequest = async ({ request, env }: any) => {
   try {
     const cors = corsHeaders(request);
@@ -40,32 +38,19 @@ export const onRequest = async ({ request, env }: any) => {
 
     if (!email) return badRequest("Email is required.", "customer.email");
 
-    // ---- Build inputs (all optional except shaft + quantity) ----
     const shaft_id = Number(build.shaft_id);
     const wrap_id = build.wrap_id == null ? null : Number(build.wrap_id);
-
     const vane_id = build.vane_id == null ? null : Number(build.vane_id);
     const insert_id = build.insert_id == null ? null : Number(build.insert_id);
     const point_id = build.point_id == null ? null : Number(build.point_id);
     const nock_id = build.nock_id == null ? null : Number(build.nock_id);
 
-    const quantity = Number(build.quantity);
-
-    // Allow 0/3/4 (default 0 = no vanes)
-    const fletch_count = build.fletch_count == null ? 0 : Number(build.fletch_count);
-
-    // Cut handling: use cut_mode + sentinel 99 when uncut
-    const cut_mode: "uncut" | "cut" = build.cut_mode === "cut" ? "cut" : "uncut";
+    // cut_length should already be nullable when uncut
     const cut_length = build.cut_length == null ? null : Number(build.cut_length);
 
-    if (cut_mode === "cut" && (cut_length == null || !Number.isFinite(cut_length))) {
-      return badRequest("cut_length is required when cut_mode is 'cut'.", "build.cut_length");
-    }
-    if (cut_mode === "uncut" && cut_length != null) {
-      return badRequest("cut_length must be null when cut_mode is 'uncut'.", "build.cut_length");
-    }
+    const quantity = Number(build.quantity);
+    const fletch_count = build.fletch_count == null ? 3 : Number(build.fletch_count);
 
-    // ---- Type checks ----
     if (!Number.isInteger(shaft_id)) return badRequest("shaft_id must be an integer.", "build.shaft_id");
     if (wrap_id != null && !Number.isInteger(wrap_id)) return badRequest("wrap_id must be an integer.", "build.wrap_id");
     if (vane_id != null && !Number.isInteger(vane_id)) return badRequest("vane_id must be an integer.", "build.vane_id");
@@ -73,15 +58,7 @@ export const onRequest = async ({ request, env }: any) => {
     if (point_id != null && !Number.isInteger(point_id)) return badRequest("point_id must be an integer.", "build.point_id");
     if (nock_id != null && !Number.isInteger(nock_id)) return badRequest("nock_id must be an integer.", "build.nock_id");
 
-    if (!Number.isFinite(quantity)) return badRequest("quantity must be a number.", "build.quantity");
-    if (!Number.isFinite(fletch_count)) return badRequest("fletch_count must be a number.", "build.fletch_count");
-
-    // If cutting, cut_length must be a number
-    if (cut_mode === "cut" && (cut_length == null || !Number.isFinite(cut_length))) {
-      return badRequest("cut_length is required when cut_mode is 'cut'.", "build.cut_length");
-    }
-
-    // ---- Fetch referenced items ----
+    // Fetch referenced items
     const [shaft, wrap, vane, insert, point, nock] = await Promise.all([
       getShaft(DB, shaft_id),
       wrap_id != null ? getWrap(DB, wrap_id) : Promise.resolve(null),
@@ -98,15 +75,14 @@ export const onRequest = async ({ request, env }: any) => {
     if (point_id != null && !point) return badRequest("Selected point not found.", "build.point_id");
     if (nock_id != null && !nock) return badRequest("Selected nock not found.", "build.nock_id");
 
-    // ---- Validate (backend is source of truth) ----
-    const v = validateBuild({ shaft, wrap, vane, insert, point, nock, cut_mode, cut_length, quantity, fletch_count });
-
+    // Validate (your db.ts validateBuild now supports insert/nock + nullable cut_length if you updated it)
+    const v = validateBuild({ shaft, wrap, vane, insert, point, nock, cut_length, quantity, fletch_count });
     if (!v.ok) return json(v, 400, cors);
 
-    // ---- Price snapshot ----
+    // Price snapshot
     const price = calculatePrice({ shaft, wrap, vane, insert, point, nock, fletch_count, quantity });
 
-    // ---- Write order data ----
+    // Write order data
     const cust = await upsertCustomer(DB, { email, name });
     if (!cust) return badRequest("Invalid email.", "customer.email");
 
@@ -120,7 +96,7 @@ export const onRequest = async ({ request, env }: any) => {
       insert_id,
       point_id,
       nock_id,
-      cut_length, 
+      cut_length: cut_length ?? 0, // if your schema still requires NOT NULL, keep this as a safe fallback
       quantity,
       fletch_count,
       price_per_arrow: price.per_arrow,
