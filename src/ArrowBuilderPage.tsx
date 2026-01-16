@@ -803,15 +803,15 @@ function imagesFor(type: ProductType, id?: number | null) {
                         <tr
                           key={`${m.brand}:${m.model}`}
                           onClick={() => {
-                            // selecting model: pick a default spine (closest to mid)
-                            const defaultShaft = m.spines[Math.floor(m.spines.length / 2)];
-                            setState((s) => ({
-                              ...DEFAULT_STATE,
-                              shaft_id: defaultShaft.id,
-                              quantity: s.quantity === 12 ? 12 : 6,
-                            }));
-                            setOpenStep(2);
-                          }}
+                              const defaultShaft = m.spines[Math.floor(m.spines.length / 2)];
+                              setState((s) => ({
+                                ...DEFAULT_STATE,
+                                shaft_id: defaultShaft.id,
+                                quantity: s.quantity === 12 ? 12 : 6,
+                              }));
+                              setOpenStep(1); // keep shaft step open so they can pick spine
+                            }}
+
                           style={{
                             ...styles.tr,
                             background: isSelectedModel ? "rgba(255,212,0,.08)" : "transparent",
@@ -850,7 +850,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                       const id = Number(e.target.value);
                       if (!Number.isFinite(id)) return;
                       setState((s) => ({ ...s, shaft_id: id }));
-                      setOpenStep(2);
+                      setOpenStep(2); // NOW advance
                     }}
                   >
                     {selectedModelGroup.spines.map((s) => (
