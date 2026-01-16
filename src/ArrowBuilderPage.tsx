@@ -217,6 +217,43 @@ function groupShafts(shafts: Shaft[]) {
   }));
 }
 
+function groupShaftsByBrandModel(shafts: Shaft[]) {
+  // brand -> model -> Shaft[]
+  const brands = new Map<string, Map<string, Shaft[]>>();
+
+  for (const s of shafts) {
+    if (!brands.has(s.brand)) brands.set(s.brand, new Map());
+    const models = brands.get(s.brand)!;
+    if (!models.has(s.model)) models.set(s.model, []);
+    models.get(s.model)!.push(s);
+  }
+
+  // Return a stable array shape
+  const out = Array.from(brands.entries()).map(([brand, models]) => {
+    const modelRows = Array.from(models.entries()).map(([model, items]) => {
+      const spines = items.slice().sort((a, b) => a.spine - b.spine);
+      return { brand, model, spines };
+    });
+
+    // Sort models by name
+    modelRows.sort((a, b) => a.model.localeCompare(b.model));
+    return { brand, models: modelRows };
+  });
+
+  // Sort brands in your preferred order
+  const preferred = ["Easton", "Victory", "Black Eagle", "Gold Tip"];
+  out.sort((a, b) => {
+    const ai = preferred.indexOf(a.brand);
+    const bi = preferred.indexOf(b.brand);
+    if (ai === -1 && bi === -1) return a.brand.localeCompare(b.brand);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  return out;
+}
+
 // ---------------------- Page ----------------------
 
 export default function ArrowBuilderPage() {
@@ -225,6 +262,26 @@ export default function ArrowBuilderPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
 
   const [state, setState] = useState<BuilderState>({ ...DEFAULT_STATE });
+
+  const grouped = useMemo(() => groupShaftsByBrandModel(shafts), [shafts]);
+
+  const [openBrand, setOpenBrand] = useState<string>("Easton"); // default
+  const selectedShaft = useMemo(
+    () => shafts.find((s) => s.id === state.shaft_id) ?? null,
+    [shafts, state.shaft_id]
+  );
+
+  const selectedBrand = selectedShaft?.brand ?? openBrand;
+  const selectedModel = selectedShaft?.model ?? null;
+
+  // Find the current model group (so we can show spine options)
+  const selectedModelGroup = useMemo(() => {
+  const b = grouped.find((x) => x.brand === selectedBrand);
+  if (!b) return null;
+  if (!selectedModel) return null;
+  return b.models.find((m) => m.model === selectedModel) ?? null;
+}, [grouped, selectedBrand, selectedModel]);
+
 
   const [pricing, setPricing] = useState<{ per_arrow?: number; subtotal?: number }>({});
   const [serverErr, setServerErr] = useState<{ field?: string; message: string } | null>(null);
@@ -284,10 +341,10 @@ function imagesFor(type: ProductType, id?: number | null) {
   return imagesByKey.get(`${type}:${id}`) ?? [];
 }
 
-  const selectedShaft = useMemo(
-    () => shafts.find((s) => s.id === state.shaft_id) ?? null,
-    [shafts, state.shaft_id]
-  );
+  // const selectedShaft = useMemo(
+  //   () => shafts.find((s) => s.id === state.shaft_id) ?? null,
+  //   [shafts, state.shaft_id]
+  // );
   const selectedWrap = useMemo(
     () => (state.wrap_id ? wraps.find((w) => w.id === state.wrap_id) ?? null : null),
     [wraps, state.wrap_id]
@@ -672,55 +729,141 @@ function imagesFor(type: ProductType, id?: number | null) {
           <div style={styles.left}>
             {/* 1) Shaft */}
             <Step
-              n={1}
-              title="Shaft"
-              subtitle="Choose brand/model/spine"
-              open={openStep === 1}
-              done={stepDone[1]}
-              onToggle={() => setOpenStep(openStep === 1 ? 0 : 1)}
-            >
-              <div style={styles.cardInner}>
-                <div style={styles.cardHint}>Pick a shaft first — everything else is optional.</div>
-                <div style={styles.cards}>
-                  {groupShafts(shafts).map(({ key, items }) => (
-                    <div key={key} style={{ marginBottom: 14 }}>
-                      <div style={styles.groupTitle}>{key}</div>
-                      <div style={styles.cards}>
-                        {items.map((s) => {
-                          const selected = s.id === state.shaft_id;
-                          return (
-                            <button
-                                  key={s.id}
-                                  onClick={() => {
-                                    selectShaft(s.id);
-                                    setModal({ type: "shaft", id: s.id, title: `${s.brand} ${s.model} • Spine ${s.spine}` });
-                                  }}
-                                  style={cardButtonStyle(selected)}
-                                >
-                              <div style={styles.cardTop}>
-                                <div style={styles.cardTitle}>
-                                  {s.brand} {s.model}
-                                </div>
-                                <div style={styles.badge}>Spine {s.spine}</div>
-                              </div>
-                              <div style={styles.cardMeta}>
-                                <span>{s.gpi} GPI</span>
-                                <span>•</span>
-                                <span>{s.straightness || "—"}</span>
-                                <span>•</span>
-                                <span>Max {s.max_length}"</span>
-                              </div>
-                              <div style={styles.cardPrice}>Shaft {formatMoney(s.price_per_shaft)}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {fieldError("shaft_id") && <FieldError msg={fieldError("shaft_id")!} />}
+  n={1}
+  title="Shaft"
+  subtitle="Choose model, then spine"
+  open={openStep === 1}
+  done={stepDone[1]}
+  onToggle={() => setOpenStep(openStep === 1 ? 0 : 1)}
+>
+  <div style={styles.cardInner}>
+    <div style={styles.cardHint}>Pick a model first, then choose spine.</div>
+
+    {grouped.map((brandBlock) => {
+      const isOpen = openBrand === brandBlock.brand;
+
+      return (
+        <div key={brandBlock.brand} style={{ marginBottom: 12 }}>
+          {/* Brand header */}
+          <button
+            onClick={() => setOpenBrand(isOpen ? "" : brandBlock.brand)}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 12px",
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,.12)",
+              background: isOpen ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.12)",
+              color: "rgba(255,255,255,.92)",
+              cursor: "pointer",
+              fontWeight: 950,
+            }}
+          >
+            <span>{brandBlock.brand}</span>
+            <span style={{ opacity: 0.8 }}>{isOpen ? "▾" : "▸"}</span>
+          </button>
+
+          {/* Brand table */}
+          {isOpen && (
+            <div style={{ marginTop: 10 }}>
+              <div style={styles.tableWrap}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Model</th>
+                      <th style={styles.th}>GPI</th>
+                      <th style={styles.th}>OD</th>
+                      <th style={styles.th}>Max</th>
+                      <th style={styles.th}>Spines</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brandBlock.models.map((m) => {
+                      const isSelectedModel =
+                        selectedBrand === m.brand && selectedModel === m.model;
+
+                      const gpiRange =
+                        m.spines.length > 1
+                          ? `${Math.min(...m.spines.map((x) => x.gpi))}-${Math.max(...m.spines.map((x) => x.gpi))}`
+                          : `${m.spines[0].gpi}`;
+
+                      // show a short spine list (e.g. 250,300,340…)
+                      const spineList = m.spines.map((x) => x.spine).join(", ");
+
+                      return (
+                        <tr
+                          key={`${m.brand}:${m.model}`}
+                          onClick={() => {
+                            // selecting model: pick a default spine (closest to mid)
+                            const defaultShaft = m.spines[Math.floor(m.spines.length / 2)];
+                            setState((s) => ({
+                              ...DEFAULT_STATE,
+                              shaft_id: defaultShaft.id,
+                              quantity: s.quantity === 12 ? 12 : 6,
+                            }));
+                            setOpenStep(2);
+                          }}
+                          style={{
+                            ...styles.tr,
+                            background: isSelectedModel ? "rgba(255,212,0,.08)" : "transparent",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <td style={styles.td}>
+                            <div style={{ fontWeight: 950 }}>{m.model}</div>
+                            <div style={{ fontSize: 12, opacity: 0.7 }}>
+                              {m.brand}
+                            </div>
+                          </td>
+                          <td style={styles.td}>{gpiRange}</td>
+                          <td style={styles.td}>{m.spines[0].outer_diameter}</td>
+                          <td style={styles.td}>{m.spines[0].max_length}"</td>
+                          <td style={styles.td} title={spineList}>
+                            <span style={{ opacity: 0.85 }}>
+                              {m.spines.length} options
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </Step>
+
+              {/* Spine picker for the selected model */}
+              {selectedModelGroup && (
+                <div style={{ marginTop: 10 }}>
+                  <label style={styles.label}>Spine</label>
+                  <select
+                    style={{ ...styles.input, padding: "10px 12px" }}
+                    value={state.shaft_id ?? ""}
+                    onChange={(e) => {
+                      const id = Number(e.target.value);
+                      if (!Number.isFinite(id)) return;
+                      setState((s) => ({ ...s, shaft_id: id }));
+                      setOpenStep(2);
+                    }}
+                  >
+                    {selectedModelGroup.spines.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.spine} • {s.gpi} GPI • {formatMoney(s.price_per_shaft)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    })}
+
+    {fieldError("shaft_id") && <FieldError msg={fieldError("shaft_id")!} />}
+  </div>
+</Step>
+
 
             {/* 2) Cut */}
             <Step
@@ -1128,6 +1271,12 @@ function imagesFor(type: ProductType, id?: number | null) {
           </div>
 
           {/* RIGHT: sticky summary */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontWeight: 950, marginBottom: 8 }}>Model preview</div>
+                  <ImageCarousel images={imagesFor("shaft", state.shaft_id ?? null)} height={220} />
+                </div>
+
+
           <div style={styles.right}>
             <div style={styles.summaryCard}>
               <div style={styles.summaryTitle}>Build summary</div>
@@ -1629,6 +1778,35 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     color: "rgba(255,255,255,.92)",
   },
+
+  tableWrap: {
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,.10)",
+  overflow: "hidden",
+  background: "rgba(0,0,0,.12)",
+},
+table: {
+  width: "100%",
+  borderCollapse: "collapse",
+  fontSize: 12,
+},
+th: {
+  textAlign: "left",
+  padding: "10px 10px",
+  borderBottom: "1px solid rgba(255,255,255,.10)",
+  opacity: 0.75,
+  fontWeight: 900,
+},
+td: {
+  padding: "10px 10px",
+  borderBottom: "1px solid rgba(255,255,255,.06)",
+  verticalAlign: "top",
+},
+tr: {
+  transition: "background 120ms ease",
+},
+
+
   stepLeft: { display: "flex", gap: 12, alignItems: "center" },
   stepNum: {
     width: 30,
