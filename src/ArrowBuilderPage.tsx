@@ -254,6 +254,12 @@ function groupShaftsByBrandModel(shafts: Shaft[]) {
   return out;
 }
 
+
+
+// ---------------------- Page ----------------------
+
+export default function ArrowBuilderPage() {
+
   const shafts = catalog?.shafts ?? [];
   const wraps = catalog?.wraps ?? [];
   const vanes = catalog?.vanes ?? [];
@@ -262,9 +268,6 @@ function groupShaftsByBrandModel(shafts: Shaft[]) {
   const nocks = catalog?.nocks ?? [];
   const productImages = catalog?.product_images ?? [];
 
-// ---------------------- Page ----------------------
-
-export default function ArrowBuilderPage() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -594,15 +597,15 @@ function imagesFor(type: ProductType, id?: number | null) {
   const fieldError = (fieldName: string) => (serverErr?.field === fieldName ? serverErr.message : null);
 
   // UI actions
-  function selectShaft(id: number) {
-    setState((s) => ({
-      ...DEFAULT_STATE,
-      shaft_id: id,
-      // keep qty if already 12
-      quantity: s.quantity === 12 ? 12 : 6,
-    }));
-    setOpenStep(2);
-  }
+  // function selectShaft(id: number) {
+  //   setState((s) => ({
+  //     ...DEFAULT_STATE,
+  //     shaft_id: id,
+  //     // keep qty if already 12
+  //     quantity: s.quantity === 12 ? 12 : 6,
+  //   }));
+  //   setOpenStep(2);
+  // }
 
   function setCutMode(mode: "uncut" | "cut") {
     setState((s) => ({
