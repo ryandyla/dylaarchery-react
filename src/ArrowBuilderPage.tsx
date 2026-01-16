@@ -850,7 +850,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                       const id = Number(e.target.value);
                       if (!Number.isFinite(id)) return;
                       setState((s) => ({ ...s, shaft_id: id }));
-                      setOpenStep(2); // NOW advance
+                      
                     }}
                   >
                     {selectedModelGroup.spines.map((s) => (
@@ -863,11 +863,24 @@ function imagesFor(type: ProductType, id?: number | null) {
               )}
             </div>
           )}
+
+          
         </div>
       );
     })}
 
     {fieldError("shaft_id") && <FieldError msg={fieldError("shaft_id")!} />}
+
+    <div style={{ marginTop: 12 }}>
+            <button
+              style={primaryButtonStyle(!!state.shaft_id)}
+              onClick={() => setOpenStep(2)}
+              disabled={!state.shaft_id}
+            >
+              Continue
+            </button>
+          </div>
+
   </div>
 </Step>
 
