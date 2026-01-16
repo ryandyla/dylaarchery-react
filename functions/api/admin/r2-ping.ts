@@ -19,3 +19,4 @@ export const onRequest = async ({ request, env }: any) => {
     return serverError(e?.message || "Unhandled error");
   }
 };
+
