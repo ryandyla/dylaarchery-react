@@ -70,7 +70,7 @@ export async function allRows(stmt: D1PreparedStatement) {
 
 // ---- DB fetchers ----
 export async function getCatalog(DB: D1Database) {
-  const [shafts, wraps, vanes, points, inserts, nocks] = await Promise.all([
+  const [shafts, wraps, vanes, points, inserts, nocks, product_images] = await Promise.all([
     // shafts
     allRows(
       DB.prepare(
@@ -82,9 +82,9 @@ export async function getCatalog(DB: D1Database) {
     // wraps
     allRows(
       DB.prepare(
-        `SELECT id, name, length, min_outer_diameter, max_outer_diameter, weight_grains, price_per_arrow
-        FROM wraps WHERE active = 1
-        ORDER BY name`
+        `SELECT id, name, length, min_outer_diameter, max_outer_diameter, price_per_arrow
+         FROM wraps WHERE active = 1
+         ORDER BY name`
       )
     ),
     // vanes
@@ -115,15 +115,26 @@ export async function getCatalog(DB: D1Database) {
     // nocks
     allRows(
       DB.prepare(
-        `SELECT id, brand, model, system, style, weight_grains, price_per_arrow, active
-        FROM nocks WHERE active = 1
-        ORDER BY brand, model`
+        `SELECT id, brand, model, system, style, price_per_arrow, weight_grains
+         FROM nocks WHERE active = 1
+         ORDER BY brand, model`
+      )
+    ),
+
+    // product images
+    allRows(
+      DB.prepare(
+        `SELECT id, product_type, product_id, url, alt, sort, is_primary
+         FROM product_images
+         WHERE active = 1
+         ORDER BY product_type, product_id, sort ASC, id ASC`
       )
     ),
   ]);
 
-  return { shafts, wraps, vanes, inserts, points, nocks };
+  return { shafts, wraps, vanes, inserts, points, nocks, product_images };
 }
+
 
 export async function getShaft(DB: D1Database, id: number) {
   return firstRow(

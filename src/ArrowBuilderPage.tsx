@@ -89,6 +89,18 @@ type Nock = {
   price_per_arrow: number;
 };
 
+type ProductType = "shaft" | "wrap" | "vane" | "point" | "insert" | "nock";
+
+type ProductImage = {
+  id: number;
+  product_type: ProductType;
+  product_id: number;
+  url: string;
+  alt?: string | null;
+  sort: number;              // your column name
+  is_primary?: number;       // 0/1 if you have it; optional
+};
+
 type CatalogResponse = {
   ok: true;
   shafts: Shaft[];
@@ -96,7 +108,8 @@ type CatalogResponse = {
   vanes: Vane[];
   points: Point[];
   inserts: Insert[];
-  nocks: Nock[];              
+  nocks: Nock[];
+  product_images: ProductImage[];   // ✅ add this
 };
 
 type PriceResponse =
@@ -124,6 +137,8 @@ type BuilderState = {
 
   vane_id: number | null;
   fletch_count: 0 | 3 | 4;
+  vane_primary_color?: VaneColor | null;
+  vane_secondary_color?: VaneColor | null;
 
   insert_id: number | null;
   point_id: number | null;
@@ -140,6 +155,8 @@ const DEFAULT_STATE: BuilderState = {
 
   vane_id: null,
   fletch_count: 0,
+  vane_primary_color: null,
+  vane_secondary_color: null,
 
   insert_id: null,
   point_id: null,
@@ -155,6 +172,22 @@ const API = {
 
 // UX constants
 const CUT_STEP = 0.25;
+
+const VANE_COLORS = [
+  "White",
+  "Blue",
+  "Teal",
+  "Green (Fluorescent)",
+  "Pink (Fluorescent)",
+  "Orange (Fluorescent)",
+  "Yellow (Fluorescent)",
+  "Red (Fluorescent)",
+  "Purple",
+  "Black",
+] as const;
+
+type VaneColor = (typeof VANE_COLORS)[number];
+
 
 // ---------------------- Helpers ----------------------
 
@@ -203,6 +236,8 @@ export default function ArrowBuilderPage() {
 
   const [openStep, setOpenStep] = useState<number>(1);
 
+  const [modal, setModal] = useState<null | { type: ProductType; id: number; title: string }>(null);
+
   // Fetch catalog on mount
   useEffect(() => {
     (async () => {
@@ -227,6 +262,27 @@ export default function ArrowBuilderPage() {
   const inserts = catalog?.inserts ?? [];
   const points = catalog?.points ?? [];
   const nocks = catalog?.nocks ?? [];
+  const productImages = catalog?.product_images ?? [];
+
+const imagesByKey = useMemo(() => {
+  const m = new Map<string, ProductImage[]>();
+  for (const img of productImages) {
+    const key = `${img.product_type}:${img.product_id}`;
+    if (!m.has(key)) m.set(key, []);
+    m.get(key)!.push(img);
+  }
+  // sort by `sort` then id, just in case
+  for (const [k, arr] of m.entries()) {
+    arr.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.id - b.id);
+    m.set(k, arr);
+  }
+  return m;
+}, [productImages]);
+
+function imagesFor(type: ProductType, id?: number | null) {
+  if (!id) return [];
+  return imagesByKey.get(`${type}:${id}`) ?? [];
+}
 
   const selectedShaft = useMemo(
     () => shafts.find((s) => s.id === state.shaft_id) ?? null,
@@ -1255,6 +1311,125 @@ function PointPicker(props: {
       </div>
     </div>
   );
+}
+
+{modal && (
+  <ProductModal
+    title={modal.title}
+    onClose={() => setModal(null)}
+  >
+    <ImageCarousel images={imagesFor(modal.type, modal.id)} height={280} />
+    <div style={{ marginTop: 12, fontSize: 12, opacity: 0.8 }}>
+      Images are tied to <b>{modal.type}</b> #{modal.id}.
+    </div>
+  </ProductModal>
+)}
+
+function ProductModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,.65)",
+        display: "grid",
+        placeItems: "center",
+        padding: 18,
+        zIndex: 9999,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(860px, 100%)",
+          borderRadius: 18,
+          border: "1px solid rgba(255,255,255,.14)",
+          background: "rgba(10,10,14,.98)",
+          boxShadow: "0 30px 120px rgba(0,0,0,.70)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 14px", borderBottom: "1px solid rgba(255,255,255,.10)" }}>
+          <div style={{ fontWeight: 950 }}>{title}</div>
+          <button onClick={onClose} style={{ marginLeft: "auto", ...miniBtnStyle() }}>✕</button>
+        </div>
+
+        <div style={{ padding: 14 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageCarousel({ images, height = 220 }: { images: ProductImage[]; height?: number }) {
+  const [i, setI] = useState(0);
+
+  if (!images?.length) {
+    return (
+      <div style={{ height, borderRadius: 14, border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.18)", display: "grid", placeItems: "center", fontSize: 12, opacity: 0.7 }}>
+        No images yet
+      </div>
+    );
+  }
+
+  const cur = images[Math.min(i, images.length - 1)];
+
+  return (
+    <div>
+      <div style={{ height, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.18)" }}>
+        <img
+          src={cur.url}
+          alt={cur.alt ?? ""}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          loading="lazy"
+        />
+      </div>
+
+      {images.length > 1 && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
+          <button style={miniBtnStyle()} onClick={() => setI((v) => (v - 1 + images.length) % images.length)}>‹</button>
+          <div style={{ fontSize: 12, opacity: 0.75 }}>
+            {i + 1} / {images.length}
+          </div>
+          <button style={miniBtnStyle()} onClick={() => setI((v) => (v + 1) % images.length)}>›</button>
+
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+            {images.slice(0, 8).map((x, idx) => (
+              <button
+                key={x.id}
+                onClick={() => setI(idx)}
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,.20)",
+                  background: idx === i ? "rgba(255,212,0,.85)" : "rgba(255,255,255,.10)",
+                  cursor: "pointer",
+                }}
+                aria-label={`Go to image ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function miniBtnStyle(): React.CSSProperties {
+  return {
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,.14)",
+    background: "rgba(0,0,0,.18)",
+    color: "rgba(255,255,255,.92)",
+    width: 36,
+    height: 32,
+    cursor: "pointer",
+    fontSize: 16,
+    lineHeight: "32px",
+  };
 }
 
 // ---------------------- Styles ----------------------
