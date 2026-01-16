@@ -3,12 +3,22 @@ import { requireAccess } from "../../_utils/access";
 
 export const onRequest = async ({ request, env }: any) => {
   const cors = corsHeaders(request);
+
   if (request.method === "OPTIONS") return new Response("", { status: 204, headers: cors });
+  if (request.method !== "GET") return new Response("Not found", { status: 404 });
 
-  const deny = await requireAccess(request);
+  const deny = await requireAccess(request, cors); // <-- pass cors
   if (deny) return deny;
-    if (!env.PRODUCT_IMAGES) return json({ ok: false, message: "Missing R2 binding: env.PRODUCT_IMAGES" }, 500, cors);
-        const listed = await env.PRODUCT_IMAGES.list({ limit: 1 });
 
-    return json({ ok: true, r2_ok: true, sample_keys: listed.objects.map(o => o.key) }, 200, cors);
+  if (!env.PRODUCT_IMAGES) {
+    return json({ ok: false, message: "Missing R2 binding: env.PRODUCT_IMAGES" }, 500, cors);
+  }
+
+  const listed = await env.PRODUCT_IMAGES.list({ limit: 1 });
+
+  return json(
+    { ok: true, r2_ok: true, sample_keys: listed.objects.map((o: any) => o.key) },
+    200,
+    cors
+  );
 };

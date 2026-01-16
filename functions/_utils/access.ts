@@ -19,7 +19,7 @@ function getCookie(req: Request, name: string) {
  * - Works for service tokens (CF-Access-Client-Id/Secret)
  * - Uses /cdn-cgi/access/get-identity to confirm authentication
  */
-export async function requireAccess(request: Request) {
+export async function requireAccess(request: Request, extraHeaders: Record<string,string> = {}) {
   // 1) Service Token auth path (for curl/Postman)
   const clientId = request.headers.get("cf-access-client-id");
   const clientSecret = request.headers.get("cf-access-client-secret");
@@ -34,9 +34,8 @@ export async function requireAccess(request: Request) {
 
   // If neither is present, it’s definitely not authenticated.
   if (!cfAuth && !(clientId && clientSecret)) {
-    return json({ ok: false, message: "Unauthorized (Cloudflare Access required)." }, 401);
+    return json({ ok: false, message: "Unauthorized (Cloudflare Access required)." }, 401, extraHeaders);
   }
-
   // Validate via get-identity (best practice; avoids trusting mere cookie existence)
   // Use SAME host as the incoming request so it hits the same Access app.
   const url = new URL(request.url);
@@ -53,8 +52,8 @@ export async function requireAccess(request: Request) {
     },
   });
 
-  if (!res.ok) {
-    return json({ ok: false, message: "Unauthorized (Cloudflare Access required)." }, 401);
+ if (!res.ok) {
+    return json({ ok: false, message: "Unauthorized (Cloudflare Access required)." }, 401, extraHeaders);
   }
 
   // Optional: you can read identity JSON here if you want email-based authorization
