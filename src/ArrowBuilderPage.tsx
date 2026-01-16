@@ -260,6 +260,12 @@ function groupShaftsByBrandModel(shafts: Shaft[]) {
 
 export default function ArrowBuilderPage() {
 
+
+
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
   const shafts = catalog?.shafts ?? [];
   const wraps = catalog?.wraps ?? [];
   const vanes = catalog?.vanes ?? [];
@@ -267,10 +273,6 @@ export default function ArrowBuilderPage() {
   const points = catalog?.points ?? [];
   const nocks = catalog?.nocks ?? [];
   const productImages = catalog?.product_images ?? [];
-
-  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
-  const [loadingCatalog, setLoadingCatalog] = useState(true);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
 
   const [state, setState] = useState<BuilderState>({ ...DEFAULT_STATE });
 
