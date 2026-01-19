@@ -11,7 +11,7 @@ export default function AppShell() {
       <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <img src="/logo-blurb.png" alt="Dyla Archery" className="h-12 w-auto" />
+            <img src="/logo.png" alt="Dyla Archery" className="h-12 w-auto" />
             <div className="leading-tight">
               <div className="font-semibold">Dyla Archery</div>
               <div className="text-xs text-white/60">Precision-built custom arrows</div>
