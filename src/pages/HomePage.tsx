@@ -120,12 +120,18 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
 
+// heroOverlay: {
+//   position: "absolute",
+//   inset: 0,
+//   background:
+//     // super light vignette for readability, not a “box”
+//     "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.55) 100%)",
+// },
+
 heroOverlay: {
   position: "absolute",
   inset: 0,
-  background:
-    // super light vignette for readability, not a “box”
-    "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.55) 100%)",
+  background: "transparent",
 },
 
   heroInner: {
@@ -140,20 +146,38 @@ heroOverlay: {
     gap: 18,
     alignItems: "start",
   },
+
   h1: {
-    margin: 0,
-    fontSize: 44,
-    fontWeight: 980,
-    letterSpacing: -0.6,
-    lineHeight: 1.05,
-  },
-  heroP: {
-    marginTop: 14,
-    maxWidth: 620,
-    opacity: 0.82,
-    lineHeight: 1.65,
-    fontSize: 14,
-  },
+  margin: 0,
+  fontSize: 44,
+  fontWeight: 980,
+  letterSpacing: -0.6,
+  lineHeight: 1.05,
+  textShadow: "0 10px 35px rgba(0,0,0,.65)",
+},
+heroP: {
+  marginTop: 14,
+  maxWidth: 620,
+  opacity: 0.92,
+  lineHeight: 1.65,
+  fontSize: 14,
+  textShadow: "0 8px 26px rgba(0,0,0,.55)",
+},
+
+  // h1: {
+  //   margin: 0,
+  //   fontSize: 44,
+  //   fontWeight: 980,
+  //   letterSpacing: -0.6,
+  //   lineHeight: 1.05,
+  // },
+  // heroP: {
+  //   marginTop: 14,
+  //   maxWidth: 620,
+  //   opacity: 0.82,
+  //   lineHeight: 1.65,
+  //   fontSize: 14,
+  // },
   ctaPrimary: {
     display: "inline-flex",
     alignItems: "center",
