@@ -24,7 +24,7 @@ export default function HomePage() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.topNav}>
+      
         <div style={styles.navInner}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div style={styles.logoBox}>
@@ -43,7 +43,7 @@ export default function HomePage() {
             <a style={styles.navLink} href="/contact">Contact</a>
           </div>
         </div>
-      </div>
+      
 
       {/* HERO BAND */}
       <section style={{ ...styles.heroBand, backgroundImage: `url(${heroUrl})` }}>
@@ -178,12 +178,18 @@ const styles: Record<string, React.CSSProperties> = {
 
   heroBand: {
     position: "relative",
-    width: "100%",
+    left: "50%",
+    right: "50%",
+    marginLeft: "-50vw",
+    marginRight: "-50vw",
+    width: "100vw",
+
     minHeight: 520,
     backgroundSize: "cover",
     backgroundPosition: "center",
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
+
   heroOverlay: {
     position: "absolute",
     inset: 0,
