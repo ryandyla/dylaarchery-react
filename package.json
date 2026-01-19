@@ -41,7 +41,8 @@
 	},
 	"private": true,
 	"scripts": {
-		"build": "tsc -b && vite build",
+	    "build:css": "npx tailwindcss -i ./src/index.css -o ./src/generated/tailwind.css --minify",
+    	"build": "npm run build:css && tsc -b && vite build",
 		"cf-typegen": "wrangler types",
 		"check": "tsc && vite build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
