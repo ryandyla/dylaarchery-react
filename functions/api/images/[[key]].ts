@@ -4,11 +4,11 @@
 // Example: /api/images/796892.jpg
 
 export const onRequestGet: PagesFunction = async ({ env, params, request }) => {
-  const parts = (params.key as string[]) || [];
-  const key = parts.join("/");
+const parts = params.key;
+const key = Array.isArray(parts) ? parts.join("/") : null;
 
   if (!key) {
-    return new Response("Missing key", { status: 400 });
+    return new Response("Missing image key", { status: 400 });
   }
 
   const obj = await env.PRODUCT_IMAGES?.get(key);
