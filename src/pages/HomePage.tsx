@@ -25,26 +25,6 @@ export default function HomePage() {
   return (
     <div style={styles.page}>
       
-        <div style={styles.navInner}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div style={styles.logoBox}>
-              {/* Replace with your logo img if you want */}
-              <div style={styles.logoMark}>Dyla</div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 950 }}>Dyla Archery</div>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>Precision-built custom arrows</div>
-            </div>
-          </div>
-
-          <div style={styles.navLinks}>
-            <a style={styles.navLinkActive} href="/">Home</a>
-            <a style={styles.navLink} href="/builder">Arrow Builder</a>
-            <a style={styles.navLink} href="/contact">Contact</a>
-          </div>
-        </div>
-      
-
       {/* HERO BAND */}
       <section style={{ ...styles.heroBand, backgroundImage: `url(${heroUrl})` }}>
         <div style={styles.heroOverlay} />
@@ -127,55 +107,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "rgba(255,255,255,.92)",
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
   },
-
-  topNav: {
-    position: "sticky",
-    top: 0,
-    zIndex: 50,
-    background: "rgba(5,5,6,.75)",
-    backdropFilter: "blur(10px)",
-    borderBottom: "1px solid rgba(255,255,255,.08)",
-  },
-  navInner: {
-    maxWidth: 1180,
-    margin: "0 auto",
-    padding: "14px 18px",
-    display: "flex",
-    alignItems: "center",
-    gap: 18,
-  },
-  logoBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,.14)",
-    background: "rgba(255,255,255,.04)",
-    display: "grid",
-    placeItems: "center",
-    overflow: "hidden",
-  },
-  logoMark: {
-    fontWeight: 950,
-    fontSize: 12,
-    letterSpacing: -0.3,
-  },
-  navLinks: { marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" },
-  navLink: {
-    color: "rgba(255,255,255,.78)",
-    textDecoration: "none",
-    padding: "10px 12px",
-    borderRadius: 999,
-    border: "1px solid transparent",
-  },
-  navLinkActive: {
-    color: "#0b0b10",
-    textDecoration: "none",
-    padding: "10px 14px",
-    borderRadius: 999,
-    background: "rgba(255,212,0,1)",
-    fontWeight: 900,
-  },
-
   heroBand: {
     position: "relative",
     left: "50%",
@@ -183,7 +114,6 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "-50vw",
     marginRight: "-50vw",
     width: "100vw",
-
     minHeight: 520,
     backgroundSize: "cover",
     backgroundPosition: "center",
