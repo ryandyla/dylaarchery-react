@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const HERO_IMAGES = [
   "/api/images/796892.jpg",
