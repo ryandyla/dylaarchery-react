@@ -1,0 +1,10 @@
+name = "dylaarchery"
+compatibility_date = "2025-01-01"
+
+# If you're using Pages Functions, this is fine to leave out.
+# If you later switch to Pages + Functions explicitly, you can keep this.
+# No pages_build_output_dir needed for Vite builds; Pages handles dist automatically.
+
+[[r2_buckets]]
+binding = "PRODUCT_IMAGES"
+bucket_name = "dylaarchery-images"
