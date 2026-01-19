@@ -41,14 +41,13 @@
 	},
 	"private": true,
 	"scripts": {
-	    "build:css": "npx tailwindcss -i ./src/index.css -o ./src/generated/tailwind.css --minify",
-    	"build": "npm run build:css && tsc -b && vite build",
-		"cf-typegen": "wrangler types",
-		"check": "tsc && vite build && wrangler deploy --dry-run",
-		"deploy": "wrangler deploy",
-		"dev": "vite",
-		"lint": "eslint .",
-		"preview": "npm run build && vite preview"
+	"build": "tsc -b && vite build",
+	"cf-typegen": "wrangler types",
+	"check": "tsc && vite build && wrangler deploy --dry-run",
+	"deploy": "wrangler deploy",
+	"dev": "vite",
+	"lint": "eslint .",
+	"preview": "npm run build && vite preview"
 	},
 	"type": "module"
 }
