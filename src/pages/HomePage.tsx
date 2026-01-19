@@ -114,7 +114,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "-50vw",
     marginRight: "-50vw",
     width: "100vw",
-    minHeight: 520,
+    minHeight: "min(85vh, 900px)",
     backgroundSize: "cover",
     backgroundPosition: "center",
     borderBottom: "1px solid rgba(255,255,255,.10)",
