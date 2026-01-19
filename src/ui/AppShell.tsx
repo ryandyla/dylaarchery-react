@@ -33,7 +33,7 @@ export default function AppShell() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-0">
+      <main className="mx-auto px-0 py-0">
         <Outlet />
       </main>
 

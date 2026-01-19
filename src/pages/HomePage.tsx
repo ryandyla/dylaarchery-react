@@ -120,13 +120,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
 
-  heroOverlay: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(90deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.64) 46%, rgba(0,0,0,.78) 100%)," +
-      "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.85) 100%)",
-  },
+heroOverlay: {
+  position: "absolute",
+  inset: 0,
+  background:
+    // super light vignette for readability, not a “box”
+    "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.55) 100%)",
+},
+
   heroInner: {
     position: "relative",
     maxWidth: 1180,
@@ -179,22 +180,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   featureRow: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 22 },
-  featureCard: {
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,.12)",
-    background: "rgba(0,0,0,.24)",
-    padding: 12,
-  },
   featureTitle: { fontWeight: 950, fontSize: 13 },
   featureText: { marginTop: 6, fontSize: 12, opacity: 0.72, lineHeight: 1.45 },
 
-  missionCard: {
-    borderRadius: 22,
-    border: "1px solid rgba(255,255,255,.14)",
-    background: "linear-gradient(180deg, rgba(50,25,0,.55), rgba(10,10,14,.92))",
-    boxShadow: "0 18px 70px rgba(0,0,0,.55)",
-    padding: 18,
-  },
+featureCard: {
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,.14)",
+  background: "rgba(0,0,0,.10)",   // was .24
+  padding: 12,
+},
+missionCard: {
+  borderRadius: 22,
+  border: "1px solid rgba(255,255,255,.16)",
+  background: "rgba(0,0,0,.18)",   // was a heavier gradient
+  boxShadow: "0 18px 70px rgba(0,0,0,.35)", // lighter shadow
+  padding: 18,
+},
+
   missionList: {
     marginTop: 14,
     opacity: 0.8,
