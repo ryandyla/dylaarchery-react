@@ -28,7 +28,9 @@ export default function AppShell() {
 
           <nav className="flex items-center gap-2">
             <NavLink to="/" className={linkClass} end>Home</NavLink>
-            <NavLink to="/builder" className={linkClass}>Arrow Builder</NavLink>
+            <NavLink to="/builder" className={linkClass}>Build Your Arrows</NavLink>
+            <NavLink to="/process" className={linkClass}>Our Process</NavLink>
+            <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
             <NavLink to="/contact" className={linkClass}>Contact</NavLink>
           </nav>
         </div>
