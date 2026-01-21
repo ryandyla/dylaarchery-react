@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 
 const HERO_IMAGES = [
   "/api/images/796892.jpg",
-  // later add more:
-  // "/api/images/hero/2.jpg",
-  // "/api/images/hero/3.jpg",
+  "/api/images/deerbg1.jpg",
+  "/api/images/deerbg2.jpg",
+  "api/images/deerbg3.jpg"
 ];
 
 function useHeroRotation(urls: string[], ms = 9000) {
