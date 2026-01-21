@@ -3,6 +3,7 @@ import AppShell from "./ui/AppShell";
 import HomePage from "./pages/HomePage";
 import ContactPage from "./pages/ContactPage";
 import ArrowBuilderPage from "./ArrowBuilderPage";
+import ProcessPage from "./pages/ProcessPage"; // 👈 add this
 
 export const router = createBrowserRouter([
   {
@@ -10,7 +11,9 @@ export const router = createBrowserRouter([
     children: [
       { path: "/", element: <HomePage /> },
       { path: "/builder", element: <ArrowBuilderPage /> },
+      { path: "/process", element: <ProcessPage /> }, // 👈 add this
       { path: "/contact", element: <ContactPage /> },
     ],
   },
 ]);
+
