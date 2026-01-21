@@ -1,5 +1,3 @@
-import React, { useEffect, useState } from "react";
-
 const HERO_IMAGES = [
   "/api/images/796892.jpg",
   "/api/images/deerbg1.jpg",
