@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 const HERO_IMAGES = [
   "/api/images/796892.jpg",
   "/api/images/deerbg1.jpg",
   "/api/images/deerbg2.jpg",
-  "api/images/deerbg3.jpg"
+  "/api/images/deerbg3.jpg"
 ];
 
 function useRandomHero(urls: string[]) {
@@ -40,7 +40,11 @@ const heroUrl = useRandomHero(HERO_IMAGES);
                 <a href="/process" style={styles.ctaSecondary}>Learn Our Process</a>
               </div>
 
-              <div style={styles.featureRow}>
+             
+            </div>
+
+
+             <div style={styles.featureRow}>
                 <div style={styles.featureCard}>
                   <div style={styles.featureTitle}>Spine & Balance</div>
                   <div style={styles.featureText}>Static + dynamic spine guidance with FOC estimates.</div>
@@ -54,7 +58,6 @@ const heroUrl = useRandomHero(HERO_IMAGES);
                   <div style={styles.featureText}>Alignment, consistency checks, and QC before ship.</div>
                 </div>
               </div>
-            </div>
 
             {/* Right mission card */}
             <div style={styles.missionCard}>
@@ -131,12 +134,19 @@ heroOverlay: {
   background: "transparent",
 },
 
-  heroInner: {
-    position: "relative",
-    maxWidth: 1180,
-    margin: "0 auto",
-    padding: "48px 18px 44px",
-  },
+heroInner: {
+  position: "relative",
+  maxWidth: 1180,
+  margin: "0 auto",
+  padding: "48px 18px 44px",
+
+  // NEW:
+  minHeight: "inherit",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+},
+
   heroGrid: {
     display: "grid",
     gridTemplateColumns: "1.25fr .75fr",
@@ -200,7 +210,14 @@ heroP: {
     border: "1px solid rgba(255,255,255,.14)",
   },
 
-  featureRow: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 22 },
+  featureRow: {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 10,
+  marginTop: 18,   // was 22
+  marginBottom: 6, // NEW: gives a touch of breathing room
+},
+
   featureTitle: { fontWeight: 950, fontSize: 13 },
   featureText: { marginTop: 6, fontSize: 12, opacity: 0.72, lineHeight: 1.45 },
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 function clampNum(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
