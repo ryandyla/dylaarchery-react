@@ -1,6 +1,8 @@
-// function clampNum(n: number, min: number, max: number) {
-//   return Math.max(min, Math.min(max, n));
-// }
+import React, { useMemo, useState } from "react";
+
+function clampNum(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
 
 function safeNum(x: string, fallback = 0) {
   const n = Number(x);
