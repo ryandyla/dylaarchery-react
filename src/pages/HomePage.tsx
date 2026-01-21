@@ -7,20 +7,17 @@ const HERO_IMAGES = [
   "api/images/deerbg3.jpg"
 ];
 
-function useHeroRotation(urls: string[], ms = 9000) {
-  const [i, setI] = useState(0);
-
-  useEffect(() => {
-    if (urls.length <= 1) return;
-    const t = setInterval(() => setI((v) => (v + 1) % urls.length), ms);
-    return () => clearInterval(t);
-  }, [urls, ms]);
-
-  return urls[Math.min(i, urls.length - 1)];
+function useRandomHero(urls: string[]) {
+  const [url] = React.useState(() => {
+    if (!urls?.length) return "";
+    const idx = Math.floor(Math.random() * urls.length);
+    return urls[idx];
+  });
+  return url;
 }
 
 export default function HomePage() {
-  const heroUrl = useHeroRotation(HERO_IMAGES, 9000);
+const heroUrl = useRandomHero(HERO_IMAGES);
 
   return (
     <div style={styles.page}>

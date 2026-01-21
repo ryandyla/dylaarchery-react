@@ -4,6 +4,7 @@ import HomePage from "./pages/HomePage";
 import ContactPage from "./pages/ContactPage";
 import ArrowBuilderPage from "./ArrowBuilderPage";
 import ProcessPage from "./pages/ProcessPage"; // 👈 add this
+import ToolsPage from "./pages/ToolsPage";
 
 export const router = createBrowserRouter([
   {
@@ -12,6 +13,7 @@ export const router = createBrowserRouter([
       { path: "/", element: <HomePage /> },
       { path: "/builder", element: <ArrowBuilderPage /> },
       { path: "/process", element: <ProcessPage /> }, // 👈 add this
+      { path: "/tools", element: <ToolsPage /> },
       { path: "/contact", element: <ContactPage /> },
     ],
   },
