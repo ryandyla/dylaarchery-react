@@ -18,7 +18,7 @@ function useRandomHero(urls: string[]) {
 
 export default function ProcessPage() {
   const heroUrl = useRandomHero(PROCESS_HERO_IMAGES);
-  const bgPos = heroUrl.includes("deerbg3") ? "center 78%" : "center";
+  const bgPos = heroUrl.includes("deerbg3") ? "center bottom" : "center";
 
   return (
     <div style={styles.page}>
