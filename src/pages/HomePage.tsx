@@ -22,7 +22,15 @@ export default function HomePage() {
   return (
     <div style={styles.page}>
       {/* HERO BAND */}
-      <section style={{ ...styles.heroBand, backgroundImage: `url(${heroUrl})` }}>
+      <section
+  style={{
+    ...styles.heroBand,
+    backgroundImage: `url(${heroUrl})`,
+    backgroundPosition: heroUrl.includes("deerbg3")
+      ? "center top"
+      : "center",
+  }}
+>
         <div style={styles.heroOverlay} />
 
         {/* Constrained content, but vertically bottom-aligned */}
