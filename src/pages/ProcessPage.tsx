@@ -22,17 +22,16 @@ export default function ProcessPage() {
 
   return (
     <div style={styles.page}>
-      <section
+            <section
         style={{
           ...styles.heroBand,
           backgroundImage: `url(${heroUrl})`,
           backgroundPosition: bgPos,
         }}
       >
-        
-        <div style={styles.heroInner}>
-        {/* optional: keep ultra-light vignette for legibility */}
+        {/* ultra-light vignette for legibility */}
         <div style={styles.heroOverlay} />
+
         <div style={styles.heroInner}>
           <div style={styles.heroStack}>
             <div style={styles.kicker}>THE DYLA PROCESS</div>
@@ -53,8 +52,9 @@ export default function ProcessPage() {
               <a href="/contact" style={styles.ctaSecondary}>Ask a Build Question</a>
             </div>
           </div>
-       
+        </div>
       </section>
+
 
       {/* CONTENT */}
       <section style={styles.section}>
@@ -160,15 +160,14 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: "min(72vh, 760px)",
     backgroundSize: "cover",
     backgroundPosition: "center",
-    backgroundAttachment: "fixed", // parallax feel on desktop
+    backgroundAttachment: "fixed",
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
-heroOverlay: {
-  position: "absolute",
-  inset: 0,
-  background:
-    "linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.38) 100%)",
-},
+  heroOverlay: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.38) 100%)",
   },
   heroInner: {
     position: "relative",
@@ -177,8 +176,9 @@ heroOverlay: {
     padding: "48px 18px 44px",
     minHeight: "inherit",
     display: "flex",
-    alignItems: "flex-end", // pushes the content toward the bottom
+    alignItems: "flex-end",
   },
+
   heroStack: {
     maxWidth: 760,
     paddingBottom: 14,
