@@ -4,7 +4,7 @@ const HERO_IMAGES = [
   "/api/images/796892.jpg",
   "/api/images/deerbg1.jpg",
   "/api/images/deerbg2.jpg",
-  "/api/images/deerbg3.jpg"
+  "/api/images/deerbg3.jpg",
 ];
 
 function useRandomHero(urls: string[]) {
@@ -17,75 +17,33 @@ function useRandomHero(urls: string[]) {
 }
 
 export default function HomePage() {
-const heroUrl = useRandomHero(HERO_IMAGES);
+  const heroUrl = useRandomHero(HERO_IMAGES);
 
   return (
     <div style={styles.page}>
-      
       {/* HERO BAND */}
       <section style={{ ...styles.heroBand, backgroundImage: `url(${heroUrl})` }}>
         <div style={styles.heroOverlay} />
+
+        {/* Constrained content, but vertically bottom-aligned */}
         <div style={styles.heroInner}>
-          <div style={styles.heroGrid}>
-            {/* Left content */}
-            <div>
-              <h1 style={styles.h1}>Custom arrows built like equipment, not accessories.</h1>
-              <p style={styles.heroP}>
-                We obsess over the details: spine selection, tolerance control, straightness checks,
-                and repeatable builds — engineered for consistency when the shot matters.
-              </p>
+          <div style={styles.heroBottom}>
+            <h1 style={styles.h1}>Custom arrows built like equipment, not accessories.</h1>
 
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 18 }}>
-                <a href="/builder" style={styles.ctaPrimary}>Build Your Arrows</a>
-                <a href="/process" style={styles.ctaSecondary}>Learn Our Process</a>
-              </div>
-
-             
-            </div>
-
-
-             <div style={styles.featureRow}>
-                <div style={styles.featureCard}>
-                  <div style={styles.featureTitle}>Spine & Balance</div>
-                  <div style={styles.featureText}>Static + dynamic spine guidance with FOC estimates.</div>
-                </div>
-                <div style={styles.featureCard}>
-                  <div style={styles.featureTitle}>Measured Cuts</div>
-                  <div style={styles.featureText}>Cut-to-length in ¼″ increments. No guessing.</div>
-                </div>
-                <div style={styles.featureCard}>
-                  <div style={styles.featureTitle}>Build Verification</div>
-                  <div style={styles.featureText}>Alignment, consistency checks, and QC before ship.</div>
-                </div>
-              </div>
-
-            {/* Right mission card */}
-            <div style={styles.missionCard}>
-              <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 900, letterSpacing: 0.3 }}>OUR MISSION</div>
-              <div style={{ fontSize: 22, fontWeight: 980, marginTop: 10, lineHeight: 1.15 }}>
-                Make arrow building approachable —
-                <br />
-                without compromising performance.
-              </div>
-
-              <ul style={styles.missionList}>
-                <li>Build guides that explain the “why”, not just the “what”.</li>
-                <li>Product choices curated for proven performance.</li>
-                <li>Assembly + tuning practices that match serious shooters.</li>
-              </ul>
-
-              <div style={styles.missionNote}>
-                Easton + Victory only — because tolerance and consistency are the product.
-              </div>
+            <div style={styles.ctaRow}>
+              <a href="/builder" style={styles.ctaPrimary}>Build Your Arrows</a>
+              <a href="/process" style={styles.ctaSecondary}>Learn Our Process</a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Lower section placeholder */}
+      {/* Optional: keep or remove this lower section */}
       <section style={styles.lowerSection}>
         <div style={styles.lowerInner}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Why we only build with Easton and Victory</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>
+            Why we only build with Easton and Victory
+          </h2>
           <p style={{ marginTop: 10, opacity: 0.75, lineHeight: 1.6 }}>
             Your whole brand story is precision. These two manufacturers are the easiest to defend on
             straightness, batch consistency, and real-world reliability.
@@ -107,6 +65,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "rgba(255,255,255,.92)",
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
   },
+
   heroBand: {
     position: "relative",
     left: "50%",
@@ -114,77 +73,55 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "-50vw",
     marginRight: "-50vw",
     width: "100vw",
-    minHeight: "min(70vh, 700px)",
+    minHeight: "min(78vh, 820px)", // tweak this to show more/less image
     backgroundSize: "cover",
     backgroundPosition: "center",
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
 
-// heroOverlay: {
-//   position: "absolute",
-//   inset: 0,
-//   background:
-//     // super light vignette for readability, not a “box”
-//     "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.55) 100%)",
-// },
+  // keep it super light (or transparent) since you said no overlay box
+  heroOverlay: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.55) 100%)",
+  },
 
-heroOverlay: {
-  position: "absolute",
-  inset: 0,
-  background: "transparent",
-},
+  heroInner: {
+    position: "relative",
+    maxWidth: 1180,
+    margin: "0 auto",
+    padding: "48px 18px 44px",
+    minHeight: "inherit",
+    display: "flex",
+  },
 
-heroInner: {
-  position: "relative",
-  maxWidth: 1180,
-  margin: "0 auto",
-  padding: "48px 18px 44px",
-
-  // NEW:
-  minHeight: "inherit",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-},
-
-  heroGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.25fr .75fr",
-    gap: 18,
-    alignItems: "start",
+  // This is the key: pushes content toward the bottom
+  heroBottom: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-end",
+    gap: 14,
+    paddingBottom: 6,
+    maxWidth: 820, // keeps the tagline/CTAs from stretching too wide
   },
 
   h1: {
-  margin: 0,
-  fontSize: 44,
-  fontWeight: 980,
-  letterSpacing: -0.6,
-  lineHeight: 1.05,
-  textShadow: "0 10px 35px rgba(0,0,0,.65)",
-},
-heroP: {
-  marginTop: 14,
-  maxWidth: 620,
-  opacity: 0.92,
-  lineHeight: 1.65,
-  fontSize: 14,
-  textShadow: "0 8px 26px rgba(0,0,0,.55)",
-},
+    margin: 0,
+    fontSize: 46,
+    fontWeight: 980,
+    letterSpacing: -0.6,
+    lineHeight: 1.05,
+    textShadow: "0 10px 35px rgba(0,0,0,.65)",
+  },
 
-  // h1: {
-  //   margin: 0,
-  //   fontSize: 44,
-  //   fontWeight: 980,
-  //   letterSpacing: -0.6,
-  //   lineHeight: 1.05,
-  // },
-  // heroP: {
-  //   marginTop: 14,
-  //   maxWidth: 620,
-  //   opacity: 0.82,
-  //   lineHeight: 1.65,
-  //   fontSize: 14,
-  // },
+  ctaRow: {
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
   ctaPrimary: {
     display: "inline-flex",
     alignItems: "center",
@@ -205,51 +142,9 @@ heroP: {
     borderRadius: 14,
     padding: "12px 16px",
     fontWeight: 900,
-    background: "rgba(0,0,0,.25)",
-    color: "rgba(255,255,255,.90)",
-    border: "1px solid rgba(255,255,255,.14)",
-  },
-
-  featureRow: {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: 10,
-  marginTop: 18,   // was 22
-  marginBottom: 6, // NEW: gives a touch of breathing room
-},
-
-  featureTitle: { fontWeight: 950, fontSize: 13 },
-  featureText: { marginTop: 6, fontSize: 12, opacity: 0.72, lineHeight: 1.45 },
-
-featureCard: {
-  borderRadius: 16,
-  border: "1px solid rgba(255,255,255,.14)",
-  background: "rgba(0,0,0,.10)",   // was .24
-  padding: 12,
-},
-missionCard: {
-  borderRadius: 22,
-  border: "1px solid rgba(255,255,255,.16)",
-  background: "rgba(0,0,0,.18)",   // was a heavier gradient
-  boxShadow: "0 18px 70px rgba(0,0,0,.35)", // lighter shadow
-  padding: 18,
-},
-
-  missionList: {
-    marginTop: 14,
-    opacity: 0.8,
-    lineHeight: 1.7,
-    paddingLeft: 18,
-    fontSize: 13,
-  },
-  missionNote: {
-    marginTop: 14,
-    padding: "10px 12px",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,.12)",
-    background: "rgba(0,0,0,.22)",
-    fontSize: 12,
-    opacity: 0.85,
+    background: "rgba(0,0,0,.18)",
+    color: "rgba(255,255,255,.92)",
+    border: "1px solid rgba(255,255,255,.16)",
   },
 
   lowerSection: { padding: "34px 18px 10px" },
