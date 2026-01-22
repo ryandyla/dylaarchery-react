@@ -27,7 +27,7 @@ export default function HomePage() {
     ...styles.heroBand,
     backgroundImage: `url(${heroUrl})`,
     backgroundPosition: heroUrl.includes("deerbg3")
-      ? "center top"
+      ? "center bottom"
       : "center",
   }}
 >
