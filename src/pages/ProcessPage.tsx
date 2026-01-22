@@ -22,7 +22,17 @@ export default function ProcessPage() {
   return (
     <div style={styles.page}>
       {/* HERO */}
-      <section style={{ ...styles.heroBand, backgroundImage: `url(${heroUrl})` }}>
+          <div style={styles.page}>
+      {/* HERO BAND */}
+      <section
+        style={{
+          ...styles.heroBand,
+          backgroundImage: `url(${heroUrl})`,
+          backgroundPosition: heroUrl.includes("deerbg3")
+            ? "center bottom"
+            : "center",
+        }}
+      >
         {/* optional: keep ultra-light vignette for legibility */}
         <div style={styles.heroOverlay} />
         <div style={styles.heroInner}>
