@@ -169,8 +169,8 @@ const styles: Record<string, React.CSSProperties> = {
     position: "absolute",
     inset: 0,
     // light readability without “box”
-    background:
-      "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.62) 100%)",
+    //background:
+    //  "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.62) 100%)",
   },
   heroInner: {
     position: "relative",
