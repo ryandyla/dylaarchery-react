@@ -87,12 +87,10 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
 
-  // keep it super light (or transparent) since you said no overlay box
+  // keep it super light (or transparent) since you said no overlay box "background:linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.55) 100%)",
   heroOverlay: {
     position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.55) 100%)",
+    inset: 0      
   },
 
   heroInner: {
