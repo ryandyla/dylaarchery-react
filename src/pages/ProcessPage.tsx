@@ -18,21 +18,19 @@ function useRandomHero(urls: string[]) {
 
 export default function ProcessPage() {
   const heroUrl = useRandomHero(PROCESS_HERO_IMAGES);
+  const bgPos = heroUrl.includes("deerbg3") ? "center 78%" : "center";
 
   return (
     <div style={styles.page}>
-      {/* HERO */}
-          <div style={styles.page}>
-      {/* HERO BAND */}
       <section
         style={{
           ...styles.heroBand,
           backgroundImage: `url(${heroUrl})`,
-          backgroundPosition: heroUrl.includes("deerbg3")
-            ? "center bottom"
-            : "center",
+          backgroundPosition: bgPos,
         }}
       >
+        
+        <div style={styles.heroInner}>
         {/* optional: keep ultra-light vignette for legibility */}
         <div style={styles.heroOverlay} />
         <div style={styles.heroInner}>
@@ -55,7 +53,7 @@ export default function ProcessPage() {
               <a href="/contact" style={styles.ctaSecondary}>Ask a Build Question</a>
             </div>
           </div>
-        </div>
+       
       </section>
 
       {/* CONTENT */}
@@ -165,12 +163,12 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundAttachment: "fixed", // parallax feel on desktop
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
-  heroOverlay: {
-    position: "absolute",
-    inset: 0,
-    // light readability without “box”
-    //background:
-    //  "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.62) 100%)",
+heroOverlay: {
+  position: "absolute",
+  inset: 0,
+  background:
+    "linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.38) 100%)",
+},
   },
   heroInner: {
     position: "relative",
