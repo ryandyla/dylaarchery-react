@@ -83,6 +83,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100vw",
     minHeight: "min(78vh, 820px)", // tweak this to show more/less image
     backgroundSize: "cover",
+    backgroundAttachment: "fixed",
     backgroundPosition: "center",
     borderBottom: "1px solid rgba(255,255,255,.10)",
   },
