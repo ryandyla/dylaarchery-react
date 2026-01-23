@@ -1,4 +1,7 @@
-import { Link } from "react-router-dom";
+import React from "react";
+import { tw } from "../ui/tw";
+import { heroBandStyle, heroOverlayVignette, heroInnerBottom } from "../ui/hero";
+
 
 type Step = {
   k: string;
