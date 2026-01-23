@@ -3,296 +3,319 @@ import { tw } from "../ui/tw";
 import { heroBandStyle, heroOverlayVignette, heroInnerBottom } from "../ui/hero";
 
 
-type Step = {
-  k: string;
-  title: string;
-  subtitle: string;
-  bullets: string[];
-  checkpoint?: string;
-};
-
-const STEPS: Step[] = [
-  {
-    k: "spec",
-    title: "1) Build spec intake",
-    subtitle: "Get the inputs that actually affect tune + consistency.",
-    bullets: [
-      "Bow type, draw weight, draw length, cam style",
-      "Intended use: hunting / 3D / target",
-      "Point weight, broadhead plan, vane preference",
-      "Cut length + desired total arrow weight range",
-    ],
-    checkpoint: "Spec sanity check (no missing variables)",
-  },
-  {
-    k: "spine",
-    title: "2) Spine + balance math",
-    subtitle: "Static + dynamic spine selection with FOC targets.",
-    bullets: [
-      "Spine range recommendation with tolerance buffer",
-      "FOC estimate + weight distribution planning",
-      "Component stack-up to hit the spec, not “close enough”",
-    ],
-    checkpoint: "Spine window confirmed (with margin)",
-  },
-  {
-    k: "prep",
-    title: "3) Shaft prep + straightness verification",
-    subtitle: "Precision starts before glue touches anything.",
-    bullets: [
-      "Shaft inspection + straightness confirmation",
-      "Ends squared / prepped for repeatable seating",
-      "Surface prep for consistent adhesion",
-    ],
-    checkpoint: "Reject/replace any outliers",
-  },
-  {
-    k: "build",
-    title: "4) Assembly to spec",
-    subtitle: "Repeatability is the product.",
-    bullets: [
-      "Cut-to-length in ¼″ increments",
-      "Component install with consistent seating depth",
-      "Weight matching to your build sheet target",
-    ],
-    checkpoint: "Weights verified (set consistency)",
-  },
-  {
-    k: "qc",
-    title: "5) QC gates + final verification",
-    subtitle: "No “good enough” leaves the bench.",
-    bullets: [
-      "Alignment checks + repeatable spin/roll verification",
-      "Broadhead-ready build confidence",
-      "Final review against the original build spec",
-    ],
-    checkpoint: "Final sign-off before ship",
-  },
+const PROCESS_HERO_IMAGES = [
+  "/api/images/796892.jpg",
+  "/api/images/deerbg1.jpg",
+  "/api/images/deerbg2.jpg",
+  "/api/images/deerbg3.jpg",
 ];
 
-const CHECKPOINTS = [
-  { title: "Spine window validated", desc: "Chosen with margin so tune stays stable across real-world variables." },
-  { title: "Cut length verified", desc: "Length is controlled in ¼″ steps for repeatable dynamic behavior." },
-  { title: "Straightness confirmed", desc: "Outliers don’t get “worked around” — they get removed." },
-  { title: "Weight consistency", desc: "Set built to a target so every arrow behaves the same." },
-  { title: "Final alignment + review", desc: "Everything checked against your build sheet before shipping." },
-];
-
-function StepIcon({ n }: { n: number }) {
-  return (
-    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-sm font-black text-yellow-300">
-      {n}
-    </div>
-  );
-}
-
-function ArrowMark() {
-  // simple, clean “arrow” separator that matches your brand without being busy
-  return (
-    <svg viewBox="0 0 120 12" className="h-3 w-32 opacity-80" aria-hidden="true">
-      <path d="M2 6h96" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M98 2l18 4-18 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  );
+function useRandomHero(urls: string[]) {
+  const [url] = React.useState(() => {
+    if (!urls?.length) return "";
+    const idx = Math.floor(Math.random() * urls.length);
+    return urls[idx];
+  });
+  return url;
 }
 
 export default function ProcessPage() {
+  const heroUrl = useRandomHero(PROCESS_HERO_IMAGES);
+  const bgPos = heroUrl.includes("deerbg3") ? "center bottom" : "center";
+
   return (
-    <div className="bg-zinc-950 text-white">
-      {/* FULL-WIDTH HERO (content constrained) */}
-      <section className="relative w-full overflow-hidden border-b border-white/10">
-        {/* background (keep it subtle / clean like homepage) */}
-        <div className="absolute inset-0">
-          <div className="h-full w-full bg-[radial-gradient(1200px_520px_at_20%_10%,rgba(255,210,0,0.14),transparent_55%),radial-gradient(900px_500px_at_80%_20%,rgba(255,120,0,0.10),transparent_60%),linear-gradient(to_bottom,rgba(0,0,0,0.40),rgba(0,0,0,0.85))]" />
-          <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(255,255,255,.4)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.4)_1px,transparent_1px)] [background-size:64px_64px]" />
-        </div>
+    <div style={styles.page}>
+            <section
+        style={{
+          ...styles.heroBand,
+          backgroundImage: `url(${heroUrl})`,
+          backgroundPosition: bgPos,
+        }}
+      >
+        {/* ultra-light vignette for legibility */}
+        <div style={styles.heroOverlay} />
 
-        <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-20">
-          <div className="grid gap-10 md:grid-cols-[1.15fr_.85fr] md:items-start">
-            {/* left */}
-            <div>
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-xs font-semibold text-white/80">
-                Our process <span className="text-white/40">•</span> built for consistency
-              </div>
+        <div style={styles.heroInner}>
+          <div style={styles.heroStack}>
+            <div style={styles.kicker}>THE DYLA PROCESS</div>
 
-              <h1 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">
-                Precision isn’t a feature —
-                <span className="block text-white/90">it’s the workflow.</span>
-              </h1>
+            <h1 style={styles.h1}>
+              Precision isn’t a feature —
+              <br />
+              it’s the workflow.
+            </h1>
 
-              <p className="mt-4 max-w-xl text-sm leading-7 text-white/75">
-                We build arrows like equipment: controlled inputs, repeatable steps, and QC gates that catch outliers
-                before they become “mystery flyers.”
-              </p>
-
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link
-                  to="/builder"
-                  className="inline-flex items-center justify-center rounded-xl bg-yellow-500 px-4 py-3 text-sm font-extrabold text-black hover:bg-yellow-400"
-                >
-                  Build Your Arrows
-                </Link>
-                <span className="inline-flex items-center gap-2 text-sm text-white/70">
-                  <ArrowMark />
-                  <span>Scroll for the step-by-step</span>
-                </span>
-              </div>
-
-              {/* mini highlights row (keeps the homepage vibe) */}
-              <div className="mt-10 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-sm font-extrabold">Inputs first</div>
-                  <div className="mt-1 text-xs leading-6 text-white/70">
-                    We don’t guess — we define the variables that matter.
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-sm font-extrabold">Math + margin</div>
-                  <div className="mt-1 text-xs leading-6 text-white/70">
-                    Spine selection with a buffer for real-world tune stability.
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-sm font-extrabold">QC gates</div>
-                  <div className="mt-1 text-xs leading-6 text-white/70">
-                    Outliers are removed — not “worked around.”
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* right card */}
-            <div className="rounded-3xl border border-white/10 bg-black/25 p-6 shadow-[0_30px_90px_rgba(0,0,0,.55)]">
-              <div className="text-xs font-black tracking-wide text-yellow-300">WHAT YOU GET</div>
-              <div className="mt-3 text-xl font-extrabold leading-tight">
-                A repeatable build sheet
-                <span className="block text-white/85">and arrows that match it.</span>
-              </div>
-              <ul className="mt-4 space-y-2 text-sm text-white/75">
-                <li>• Recommended spine window + why</li>
-                <li>• Component stack that hits the target</li>
-                <li>• Cut length + weight plan</li>
-                <li>• QC checkpoints before ship</li>
-              </ul>
-
-              <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4 text-xs text-white/70">
-                Easton + Victory only — because tolerance and consistency are the product.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PROCESS DIAGRAM (illustrated rail) */}
-      <section className="mx-auto max-w-6xl px-4 py-12 md:py-14">
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight">The build workflow</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-white/70">
-              Each step has a checkpoint — not because it’s fancy, but because consistency is measurable.
+            <p style={styles.lede}>
+              We build arrows like equipment: measured, repeatable, and verified at every gate.
+              If something doesn’t meet tolerance, it doesn’t move forward.
             </p>
-          </div>
-          <div className="hidden items-center gap-3 md:flex">
-            <span className="text-xs font-semibold text-white/60">Start</span>
-            <ArrowMark />
-            <span className="text-xs font-semibold text-white/60">Ship</span>
-          </div>
-        </div>
 
-        <div className="mt-8 grid gap-6">
-          {STEPS.map((s, idx) => (
-            <div
-              key={s.k}
-              className="relative rounded-3xl border border-white/10 bg-white/[0.03] p-6"
-            >
-              {/* rail */}
-              <div className="absolute left-8 top-0 hidden h-full w-px bg-white/10 md:block" />
-              <div className="flex flex-col gap-4 md:flex-row md:gap-5">
-                <div className="flex items-start gap-4 md:gap-5">
-                  <StepIcon n={idx + 1} />
-                  <div className="md:hidden">
-                    <div className="text-lg font-extrabold">{s.title}</div>
-                    <div className="mt-1 text-sm text-white/70">{s.subtitle}</div>
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <div className="hidden md:block">
-                    <div className="text-lg font-extrabold">{s.title}</div>
-                    <div className="mt-1 text-sm text-white/70">{s.subtitle}</div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-[1fr_.9fr] md:items-start">
-                    <ul className="space-y-2 text-sm text-white/75">
-                      {s.bullets.map((b) => (
-                        <li key={b} className="flex gap-2">
-                          <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-yellow-400/90" />
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* checkpoint callout */}
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <div className="text-xs font-black tracking-wide text-yellow-300">CHECKPOINT</div>
-                      <div className="mt-2 text-sm font-semibold text-white/85">{s.checkpoint}</div>
-                      <div className="mt-2 text-xs leading-6 text-white/60">
-                        This gate exists to prevent drift — the small errors that become big misses.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* step separator arrow */}
-              {idx < STEPS.length - 1 && (
-                <div className="mt-6 flex items-center gap-3 text-white/35">
-                  <div className="h-px flex-1 bg-white/10" />
-                  <ArrowMark />
-                  <div className="h-px flex-1 bg-white/10" />
-                </div>
-              )}
+            <div style={styles.ctaRow}>
+              <a href="/builder" style={styles.ctaPrimary}>Build Your Arrows</a>
+              <a href="/contact" style={styles.ctaSecondary}>Ask a Build Question</a>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      {/* CHECKPOINTS (keep them, featured as a clean grid) */}
-      <section className="border-t border-white/10 bg-black/20">
-        <div className="mx-auto max-w-6xl px-4 py-12 md:py-14">
-          <h2 className="text-2xl font-black tracking-tight">QC checkpoints we won’t compromise on</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-white/70">
-            These are the gates that protect your consistency — especially when the shot matters.
+
+      {/* CONTENT */}
+      <section style={styles.section}>
+        <div style={styles.inner}>
+          <h2 style={styles.h2}>Quality gates</h2>
+          <p style={styles.p}>
+            The point isn’t to sound technical — it’s to deliver consistency you can trust when the shot matters.
+            These are the checkpoints we don’t skip.
           </p>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {CHECKPOINTS.map((c) => (
-              <div key={c.title} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 h-3 w-3 rounded-full bg-yellow-400/90 shadow-[0_0_0_4px_rgba(255,212,0,.10)]" />
+          <div style={styles.gates}>
+            {GATES.map((g, idx) => (
+              <div key={g.title} style={styles.gateCard}>
+                <div style={styles.gateTop}>
+                  <div style={styles.gateIndex}>{String(idx + 1).padStart(2, "0")}</div>
                   <div>
-                    <div className="text-sm font-extrabold">{c.title}</div>
-                    <div className="mt-1 text-sm leading-7 text-white/70">{c.desc}</div>
+                    <div style={styles.gateTitle}>{g.title}</div>
+                    <div style={styles.gateText}>{g.body}</div>
                   </div>
+                </div>
+
+                {/* one tight “what happens” line only */}
+                <div style={styles.gateFooter}>
+                  <span style={styles.dot} />
+                  <span style={styles.gateFooterText}>{g.check}</span>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/10 bg-black/25 p-6">
-            <div>
-              <div className="text-sm font-extrabold">Ready to spec your arrows?</div>
-              <div className="mt-1 text-sm text-white/70">Use the builder and we’ll follow this workflow end-to-end.</div>
+      {/* BOTTOM STRIP */}
+      <section style={styles.strip}>
+        <div style={styles.inner}>
+          <div style={styles.stripGrid}>
+            <div style={styles.stripCard}>
+              <div style={styles.stripTitle}>What we obsess over</div>
+              <ul style={styles.ul}>
+                <li>Measured cut length and repeatability</li>
+                <li>Component alignment and concentricity</li>
+                <li>Build consistency across a set</li>
+              </ul>
             </div>
-            <Link
-              to="/builder"
-              className="inline-flex items-center justify-center rounded-xl bg-yellow-500 px-4 py-3 text-sm font-extrabold text-black hover:bg-yellow-400"
-            >
-              Open Arrow Builder
-            </Link>
+
+            <div style={styles.stripCard}>
+              <div style={styles.stripTitle}>What you get</div>
+              <ul style={styles.ul}>
+                <li>Confidence in the build, not guesswork</li>
+                <li>Consistency shot-to-shot, arrow-to-arrow</li>
+                <li>Easton + Victory only (tolerance is the product)</li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
+
+      <footer style={styles.footer}>
+        © {new Date().getFullYear()} Dyla Archery • Built for hunters & precision shooters
+      </footer>
     </div>
   );
 }
+
+const GATES = [
+  {
+    title: "Spec + selection",
+    body: "We start with the build intent and select components that support it — no filler parts, no compromises.",
+    check: "Shaft + component compatibility confirmed before cutting.",
+  },
+  {
+    title: "Cut + measure",
+    body: "Cuts are repeatable and verified. If a measurement is off, it gets corrected — not rationalized.",
+    check: "Cut length verified to the build spec.",
+  },
+  {
+    title: "Build + align",
+    body: "Assembly is about alignment and consistency. We treat it like a system, not a craft project.",
+    check: "Component seating + alignment checked before cure.",
+  },
+  {
+    title: "QC gate",
+    body: "Everything that matters gets checked. Anything outside tolerance gets reworked or rejected.",
+    check: "Final QC before the set ships.",
+  },
+];
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    background: "#07070a",
+    color: "rgba(255,255,255,.92)",
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+  },
+
+  heroBand: {
+    position: "relative",
+    left: "50%",
+    right: "50%",
+    marginLeft: "-50vw",
+    marginRight: "-50vw",
+    width: "100vw",
+    minHeight: "min(72vh, 760px)",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundAttachment: "fixed",
+    borderBottom: "1px solid rgba(255,255,255,.10)",
+  },
+  heroOverlay: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.38) 100%)",
+  },
+  heroInner: {
+    position: "relative",
+    maxWidth: 1180,
+    margin: "0 auto",
+    padding: "48px 18px 44px",
+    minHeight: "inherit",
+    display: "flex",
+    alignItems: "flex-end",
+  },
+
+  heroStack: {
+    maxWidth: 760,
+    paddingBottom: 14,
+  },
+  kicker: {
+    display: "inline-block",
+    fontSize: 12,
+    fontWeight: 950,
+    letterSpacing: 0.6,
+    opacity: 0.85,
+    padding: "6px 10px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,.16)",
+    background: "rgba(0,0,0,.18)",
+  },
+  h1: {
+    margin: "14px 0 0",
+    fontSize: 46,
+    fontWeight: 980,
+    letterSpacing: -0.7,
+    lineHeight: 1.05,
+    textShadow: "0 10px 35px rgba(0,0,0,.65)",
+  },
+  lede: {
+    marginTop: 14,
+    maxWidth: 680,
+    opacity: 0.92,
+    lineHeight: 1.7,
+    fontSize: 14,
+    textShadow: "0 8px 26px rgba(0,0,0,.55)",
+  },
+  ctaRow: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: 18 },
+  ctaPrimary: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textDecoration: "none",
+    borderRadius: 14,
+    padding: "12px 16px",
+    fontWeight: 950,
+    background: "linear-gradient(90deg, rgba(255,212,0,1), rgba(255,160,0,1))",
+    color: "#0b0b10",
+    border: "none",
+  },
+  ctaSecondary: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textDecoration: "none",
+    borderRadius: 14,
+    padding: "12px 16px",
+    fontWeight: 900,
+    background: "rgba(0,0,0,.25)",
+    color: "rgba(255,255,255,.90)",
+    border: "1px solid rgba(255,255,255,.14)",
+  },
+
+  section: { padding: "44px 18px 18px" },
+  strip: { padding: "18px 18px 44px" },
+  inner: { maxWidth: 1180, margin: "0 auto" },
+
+  h2: { margin: 0, fontSize: 22, fontWeight: 980, letterSpacing: -0.2 },
+  p: { marginTop: 10, opacity: 0.75, lineHeight: 1.7, maxWidth: 820, fontSize: 14 },
+
+  gates: {
+    marginTop: 18,
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 12,
+  },
+  gateCard: {
+    borderRadius: 22,
+    border: "1px solid rgba(255,255,255,.12)",
+    background: "rgba(255,255,255,.03)",
+    padding: 16,
+  },
+  gateTop: { display: "flex", gap: 12, alignItems: "flex-start" },
+  gateIndex: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    display: "grid",
+    placeItems: "center",
+    fontWeight: 980,
+    fontSize: 12,
+    color: "#0b0b10",
+    background: "linear-gradient(90deg, rgba(255,212,0,1), rgba(255,160,0,1))",
+    flex: "0 0 auto",
+  },
+  gateTitle: { fontWeight: 980, fontSize: 14, marginTop: 2 },
+  gateText: { marginTop: 6, fontSize: 13, opacity: 0.74, lineHeight: 1.6, maxWidth: 520 },
+
+  gateFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTop: "1px solid rgba(255,255,255,.10)",
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 99,
+    background: "rgba(255,212,0,1)",
+    boxShadow: "0 0 0 3px rgba(255,212,0,.15)",
+  },
+  gateFooterText: { fontSize: 12, opacity: 0.72, lineHeight: 1.4 },
+
+  stripGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 12,
+  },
+  stripCard: {
+    borderRadius: 22,
+    border: "1px solid rgba(255,255,255,.12)",
+    background: "rgba(0,0,0,.20)",
+    padding: 16,
+  },
+  stripTitle: { fontWeight: 980, fontSize: 14 },
+  ul: {
+    marginTop: 10,
+    paddingLeft: 18,
+    opacity: 0.78,
+    lineHeight: 1.8,
+    fontSize: 13,
+  },
+
+  footer: {
+    maxWidth: 1180,
+    margin: "0 auto",
+    padding: "18px 18px 40px",
+    opacity: 0.6,
+    fontSize: 12,
+  },
+};
