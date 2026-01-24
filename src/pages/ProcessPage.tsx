@@ -3,6 +3,7 @@ import { tw } from "../ui/tw";
 import { heroBandStyle, heroOverlayVignette, heroInnerBottom } from "../ui/hero";
 
 
+
 const PROCESS_HERO_IMAGES = [
   "/api/images/796892.jpg",
   "/api/images/deerbg1.jpg",
@@ -25,17 +26,18 @@ export default function ProcessPage() {
 
   return (
     <div style={styles.page}>
-            <section
-        style={{
-          ...styles.heroBand,
-          backgroundImage: `url(${heroUrl})`,
+      <section
+        style={heroBandStyle({
+          imageUrl: heroUrl,
+          minHeight: "min(72vh, 760px)",
           backgroundPosition: bgPos,
-        }}
+          parallax: true,
+        })}
       >
         {/* ultra-light vignette for legibility */}
-        <div style={styles.heroOverlay} />
+        <div style={heroOverlayVignette} />
 
-        <div style={styles.heroInner}>
+        <div style={heroInnerBottom}>
           <div style={styles.heroStack}>
             <div style={styles.kicker}>THE DYLA PROCESS</div>
 
@@ -57,7 +59,6 @@ export default function ProcessPage() {
           </div>
         </div>
       </section>
-
 
       {/* CONTENT */}
       <section style={styles.section}>
@@ -115,7 +116,7 @@ export default function ProcessPage() {
         </div>
       </section>
 
-      <footer style={styles.footer}>
+      <footer className={`${tw.container} pb-10 text-xs text-white/60`}>
         © {new Date().getFullYear()} Dyla Archery • Built for hunters & precision shooters
       </footer>
     </div>
@@ -153,39 +154,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
   },
 
-  heroBand: {
-    position: "relative",
-    left: "50%",
-    right: "50%",
-    marginLeft: "-50vw",
-    marginRight: "-50vw",
-    width: "100vw",
-    minHeight: "min(72vh, 760px)",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundAttachment: "fixed",
-    borderBottom: "1px solid rgba(255,255,255,.10)",
-  },
-  heroOverlay: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.38) 100%)",
-  },
-  heroInner: {
-    position: "relative",
-    maxWidth: 1180,
-    margin: "0 auto",
-    padding: "48px 18px 44px",
-    minHeight: "inherit",
-    display: "flex",
-    alignItems: "flex-end",
-  },
-
-  heroStack: {
-    maxWidth: 760,
-    paddingBottom: 14,
-  },
   kicker: {
     display: "inline-block",
     fontSize: 12,

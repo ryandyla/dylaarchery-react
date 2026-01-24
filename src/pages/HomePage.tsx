@@ -1,3 +1,4 @@
+// src/pages/HomePage.tsx
 import React from "react";
 import { tw } from "../ui/tw";
 import { heroBandStyle, heroOverlayNone, heroInnerBottom } from "../ui/hero";
@@ -18,15 +19,22 @@ function useRandomHero(urls: string[]) {
 }
 
 export default function HomePage() {
-const heroUrl = useRandomHero(HERO_IMAGES);
+  const heroUrl = useRandomHero(HERO_IMAGES);
 
   return (
     <div style={styles.page}>
-      
       {/* HERO BAND */}
-      <section style={{ ...styles.heroBand, backgroundImage: `url(${heroUrl})` }}>
-        <div style={styles.heroOverlay} />
-        <div style={styles.heroInner}>
+      <section
+        style={heroBandStyle({
+          imageUrl: heroUrl,
+          minHeight: "min(70vh, 700px)",
+          backgroundPosition: "center",
+          parallax: false,
+        })}
+      >
+        <div style={heroOverlayNone} />
+
+        <div style={styles.heroInner /* keep your “space-between” layout */}>
           <div style={styles.heroGrid}>
             {/* Left content */}
             <div>
@@ -40,25 +48,7 @@ const heroUrl = useRandomHero(HERO_IMAGES);
                 <a href="/builder" style={styles.ctaPrimary}>Build Your Arrows</a>
                 <a href="/process" style={styles.ctaSecondary}>Learn Our Process</a>
               </div>
-
-             
             </div>
-
-
-             <div style={styles.featureRow}>
-                <div style={styles.featureCard}>
-                  <div style={styles.featureTitle}>Spine & Balance</div>
-                  <div style={styles.featureText}>Static + dynamic spine guidance with FOC estimates.</div>
-                </div>
-                <div style={styles.featureCard}>
-                  <div style={styles.featureTitle}>Measured Cuts</div>
-                  <div style={styles.featureText}>Cut-to-length in ¼″ increments. No guessing.</div>
-                </div>
-                <div style={styles.featureCard}>
-                  <div style={styles.featureTitle}>Build Verification</div>
-                  <div style={styles.featureText}>Alignment, consistency checks, and QC before ship.</div>
-                </div>
-              </div>
 
             {/* Right mission card */}
             <div style={styles.missionCard}>
@@ -78,6 +68,22 @@ const heroUrl = useRandomHero(HERO_IMAGES);
               <div style={styles.missionNote}>
                 Easton + Victory only — because tolerance and consistency are the product.
               </div>
+            </div>
+          </div>
+
+          {/* Feature row (bottom) */}
+          <div style={styles.featureRow}>
+            <div style={styles.featureCard}>
+              <div style={styles.featureTitle}>Spine & Balance</div>
+              <div style={styles.featureText}>Static + dynamic spine guidance with FOC estimates.</div>
+            </div>
+            <div style={styles.featureCard}>
+              <div style={styles.featureTitle}>Measured Cuts</div>
+              <div style={styles.featureText}>Cut-to-length in ¼″ increments. No guessing.</div>
+            </div>
+            <div style={styles.featureCard}>
+              <div style={styles.featureTitle}>Build Verification</div>
+              <div style={styles.featureText}>Alignment, consistency checks, and QC before ship.</div>
             </div>
           </div>
         </div>
@@ -108,45 +114,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: "rgba(255,255,255,.92)",
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
   },
-  heroBand: {
+
+  // IMPORTANT: keep this as-is (it’s not the same as heroInnerBottom)
+  heroInner: {
     position: "relative",
-    left: "50%",
-    right: "50%",
-    marginLeft: "-50vw",
-    marginRight: "-50vw",
-    width: "100vw",
-    minHeight: "min(70vh, 700px)",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    borderBottom: "1px solid rgba(255,255,255,.10)",
+    maxWidth: 1180,
+    margin: "0 auto",
+    padding: "48px 18px 44px",
+    minHeight: "inherit",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
-
-// heroOverlay: {
-//   position: "absolute",
-//   inset: 0,
-//   background:
-//     // super light vignette for readability, not a “box”
-//     "linear-gradient(180deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.55) 100%)",
-// },
-
-heroOverlay: {
-  position: "absolute",
-  inset: 0,
-  background: "transparent",
-},
-
-heroInner: {
-  position: "relative",
-  maxWidth: 1180,
-  margin: "0 auto",
-  padding: "48px 18px 44px",
-
-  // NEW:
-  minHeight: "inherit",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-},
 
   heroGrid: {
     display: "grid",
@@ -156,36 +135,22 @@ heroInner: {
   },
 
   h1: {
-  margin: 0,
-  fontSize: 44,
-  fontWeight: 980,
-  letterSpacing: -0.6,
-  lineHeight: 1.05,
-  textShadow: "0 10px 35px rgba(0,0,0,.65)",
-},
-heroP: {
-  marginTop: 14,
-  maxWidth: 620,
-  opacity: 0.92,
-  lineHeight: 1.65,
-  fontSize: 14,
-  textShadow: "0 8px 26px rgba(0,0,0,.55)",
-},
+    margin: 0,
+    fontSize: 44,
+    fontWeight: 980,
+    letterSpacing: -0.6,
+    lineHeight: 1.05,
+    textShadow: "0 10px 35px rgba(0,0,0,.65)",
+  },
+  heroP: {
+    marginTop: 14,
+    maxWidth: 620,
+    opacity: 0.92,
+    lineHeight: 1.65,
+    fontSize: 14,
+    textShadow: "0 8px 26px rgba(0,0,0,.55)",
+  },
 
-  // h1: {
-  //   margin: 0,
-  //   fontSize: 44,
-  //   fontWeight: 980,
-  //   letterSpacing: -0.6,
-  //   lineHeight: 1.05,
-  // },
-  // heroP: {
-  //   marginTop: 14,
-  //   maxWidth: 620,
-  //   opacity: 0.82,
-  //   lineHeight: 1.65,
-  //   fontSize: 14,
-  // },
   ctaPrimary: {
     display: "inline-flex",
     alignItems: "center",
@@ -212,30 +177,28 @@ heroP: {
   },
 
   featureRow: {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: 10,
-  marginTop: 18,   // was 22
-  marginBottom: 6, // NEW: gives a touch of breathing room
-},
-
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 10,
+    marginTop: 18,
+    marginBottom: 6,
+  },
+  featureCard: {
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,.14)",
+    background: "rgba(0,0,0,.10)",
+    padding: 12,
+  },
   featureTitle: { fontWeight: 950, fontSize: 13 },
   featureText: { marginTop: 6, fontSize: 12, opacity: 0.72, lineHeight: 1.45 },
 
-featureCard: {
-  borderRadius: 16,
-  border: "1px solid rgba(255,255,255,.14)",
-  background: "rgba(0,0,0,.10)",   // was .24
-  padding: 12,
-},
-missionCard: {
-  borderRadius: 22,
-  border: "1px solid rgba(255,255,255,.16)",
-  background: "rgba(0,0,0,.18)",   // was a heavier gradient
-  boxShadow: "0 18px 70px rgba(0,0,0,.35)", // lighter shadow
-  padding: 18,
-},
-
+  missionCard: {
+    borderRadius: 22,
+    border: "1px solid rgba(255,255,255,.16)",
+    background: "rgba(0,0,0,.18)",
+    boxShadow: "0 18px 70px rgba(0,0,0,.35)",
+    padding: 18,
+  },
   missionList: {
     marginTop: 14,
     opacity: 0.8,
@@ -255,12 +218,4 @@ missionCard: {
 
   lowerSection: { padding: "34px 18px 10px" },
   lowerInner: { maxWidth: 1180, margin: "0 auto" },
-
-  footer: {
-    maxWidth: 1180,
-    margin: "0 auto",
-    padding: "18px 18px 40px",
-    opacity: 0.6,
-    fontSize: 12,
-  },
 };
