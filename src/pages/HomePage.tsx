@@ -1,7 +1,6 @@
-// src/pages/HomePage.tsx
 import React from "react";
 import { tw } from "../ui/tw";
-import { heroBandStyle, heroOverlayNone } from "../ui/hero";
+import { heroBandStyle, heroOverlayNone, heroInnerBottom } from "../ui/hero";
 
 const HERO_IMAGES = [
   "/api/images/796892.jpg",
@@ -20,6 +19,7 @@ function useRandomHero(urls: string[]) {
 
 export default function HomePage() {
   const heroUrl = useRandomHero(HERO_IMAGES);
+  const bgPos = heroUrl.includes("deerbg3") ? "center bottom" : "center";
 
   return (
     <div style={styles.page}>
@@ -28,72 +28,34 @@ export default function HomePage() {
         style={heroBandStyle({
           imageUrl: heroUrl,
           minHeight: "min(70vh, 700px)",
-          backgroundPosition: "center",
+          backgroundPosition: bgPos,
           parallax: false,
         })}
       >
         <div style={heroOverlayNone} />
 
-        <div style={styles.heroInner /* keep your “space-between” layout */}>
-          <div style={styles.heroGrid}>
-            {/* Left content */}
-            <div>
-              <h1 style={styles.h1}>Custom arrows built like equipment, not accessories.</h1>
-              <p style={styles.heroP}>
-                We obsess over the details: spine selection, tolerance control, straightness checks,
-                and repeatable builds — engineered for consistency when the shot matters.
-              </p>
+        <div style={heroInnerBottom}>
+          <div style={styles.heroStack}>
+            <h1 style={styles.h1}>Custom arrows built like equipment, not accessories.</h1>
 
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 18 }}>
-                <a href="/builder" style={styles.ctaPrimary}>Build Your Arrows</a>
-                <a href="/process" style={styles.ctaSecondary}>Learn Our Process</a>
-              </div>
-            </div>
+            <p style={styles.heroP}>
+              We obsess over the details: spine selection, tolerance control, straightness checks,
+              and repeatable builds — engineered for consistency when the shot matters.
+            </p>
 
-            {/* Right mission card */}
-            <div style={styles.missionCard}>
-              <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 900, letterSpacing: 0.3 }}>OUR MISSION</div>
-              <div style={{ fontSize: 22, fontWeight: 980, marginTop: 10, lineHeight: 1.15 }}>
-                Make arrow building approachable —
-                <br />
-                without compromising performance.
-              </div>
-
-              <ul style={styles.missionList}>
-                <li>Build guides that explain the “why”, not just the “what”.</li>
-                <li>Product choices curated for proven performance.</li>
-                <li>Assembly + tuning practices that match serious shooters.</li>
-              </ul>
-
-              <div style={styles.missionNote}>
-                Easton + Victory only — because tolerance and consistency are the product.
-              </div>
-            </div>
-          </div>
-
-          {/* Feature row (bottom) */}
-          <div style={styles.featureRow}>
-            <div style={styles.featureCard}>
-              <div style={styles.featureTitle}>Spine & Balance</div>
-              <div style={styles.featureText}>Static + dynamic spine guidance with FOC estimates.</div>
-            </div>
-            <div style={styles.featureCard}>
-              <div style={styles.featureTitle}>Measured Cuts</div>
-              <div style={styles.featureText}>Cut-to-length in ¼″ increments. No guessing.</div>
-            </div>
-            <div style={styles.featureCard}>
-              <div style={styles.featureTitle}>Build Verification</div>
-              <div style={styles.featureText}>Alignment, consistency checks, and QC before ship.</div>
+            <div style={styles.ctaRow}>
+              <a href="/builder" style={styles.ctaPrimary}>Build Your Arrows</a>
+              <a href="/process" style={styles.ctaSecondary}>Learn Our Process</a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Lower section placeholder */}
+      {/* Optional lower section */}
       <section style={styles.lowerSection}>
         <div style={styles.lowerInner}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Why we only build with Easton and Victory</h2>
-          <p style={{ marginTop: 10, opacity: 0.75, lineHeight: 1.6 }}>
+          <h2 style={styles.h2}>Why we only build with Easton and Victory</h2>
+          <p style={styles.p}>
             Your whole brand story is precision. These two manufacturers are the easiest to defend on
             straightness, batch consistency, and real-world reliability.
           </p>
@@ -115,23 +77,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
   },
 
-  // IMPORTANT: keep this as-is (it’s not the same as heroInnerBottom)
-  heroInner: {
-    position: "relative",
-    maxWidth: 1180,
-    margin: "0 auto",
-    padding: "48px 18px 44px",
-    minHeight: "inherit",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-  },
-
-  heroGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.25fr .75fr",
-    gap: 18,
-    alignItems: "start",
+  heroStack: {
+    maxWidth: 720,
+    paddingBottom: 14,
   },
 
   h1: {
@@ -142,6 +90,7 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.05,
     textShadow: "0 10px 35px rgba(0,0,0,.65)",
   },
+
   heroP: {
     marginTop: 14,
     maxWidth: 620,
@@ -149,6 +98,13 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.65,
     fontSize: 14,
     textShadow: "0 8px 26px rgba(0,0,0,.55)",
+  },
+
+  ctaRow: {
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap",
+    marginTop: 18,
   },
 
   ctaPrimary: {
@@ -163,6 +119,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#0b0b10",
     border: "none",
   },
+
   ctaSecondary: {
     display: "inline-flex",
     alignItems: "center",
@@ -176,46 +133,9 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(255,255,255,.14)",
   },
 
-  featureRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 10,
-    marginTop: 18,
-    marginBottom: 6,
-  },
-  featureCard: {
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,.14)",
-    background: "rgba(0,0,0,.10)",
-    padding: 12,
-  },
-  featureTitle: { fontWeight: 950, fontSize: 13 },
-  featureText: { marginTop: 6, fontSize: 12, opacity: 0.72, lineHeight: 1.45 },
-
-  missionCard: {
-    borderRadius: 22,
-    border: "1px solid rgba(255,255,255,.16)",
-    background: "rgba(0,0,0,.18)",
-    boxShadow: "0 18px 70px rgba(0,0,0,.35)",
-    padding: 18,
-  },
-  missionList: {
-    marginTop: 14,
-    opacity: 0.8,
-    lineHeight: 1.7,
-    paddingLeft: 18,
-    fontSize: 13,
-  },
-  missionNote: {
-    marginTop: 14,
-    padding: "10px 12px",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,.12)",
-    background: "rgba(0,0,0,.22)",
-    fontSize: 12,
-    opacity: 0.85,
-  },
-
   lowerSection: { padding: "34px 18px 10px" },
   lowerInner: { maxWidth: 1180, margin: "0 auto" },
+
+  h2: { margin: 0, fontSize: 18, fontWeight: 950 },
+  p: { marginTop: 10, opacity: 0.75, lineHeight: 1.6 },
 };
