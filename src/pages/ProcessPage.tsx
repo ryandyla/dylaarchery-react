@@ -29,7 +29,7 @@ export default function ProcessPage() {
       <section
         style={heroBandStyle({
           imageUrl: heroUrl,
-          minHeight: "min(72vh, 760px)",
+          minHeight: "min(70vh, 700px)",
           backgroundPosition: bgPos,
           parallax: true,
         })}
