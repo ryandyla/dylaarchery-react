@@ -1,6 +1,6 @@
 import React from "react";
 import { tw } from "../ui/tw";
-import { heroBandStyle, heroOverlayVignette, heroInnerBottom } from "../ui/hero";
+import { heroBandStyle, heroOverlayNone, heroInnerBottom } from "../ui/hero";
 
 
 
@@ -35,7 +35,7 @@ export default function ProcessPage() {
         })}
       >
         {/* ultra-light vignette for legibility */}
-        <div style={heroOverlayVignette} />
+        <div style={heroOverlayNone} />
 
         <div style={heroInnerBottom}>
           <div style={styles.heroStack}>
