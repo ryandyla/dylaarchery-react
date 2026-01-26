@@ -61,6 +61,20 @@ function titleLabel(r: Row) {
   return String(r.id);
 }
 
+function toNumOrUndef(v: string | null) {
+  if (v === null) return undefined;
+  const t = v.trim();
+  if (!t) return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function toStrOrUndef(v: string | null) {
+  if (v === null) return undefined;
+  const t = v.trim();
+  return t ? t : undefined;
+}
+
 export default function AdminPage() {
   const [type, setType] = React.useState<TypeKey>("shafts");
   const [items, setItems] = React.useState<Row[]>([]);
@@ -175,6 +189,111 @@ export default function AdminPage() {
     }
   }
 
+  async function editRow(r: Row) {
+  setErr("");
+  try {
+    // Per-type minimal editable fields
+    const patch: any = {};
+
+    if (type === "shafts") {
+      const spine = toNumOrUndef(prompt("Spine (integer)", String((r as any).spine ?? "")));
+      const gpi = toNumOrUndef(prompt("GPI", String((r as any).gpi ?? "")));
+      const maxLen = toNumOrUndef(prompt("Max length", String((r as any).max_length ?? "")));
+      const straight = toStrOrUndef(prompt("Straightness (e.g. .001)", String((r as any).straightness ?? "")));
+      const price = toNumOrUndef(prompt("Price per shaft", String((r as any).price_per_shaft ?? "")));
+      const system = toStrOrUndef(prompt("System (.204/.166/5mm)", String((r as any).system ?? "")));
+
+      if (spine !== undefined) patch.spine = spine;
+      if (gpi !== undefined) patch.gpi = gpi;
+      if (maxLen !== undefined) patch.max_length = maxLen;
+      if (straight !== undefined) patch.straightness = straight;
+      if (price !== undefined) patch.price_per_shaft = price;
+      if (system !== undefined) patch.system = system;
+    }
+
+    if (type === "vanes") {
+      const length = toNumOrUndef(prompt("Length", String((r as any).length ?? "")));
+      const height = toNumOrUndef(prompt("Height", String((r as any).height ?? "")));
+      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
+      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
+      const profile = toStrOrUndef(prompt("Profile (optional)", String((r as any).profile ?? "")));
+
+      if (length !== undefined) patch.length = length;
+      if (height !== undefined) patch.height = height;
+      if (weight !== undefined) patch.weight_grains = weight;
+      if (price !== undefined) patch.price_per_arrow = price;
+      if (profile !== undefined) patch.profile = profile;
+    }
+
+    if (type === "nocks") {
+      const system = toStrOrUndef(prompt("System (.204/.166/5mm)", String((r as any).system ?? "")));
+      const style = toStrOrUndef(prompt("Style (standard/pin/etc)", String((r as any).style ?? "")));
+      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
+      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
+
+      if (system !== undefined) patch.system = system;
+      if (style !== undefined) patch.style = style;
+      if (weight !== undefined) patch.weight_grains = weight;
+      if (price !== undefined) patch.price_per_arrow = price;
+    }
+
+    if (type === "wraps") {
+      const name = toStrOrUndef(prompt("Name", String((r as any).name ?? "")));
+      const length = toNumOrUndef(prompt("Length", String((r as any).length ?? "")));
+      const minOD = toNumOrUndef(prompt("Min outer diameter", String((r as any).min_outer_diameter ?? "")));
+      const maxOD = toNumOrUndef(prompt("Max outer diameter", String((r as any).max_outer_diameter ?? "")));
+      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
+      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
+
+      if (name !== undefined) patch.name = name;
+      if (length !== undefined) patch.length = length;
+      if (minOD !== undefined) patch.min_outer_diameter = minOD;
+      if (maxOD !== undefined) patch.max_outer_diameter = maxOD;
+      if (weight !== undefined) patch.weight_grains = weight;
+      if (price !== undefined) patch.price_per_arrow = price;
+    }
+
+    if (type === "inserts") {
+      const system = toStrOrUndef(prompt("System (.204/.166/.246)", String((r as any).system ?? "")));
+      const tpe = toStrOrUndef(prompt("Type (standard/half-out/hit)", String((r as any).type ?? "")));
+      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
+      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
+      const collarW = toNumOrUndef(prompt("Collar weight (optional)", String((r as any).collar_weight_grains ?? "")));
+      const collarP = toNumOrUndef(prompt("Collar price (optional)", String((r as any).collar_price_per_arrow ?? "")));
+
+      if (system !== undefined) patch.system = system;
+      if (tpe !== undefined) patch.type = tpe;
+      if (weight !== undefined) patch.weight_grains = weight;
+      if (price !== undefined) patch.price_per_arrow = price;
+      if (collarW !== undefined) patch.collar_weight_grains = collarW;
+      if (collarP !== undefined) patch.collar_price_per_arrow = collarP;
+    }
+
+    if (type === "points") {
+      const tpe = toStrOrUndef(prompt("Type (field/broadhead)", String((r as any).type ?? "")));
+      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
+      const thread = toStrOrUndef(prompt("Thread (optional)", String((r as any).thread ?? "")));
+      const price = toNumOrUndef(prompt("Price", String((r as any).price ?? "")));
+
+      if (tpe !== undefined) patch.type = tpe;
+      if (weight !== undefined) patch.weight_grains = weight;
+      if (thread !== undefined) patch.thread = thread;
+      if (price !== undefined) patch.price = price;
+    }
+
+    if (Object.keys(patch).length === 0) return;
+
+    await api(`/api/admin/${type}/${r.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+
+    await load();
+  } catch (e: any) {
+    setErr(e?.message || String(e));
+  }
+}
+
   async function uploadForRow(r: Row) {
     setErr("");
     try {
@@ -285,6 +404,13 @@ export default function AdminPage() {
                 className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
               >
                 Upload image
+              </button>
+
+              <button
+                onClick={() => editRow(r)}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
+              >
+                Edit
               </button>
 
               <button
