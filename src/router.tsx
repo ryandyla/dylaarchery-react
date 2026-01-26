@@ -5,7 +5,7 @@ import ContactPage from "./pages/ContactPage";
 import ArrowBuilderPage from "./ArrowBuilderPage";
 import ProcessPage from "./pages/ProcessPage"; // 👈 add this
 import ToolsPage from "./pages/ToolsPage";
-
+import AdminPage from "./pages/AdminPage";
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
@@ -15,6 +15,7 @@ export const router = createBrowserRouter([
       { path: "/process", element: <ProcessPage /> }, // 👈 add this
       { path: "/tools", element: <ToolsPage /> },
       { path: "/contact", element: <ContactPage /> },
+      { path: "/admin", element: <AdminPage /> },
     ],
   },
 ]);
