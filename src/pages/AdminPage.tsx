@@ -2,22 +2,91 @@ import React from "react";
 
 type TypeKey = "shafts" | "nocks" | "vanes" | "wraps" | "inserts" | "points";
 
-type Row = {
+type Row = Record<string, any> & {
   id: number;
   active?: number;
-
-  // common-ish fields across tables:
   brand?: string;
   model?: string;
   name?: string;
   system?: string;
-
-  // pricing differs by table; we’ll display the first one we find
   price_per_shaft?: number;
   price_per_arrow?: number;
   price?: number;
-
   image_url?: string | null;
+};
+
+type FieldDef = {
+  key: string;
+  label: string;
+  type: "text" | "number" | "checkbox";
+  placeholder?: string;
+  step?: string;
+};
+
+const FIELDS: Record<TypeKey, FieldDef[]> = {
+  shafts: [
+    { key: "brand",         label: "Brand",          type: "text" },
+    { key: "model",         label: "Model",          type: "text" },
+    { key: "spine",         label: "Spine",          type: "number", placeholder: "300" },
+    { key: "gpi",           label: "GPI",            type: "number", step: "0.1", placeholder: "8.5" },
+    { key: "inner_diameter",label: "Inner Dia (in)", type: "number", step: "0.001", placeholder: "0.204" },
+    { key: "outer_diameter",label: "Outer Dia (in)", type: "number", step: "0.001", placeholder: "0.246" },
+    { key: "max_length",    label: "Max Length (in)",type: "number", step: "0.25", placeholder: "32" },
+    { key: "straightness",  label: "Straightness",   type: "text",   placeholder: ".001" },
+    { key: "system",        label: "System",         type: "text",   placeholder: ".204 / .166 / 5mm" },
+    { key: "price_per_shaft",label: "Price / shaft", type: "number", step: "0.01", placeholder: "0.00" },
+    { key: "active",        label: "Active",         type: "checkbox" },
+  ],
+  vanes: [
+    { key: "brand",          label: "Brand",          type: "text" },
+    { key: "model",          label: "Model",          type: "text" },
+    { key: "length",         label: "Length (in)",    type: "number", step: "0.01" },
+    { key: "height",         label: "Height (in)",    type: "number", step: "0.01" },
+    { key: "weight_grains",  label: "Weight (gr)",    type: "number", step: "0.1" },
+    { key: "profile",        label: "Profile",        type: "text" },
+    { key: "compatible_micro",label: "Micro OK",      type: "checkbox" },
+    { key: "price_per_arrow",label: "Price / arrow",  type: "number", step: "0.01" },
+    { key: "active",         label: "Active",         type: "checkbox" },
+  ],
+  nocks: [
+    { key: "brand",          label: "Brand",          type: "text" },
+    { key: "model",          label: "Model",          type: "text" },
+    { key: "system",         label: "System",         type: "text", placeholder: ".204 / .166 / 5mm" },
+    { key: "style",          label: "Style",          type: "text", placeholder: "standard / pin / large" },
+    { key: "weight_grains",  label: "Weight (gr)",    type: "number", step: "0.1" },
+    { key: "price_per_arrow",label: "Price / arrow",  type: "number", step: "0.01" },
+    { key: "active",         label: "Active",         type: "checkbox" },
+  ],
+  wraps: [
+    { key: "name",               label: "Name",           type: "text" },
+    { key: "length",             label: "Length (in)",    type: "number", step: "0.25" },
+    { key: "min_outer_diameter", label: "Min OD (in)",    type: "number", step: "0.001" },
+    { key: "max_outer_diameter", label: "Max OD (in)",    type: "number", step: "0.001" },
+    { key: "weight_grains",      label: "Weight (gr)",    type: "number", step: "0.1" },
+    { key: "price_per_arrow",    label: "Price / arrow",  type: "number", step: "0.01" },
+    { key: "active",             label: "Active",         type: "checkbox" },
+  ],
+  inserts: [
+    { key: "brand",                label: "Brand",           type: "text" },
+    { key: "model",                label: "Model",           type: "text" },
+    { key: "system",               label: "System",          type: "text", placeholder: ".204 / HIT / half-out" },
+    { key: "type",                 label: "Type",            type: "text", placeholder: "standard / hit / outsert" },
+    { key: "weight_grains",        label: "Weight (gr)",     type: "number", step: "0.1" },
+    { key: "price_per_arrow",      label: "Price / arrow",   type: "number", step: "0.01" },
+    { key: "requires_collar",      label: "Needs collar",    type: "checkbox" },
+    { key: "collar_weight_grains", label: "Collar wt (gr)",  type: "number", step: "0.1" },
+    { key: "collar_price_per_arrow",label: "Collar price",   type: "number", step: "0.01" },
+    { key: "active",               label: "Active",          type: "checkbox" },
+  ],
+  points: [
+    { key: "brand",         label: "Brand",          type: "text" },
+    { key: "model",         label: "Model",          type: "text" },
+    { key: "type",          label: "Type",           type: "text", placeholder: "field / broadhead" },
+    { key: "weight_grains", label: "Weight (gr)",    type: "number", step: "0.1" },
+    { key: "thread",        label: "Thread",         type: "text", placeholder: "8-32" },
+    { key: "price",         label: "Price",          type: "number", step: "0.01" },
+    { key: "active",        label: "Active",         type: "checkbox" },
+  ],
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -55,31 +124,98 @@ function priceLabel(r: Row) {
 }
 
 function titleLabel(r: Row) {
-  // wraps uses name; most others are brand+model
   if (r.name) return r.name;
+  if (r.brand && r.model) return `${r.brand} ${r.model}`;
   if (r.model) return r.model;
   return String(r.id);
 }
 
-function toNumOrUndef(v: string | null) {
-  if (v === null) return undefined;
-  const t = v.trim();
-  if (!t) return undefined;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : undefined;
+// ── Inline editor form ──────────────────────────────────────────────────────
+
+function InlineEditor({
+  type,
+  draft,
+  saving,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  type: TypeKey;
+  draft: Record<string, any>;
+  saving: boolean;
+  onChange: (key: string, val: any) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const fields = FIELDS[type];
+
+  return (
+    <div className="border-t border-yellow-400/20 bg-white/[0.03] px-4 py-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+        {fields.map((f) => (
+          <label key={f.key} className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-white/50">{f.label}</span>
+            {f.type === "checkbox" ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={!!draft[f.key]}
+                  onChange={(e) => onChange(f.key, e.target.checked ? 1 : 0)}
+                  className="h-4 w-4 accent-yellow-400"
+                />
+                <span className="text-xs text-white/60">{draft[f.key] ? "Yes" : "No"}</span>
+              </div>
+            ) : (
+              <input
+                type={f.type}
+                step={f.step}
+                placeholder={f.placeholder}
+                value={draft[f.key] ?? ""}
+                onChange={(e) =>
+                  onChange(
+                    f.key,
+                    f.type === "number"
+                      ? e.target.value === "" ? null : Number(e.target.value)
+                      : e.target.value
+                  )
+                }
+                className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white outline-none focus:border-yellow-400/50"
+              />
+            )}
+          </label>
+        ))}
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="rounded-lg bg-yellow-500 px-4 py-1.5 text-sm font-extrabold text-black hover:bg-yellow-400 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-bold text-white/70 hover:bg-white/10"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
 }
 
-function toStrOrUndef(v: string | null) {
-  if (v === null) return undefined;
-  const t = v.trim();
-  return t ? t : undefined;
-}
+// ── Main page ───────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const [type, setType] = React.useState<TypeKey>("shafts");
   const [items, setItems] = React.useState<Row[]>([]);
   const [q, setQ] = React.useState("");
   const [err, setErr] = React.useState("");
+
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [draft, setDraft] = React.useState<Record<string, any>>({});
+  const [saving, setSaving] = React.useState(false);
 
   async function load() {
     setErr("");
@@ -94,9 +230,45 @@ export default function AdminPage() {
   }
 
   React.useEffect(() => {
+    setEditingId(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
+
+  function startEdit(r: Row) {
+    setEditingId(r.id);
+    setDraft({ ...r });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft({});
+  }
+
+  async function saveEdit() {
+    if (editingId == null) return;
+    setSaving(true);
+    setErr("");
+    try {
+      // Only send fields defined for this type (safe whitelist)
+      const allowed = new Set(FIELDS[type].map((f) => f.key));
+      const patch: Record<string, any> = {};
+      for (const [k, v] of Object.entries(draft)) {
+        if (allowed.has(k)) patch[k] = v;
+      }
+      await api(`/api/admin/${type}/${editingId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+      setEditingId(null);
+      setDraft({});
+      await load();
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function createQuick() {
     setErr("");
@@ -107,62 +279,22 @@ export default function AdminPage() {
         await api(`/api/admin/${type}`, {
           method: "POST",
           body: JSON.stringify({
-            name,
-            length: 7,
-            min_outer_diameter: 0.24,
-            max_outer_diameter: 0.30,
-            price_per_arrow: 0,
-            weight_grains: 0,
-            active: 1,
+            name, length: 7, min_outer_diameter: 0.24, max_outer_diameter: 0.30,
+            price_per_arrow: 0, weight_grains: 0, active: 1,
           }),
         });
       } else {
         const brand = prompt("Brand?") || "";
         const model = prompt("Model?") || "";
         if (!brand || !model) return;
-
-        // keep it minimal; you can expand per-table later
         const body: any = { brand, model, active: 1 };
-
-        // give required defaults for tables with NOT NULLs if you want “quick create”
-        if (type === "shafts") {
-          body.spine = 300;
-          body.gpi = 8.5;
-          body.inner_diameter = 0.204;
-          body.outer_diameter = 0.265;
-          body.max_length = 32;
-          body.price_per_shaft = 0;
-          body.system = ".204";
-        }
-        if (type === "vanes") {
-          body.length = 2.0;
-          body.height = 0.5;
-          body.weight_grains = 6.0;
-          body.compatible_micro = 0;
-          body.price_per_arrow = 0;
-        }
-        if (type === "nocks") {
-          body.system = ".204";
-          body.style = "standard";
-          body.price_per_arrow = 0;
-          body.weight_grains = 0;
-        }
-        if (type === "inserts") {
-          body.system = ".204";
-          body.type = "standard";
-          body.weight_grains = 50;
-          body.price_per_arrow = 0;
-          body.requires_collar = 0;
-        }
-        if (type === "points") {
-          body.type = "field";
-          body.weight_grains = 100;
-          body.price = 0;
-        }
-
+        if (type === "shafts")  Object.assign(body, { spine: 300, gpi: 8.5, inner_diameter: 0.204, outer_diameter: 0.246, max_length: 32, price_per_shaft: 0, system: ".204" });
+        if (type === "vanes")   Object.assign(body, { length: 2.0, height: 0.5, weight_grains: 6.0, compatible_micro: 0, price_per_arrow: 0 });
+        if (type === "nocks")   Object.assign(body, { system: ".204", style: "standard", price_per_arrow: 0, weight_grains: 0 });
+        if (type === "inserts") Object.assign(body, { system: ".204", type: "standard", weight_grains: 50, price_per_arrow: 0, requires_collar: 0 });
+        if (type === "points")  Object.assign(body, { type: "field", weight_grains: 100, price: 0 });
         await api(`/api/admin/${type}`, { method: "POST", body: JSON.stringify(body) });
       }
-
       await load();
     } catch (e: any) {
       setErr(e?.message || String(e));
@@ -187,126 +319,19 @@ export default function AdminPage() {
     setErr("");
     try {
       await api(`/api/admin/${type}/${r.id}`, { method: "DELETE" });
+      if (editingId === r.id) cancelEdit();
       await load();
     } catch (e: any) {
       setErr(e?.message || String(e));
     }
   }
 
-  async function editRow(r: Row) {
-  setErr("");
-  try {
-    // Per-type minimal editable fields
-    const patch: any = {};
-
-    if (type === "shafts") {
-      const spine = toNumOrUndef(prompt("Spine (integer)", String((r as any).spine ?? "")));
-      const gpi = toNumOrUndef(prompt("GPI", String((r as any).gpi ?? "")));
-      const maxLen = toNumOrUndef(prompt("Max length", String((r as any).max_length ?? "")));
-      const straight = toStrOrUndef(prompt("Straightness (e.g. .001)", String((r as any).straightness ?? "")));
-      const price = toNumOrUndef(prompt("Price per shaft", String((r as any).price_per_shaft ?? "")));
-      const system = toStrOrUndef(prompt("System (.204/.166/5mm)", String((r as any).system ?? "")));
-
-      if (spine !== undefined) patch.spine = spine;
-      if (gpi !== undefined) patch.gpi = gpi;
-      if (maxLen !== undefined) patch.max_length = maxLen;
-      if (straight !== undefined) patch.straightness = straight;
-      if (price !== undefined) patch.price_per_shaft = price;
-      if (system !== undefined) patch.system = system;
-    }
-
-    if (type === "vanes") {
-      const length = toNumOrUndef(prompt("Length", String((r as any).length ?? "")));
-      const height = toNumOrUndef(prompt("Height", String((r as any).height ?? "")));
-      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
-      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
-      const profile = toStrOrUndef(prompt("Profile (optional)", String((r as any).profile ?? "")));
-
-      if (length !== undefined) patch.length = length;
-      if (height !== undefined) patch.height = height;
-      if (weight !== undefined) patch.weight_grains = weight;
-      if (price !== undefined) patch.price_per_arrow = price;
-      if (profile !== undefined) patch.profile = profile;
-    }
-
-    if (type === "nocks") {
-      const system = toStrOrUndef(prompt("System (.204/.166/5mm)", String((r as any).system ?? "")));
-      const style = toStrOrUndef(prompt("Style (standard/pin/etc)", String((r as any).style ?? "")));
-      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
-      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
-
-      if (system !== undefined) patch.system = system;
-      if (style !== undefined) patch.style = style;
-      if (weight !== undefined) patch.weight_grains = weight;
-      if (price !== undefined) patch.price_per_arrow = price;
-    }
-
-    if (type === "wraps") {
-      const name = toStrOrUndef(prompt("Name", String((r as any).name ?? "")));
-      const length = toNumOrUndef(prompt("Length", String((r as any).length ?? "")));
-      const minOD = toNumOrUndef(prompt("Min outer diameter", String((r as any).min_outer_diameter ?? "")));
-      const maxOD = toNumOrUndef(prompt("Max outer diameter", String((r as any).max_outer_diameter ?? "")));
-      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
-      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
-
-      if (name !== undefined) patch.name = name;
-      if (length !== undefined) patch.length = length;
-      if (minOD !== undefined) patch.min_outer_diameter = minOD;
-      if (maxOD !== undefined) patch.max_outer_diameter = maxOD;
-      if (weight !== undefined) patch.weight_grains = weight;
-      if (price !== undefined) patch.price_per_arrow = price;
-    }
-
-    if (type === "inserts") {
-      const system = toStrOrUndef(prompt("System (.204/.166/.246)", String((r as any).system ?? "")));
-      const tpe = toStrOrUndef(prompt("Type (standard/half-out/hit)", String((r as any).type ?? "")));
-      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
-      const price = toNumOrUndef(prompt("Price per arrow", String((r as any).price_per_arrow ?? "")));
-      const collarW = toNumOrUndef(prompt("Collar weight (optional)", String((r as any).collar_weight_grains ?? "")));
-      const collarP = toNumOrUndef(prompt("Collar price (optional)", String((r as any).collar_price_per_arrow ?? "")));
-
-      if (system !== undefined) patch.system = system;
-      if (tpe !== undefined) patch.type = tpe;
-      if (weight !== undefined) patch.weight_grains = weight;
-      if (price !== undefined) patch.price_per_arrow = price;
-      if (collarW !== undefined) patch.collar_weight_grains = collarW;
-      if (collarP !== undefined) patch.collar_price_per_arrow = collarP;
-    }
-
-    if (type === "points") {
-      const tpe = toStrOrUndef(prompt("Type (field/broadhead)", String((r as any).type ?? "")));
-      const weight = toNumOrUndef(prompt("Weight (grains)", String((r as any).weight_grains ?? "")));
-      const thread = toStrOrUndef(prompt("Thread (optional)", String((r as any).thread ?? "")));
-      const price = toNumOrUndef(prompt("Price", String((r as any).price ?? "")));
-
-      if (tpe !== undefined) patch.type = tpe;
-      if (weight !== undefined) patch.weight_grains = weight;
-      if (thread !== undefined) patch.thread = thread;
-      if (price !== undefined) patch.price = price;
-    }
-
-    if (Object.keys(patch).length === 0) return;
-
-    await api(`/api/admin/${type}/${r.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch),
-    });
-
-    await load();
-  } catch (e: any) {
-    setErr(e?.message || String(e));
-  }
-}
-
   async function uploadForRow(r: Row) {
     setErr("");
     try {
       const file = await pickFile("image/*");
       if (!file) return;
-
-      // your router returns { ok: true, url: servedUrl, key }
       await uploadImage(`/api/admin/${type}/${r.id}/images`, file);
-
       await load();
     } catch (e: any) {
       setErr(e?.message || String(e));
@@ -315,10 +340,10 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-black">Admin</h1>
-
           <select
             value={type}
             onChange={(e) => setType(e.target.value as TypeKey)}
@@ -332,7 +357,6 @@ export default function AdminPage() {
             <option value="points">Points</option>
           </select>
         </div>
-
         <button
           onClick={createQuick}
           className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-extrabold text-black hover:bg-yellow-400"
@@ -341,29 +365,32 @@ export default function AdminPage() {
         </button>
       </div>
 
+      {/* Search */}
       <div className="mt-6 flex flex-wrap gap-3">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search (brand/model/system/type/thread...)"
+          onKeyDown={(e) => e.key === "Enter" && load()}
+          placeholder="Search brand / model / system…"
           className="w-80 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
         />
         <button
           onClick={load}
           className="rounded-xl border border-white/15 bg-black/25 px-4 py-2 text-sm font-extrabold text-white/90 hover:bg-black/35"
         >
-          Refresh
+          Search
         </button>
       </div>
 
-      {err ? (
+      {err && (
         <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {err}
         </div>
-      ) : null}
+      )}
 
+      {/* Table */}
       <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
-        <div className="grid grid-cols-[1.2fr_.9fr_.7fr_.6fr_.9fr_.6fr] gap-2 bg-white/5 px-3 py-2 text-xs font-bold text-white/70">
+        <div className="grid grid-cols-[1.4fr_.9fr_.7fr_.5fr_.8fr_.7fr] gap-2 bg-white/5 px-3 py-2 text-xs font-bold text-white/70">
           <div>Name / Model</div>
           <div>Brand</div>
           <div>System</div>
@@ -373,63 +400,84 @@ export default function AdminPage() {
         </div>
 
         {items.map((r) => (
-          <div
-            key={r.id}
-            className="grid grid-cols-[1.2fr_.9fr_.7fr_.6fr_.9fr_.6fr] gap-2 border-t border-white/10 px-3 py-3 text-sm"
-          >
-            <div className="font-semibold">
-              {titleLabel(r)}
-              {r.image_url ? (
-                <a
-                  href={r.image_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-2 text-xs text-yellow-300/90 hover:text-yellow-200 underline underline-offset-2"
+          <div key={r.id} className="border-t border-white/10">
+            {/* Row summary */}
+            <div className="grid grid-cols-[1.4fr_.9fr_.7fr_.5fr_.8fr_.7fr] gap-2 px-3 py-3 text-sm">
+              <div className="font-semibold">
+                {titleLabel(r)}
+                {r.image_url && (
+                  <a
+                    href={r.image_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-2 text-xs text-yellow-300/90 underline underline-offset-2 hover:text-yellow-200"
+                  >
+                    img
+                  </a>
+                )}
+              </div>
+              <div className="text-white/80">{r.brand || "—"}</div>
+              <div className="text-white/70">{r.system || "—"}</div>
+              <div>
+                <button
+                  onClick={() => toggleActive(r)}
+                  className={`rounded-lg border px-2 py-1 text-xs font-bold ${
+                    r.active
+                      ? "border-green-500/20 bg-green-500/10 text-green-300"
+                      : "border-white/10 bg-white/5 text-white/40"
+                  }`}
                 >
-                  view
-                </a>
-              ) : null}
+                  {r.active ? "On" : "Off"}
+                </button>
+              </div>
+              <div className="text-white/70">{priceLabel(r)}</div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => (editingId === r.id ? cancelEdit() : startEdit(r))}
+                  className={`rounded-lg border px-2 py-1 text-xs font-bold ${
+                    editingId === r.id
+                      ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"
+                      : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                  }`}
+                >
+                  {editingId === r.id ? "Editing…" : "Edit"}
+                </button>
+                <button
+                  onClick={() => uploadForRow(r)}
+                  className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
+                >
+                  Image
+                </button>
+                <button
+                  onClick={() => delRow(r)}
+                  className="rounded-lg border border-red-500/15 bg-red-500/5 px-2 py-1 text-xs font-bold text-red-400/80 hover:bg-red-500/10"
+                >
+                  Del
+                </button>
+              </div>
             </div>
-            <div className="text-white/80">{r.brand || "—"}</div>
-            <div className="text-white/70">{r.system || "—"}</div>
-            <div className="text-white/70">
-              <button
-                onClick={() => toggleActive(r)}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
-              >
-                {r.active ? "Yes" : "No"}
-              </button>
-            </div>
-            <div className="text-white/70">{priceLabel(r)}</div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => uploadForRow(r)}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
-              >
-                Upload image
-              </button>
-
-              <button
-                onClick={() => editRow(r)}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
-              >
-                Edit
-              </button>
-
-              <button
-                onClick={() => delRow(r)}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
-              >
-                Delete
-              </button>
-            </div>
+            {/* Inline editor — expands below the row */}
+            {editingId === r.id && (
+              <InlineEditor
+                type={type}
+                draft={draft}
+                saving={saving}
+                onChange={(key, val) => setDraft((d) => ({ ...d, [key]: val }))}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+              />
+            )}
           </div>
         ))}
+
+        {items.length === 0 && (
+          <div className="px-4 py-8 text-center text-sm text-white/40">No items found.</div>
+        )}
       </div>
 
-      <p className="mt-4 text-xs text-white/60">
-        Protected by Cloudflare Access. The API additionally verifies the Access JWT on every request.
+      <p className="mt-4 text-xs text-white/40">
+        Protected by Cloudflare Access · JWT verified server-side on every request
       </p>
     </div>
   );
