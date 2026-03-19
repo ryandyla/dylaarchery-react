@@ -29,7 +29,7 @@ export default function HomePage() {
           imageUrl: heroUrl,
           minHeight: "min(70vh, 700px)",
           backgroundPosition: bgPos,
-          parallax: false,
+          parallax: true,
         })}
       >
         <div style={heroOverlayNone} />
