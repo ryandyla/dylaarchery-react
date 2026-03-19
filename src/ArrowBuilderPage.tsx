@@ -1027,7 +1027,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                         return (
                           <button
                             key={v.id}
-                            onClick={() => setState((s) => ({ ...s, vane_id: v.id }))
+                            onClick={() => setState((s) => ({ ...s, vane_id: v.id }))}
                             style={cardButtonStyle(selected)}
                           >
                             <div style={styles.cardTop}>
@@ -1082,7 +1082,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                     <button
                       key={ins.id}
 
-                        onClick={() => setState((s) => ({ ...s, insert_id: ins.id }))
+                        onClick={() => setState((s) => ({ ...s, insert_id: ins.id }))}
                       style={pillStyle(state.insert_id === ins.id)}
                     >
                       {ins.brand} {ins.model}
