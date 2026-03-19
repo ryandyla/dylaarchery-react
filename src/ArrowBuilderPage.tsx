@@ -124,21 +124,6 @@ type DraftResponse =
   | { ok: true; order_id: number; build_id: number; status: string; price: { per_arrow: number; subtotal: number } }
   | { ok: false; field?: string; message: string };
 
-const VANE_COLORS = [
-  "White",
-  "Blue",
-  "Teal",
-  "Green (Fluorescent)",
-  "Pink (Fluorescent)",
-  "Orange (Fluorescent)",
-  "Yellow (Fluorescent)",
-  "Red (Fluorescent)",
-  "Purple",
-  "Black",
-] as const;
-
-type VaneColor = (typeof VANE_COLORS)[number];
-
 // ---------------------- Builder state ----------------------
 
 type BuilderState = {
@@ -152,8 +137,6 @@ type BuilderState = {
 
   vane_id: number | null;
   fletch_count: 0 | 3 | 4;
-  vane_primary_color?: VaneColor | null;
-  vane_secondary_color?: VaneColor | null;
 
   insert_id: number | null;
   point_id: number | null;
@@ -170,8 +153,6 @@ const DEFAULT_STATE: BuilderState = {
 
   vane_id: null,
   fletch_count: 0,
-  vane_primary_color: null,
-  vane_secondary_color: null,
 
   insert_id: null,
   point_id: null,
@@ -204,18 +185,6 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) {
   };
 }
 
-// function groupShafts(shafts: Shaft[]) {
-//   const map = new Map<string, Shaft[]>();
-//   for (const s of shafts) {
-//     const key = `${s.brand} ${s.model}`;
-//     if (!map.has(key)) map.set(key, []);
-//     map.get(key)!.push(s);
-//   }
-//   return Array.from(map.entries()).map(([key, items]) => ({
-//     key,
-//     items: items.slice().sort((a, b) => a.spine - b.spine),
-//   }));
-// }
 
 function groupShaftsByBrandModel(shafts: Shaft[]) {
   // brand -> model -> Shaft[]
@@ -306,8 +275,6 @@ export default function ArrowBuilderPage() {
 
   const [openStep, setOpenStep] = useState<number>(1);
 
-  const [modal, setModal] = useState<null | { type: ProductType; id: number; title: string }>(null);
-
   // Fetch catalog on mount
   useEffect(() => {
     (async () => {
@@ -348,10 +315,6 @@ function imagesFor(type: ProductType, id?: number | null) {
   return imagesByKey.get(`${type}:${id}`) ?? [];
 }
 
-  // const selectedShaft = useMemo(
-  //   () => shafts.find((s) => s.id === state.shaft_id) ?? null,
-  //   [shafts, state.shaft_id]
-  // );
   const selectedWrap = useMemo(
     () => (state.wrap_id ? wraps.find((w) => w.id === state.wrap_id) ?? null : null),
     [wraps, state.wrap_id]
@@ -598,16 +561,6 @@ function imagesFor(type: ProductType, id?: number | null) {
 
   const fieldError = (fieldName: string) => (serverErr?.field === fieldName ? serverErr.message : null);
 
-  // UI actions
-  // function selectShaft(id: number) {
-  //   setState((s) => ({
-  //     ...DEFAULT_STATE,
-  //     shaft_id: id,
-  //     // keep qty if already 12
-  //     quantity: s.quantity === 12 ? 12 : 6,
-  //   }));
-  //   setOpenStep(2);
-  // }
 
   function setCutMode(mode: "uncut" | "cut") {
     setState((s) => ({
@@ -844,18 +797,17 @@ function imagesFor(type: ProductType, id?: number | null) {
                 <div style={{ marginTop: 10 }}>
                   <label style={styles.label}>Spine</label>
                   <select
-                    style={{ ...styles.input, padding: "10px 12px" }}
+                    style={{ ...styles.input, padding: "10px 12px", background: "#13131a", color: "rgba(255,255,255,.92)" }}
                     value={state.shaft_id ?? ""}
                     onChange={(e) => {
                       const id = Number(e.target.value);
                       if (!Number.isFinite(id)) return;
                       setState((s) => ({ ...s, shaft_id: id }));
-                      
                     }}
                   >
                     {selectedModelGroup.spines.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.spine} • {s.gpi} GPI • {formatMoney(s.price_per_shaft)}
+                      <option key={s.id} value={s.id} style={{ background: "#13131a", color: "rgba(255,255,255,.92)" }}>
+                        {s.spine} spine • {s.gpi} GPI • {formatMoney(s.price_per_shaft)}
                       </option>
                     ))}
                   </select>
@@ -1017,41 +969,15 @@ function imagesFor(type: ProductType, id?: number | null) {
                   <button onClick={() => setState((s) => ({ ...s, wrap_id: null }))} style={pillStyle(state.wrap_id == null)}>
                     No wrap
                   </button>
-                    {compatibleWraps.map((w) => {
-                      const active = state.wrap_id === w.id;
-
-                      return (
-                        <div key={w.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <button
-                            onClick={() => {
-                                setState((s) => ({ ...s, wrap_id: w.id }));
-                                setModal({ type: "wrap", id: w.id, title: `${w.name} • ${w.length}"` });
-                              }}
-                            style={pillStyle(active)}
-                          >
-                            {w.name} <span style={{ opacity: 0.8 }}>• +{formatMoney(w.price_per_arrow)}/arrow</span>
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              setModal({
-                                type: "wrap",
-                                id: w.id,
-                                title: `${w.name} • ${w.length}"`,
-                              })
-                            }
-                            style={{
-                              ...miniBtnStyle(),
-                              width: 44,
-                            }}
-                            aria-label={`View ${w.name} images`}
-                            title="View images"
-                          >
-                            📷
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {compatibleWraps.map((w) => (
+                      <button
+                        key={w.id}
+                        onClick={() => setState((s) => ({ ...s, wrap_id: w.id }))}
+                        style={pillStyle(state.wrap_id === w.id)}
+                      >
+                        {w.name} <span style={{ opacity: 0.8 }}>• +{formatMoney(w.price_per_arrow)}/arrow</span>
+                      </button>
+                    ))}
 
 
                 </div>
@@ -1101,10 +1027,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                         return (
                           <button
                             key={v.id}
-                            onClick={() => {
-                                setState((s) => ({ ...s, vane_id: v.id }));
-                                setModal({ type: "vane", id: v.id, title: `${v.brand} ${v.model}` });
-                              }}
+                            onClick={() => setState((s) => ({ ...s, vane_id: v.id }))
                             style={cardButtonStyle(selected)}
                           >
                             <div style={styles.cardTop}>
@@ -1159,10 +1082,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                     <button
                       key={ins.id}
 
-                        onClick={() => {
-                         setState((s) => ({ ...s, insert_id: ins.id }));
-                         setModal({ type: "insert", id: ins.id, title: `${ins.brand} ${ins.model}` });
-                              }}
+                        onClick={() => setState((s) => ({ ...s, insert_id: ins.id }))
                       style={pillStyle(state.insert_id === ins.id)}
                     >
                       {ins.brand} {ins.model}
@@ -1398,18 +1318,7 @@ function imagesFor(type: ProductType, id?: number | null) {
           </div>
         </div>
       </div>
-            {modal && (
-                <ProductModal title={modal.title} onClose={() => setModal(null)}>
-                  <ImageCarousel images={imagesFor(modal.type, modal.id)} height={280} />
-                  <div style={{ marginTop: 12, fontSize: 12, opacity: 0.8 }}>
-                    Images are tied to <b>{modal.type}</b> #{modal.id}.
-                  </div>
-                </ProductModal>
-              )}
-
     </div>
-
-    
   );
 }
 
@@ -1536,43 +1445,6 @@ function PointPicker(props: {
   );
 }
 
-function ProductModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.65)",
-        display: "grid",
-        placeItems: "center",
-        padding: 18,
-        zIndex: 9999,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "min(860px, 100%)",
-          borderRadius: 18,
-          border: "1px solid rgba(255,255,255,.14)",
-          background: "rgba(10,10,14,.98)",
-          boxShadow: "0 30px 120px rgba(0,0,0,.70)",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 14px", borderBottom: "1px solid rgba(255,255,255,.10)" }}>
-          <div style={{ fontWeight: 950 }}>{title}</div>
-          <button onClick={onClose} style={{ marginLeft: "auto", ...miniBtnStyle() }}>✕</button>
-        </div>
-
-        <div style={{ padding: 14 }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ImageCarousel({ images, height = 220 }: { images: ProductImage[]; height?: number }) {
   const [i, setI] = useState(0);
