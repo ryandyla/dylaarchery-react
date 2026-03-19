@@ -25,69 +25,80 @@ type FieldDef = {
 
 const FIELDS: Record<TypeKey, FieldDef[]> = {
   shafts: [
-    { key: "brand",         label: "Brand",          type: "text" },
-    { key: "model",         label: "Model",          type: "text" },
-    { key: "spine",         label: "Spine",          type: "number", placeholder: "300" },
-    { key: "gpi",           label: "GPI",            type: "number", step: "0.1", placeholder: "8.5" },
-    { key: "inner_diameter",label: "Inner Dia (in)", type: "number", step: "0.001", placeholder: "0.204" },
-    { key: "outer_diameter",label: "Outer Dia (in)", type: "number", step: "0.001", placeholder: "0.246" },
-    { key: "max_length",    label: "Max Length (in)",type: "number", step: "0.25", placeholder: "32" },
-    { key: "straightness",  label: "Straightness",   type: "text",   placeholder: ".001" },
-    { key: "system",        label: "System",         type: "text",   placeholder: ".204 / .166 / 5mm" },
-    { key: "price_per_shaft",label: "Price / shaft", type: "number", step: "0.01", placeholder: "0.00" },
-    { key: "active",        label: "Active",         type: "checkbox" },
+    { key: "brand",          label: "Brand",           type: "text" },
+    { key: "model",          label: "Model",           type: "text" },
+    { key: "spine",          label: "Spine",           type: "number", placeholder: "300" },
+    { key: "gpi",            label: "GPI",             type: "number", step: "0.1",   placeholder: "8.5" },
+    { key: "inner_diameter", label: "Inner Dia (in)",  type: "number", step: "0.001", placeholder: "0.204" },
+    { key: "outer_diameter", label: "Outer Dia (in)",  type: "number", step: "0.001", placeholder: "0.246" },
+    { key: "max_length",     label: "Max Length (in)", type: "number", step: "0.25",  placeholder: "32" },
+    { key: "straightness",   label: "Straightness",    type: "text",   placeholder: ".001" },
+    { key: "system",         label: "System",          type: "text",   placeholder: ".204 / .166 / 5mm" },
+    { key: "price_per_shaft",label: "Price / shaft",   type: "number", step: "0.01",  placeholder: "0.00" },
+    { key: "active",         label: "Active",          type: "checkbox" },
   ],
   vanes: [
-    { key: "brand",          label: "Brand",          type: "text" },
-    { key: "model",          label: "Model",          type: "text" },
-    { key: "length",         label: "Length (in)",    type: "number", step: "0.01" },
-    { key: "height",         label: "Height (in)",    type: "number", step: "0.01" },
-    { key: "weight_grains",  label: "Weight (gr)",    type: "number", step: "0.1" },
-    { key: "profile",        label: "Profile",        type: "text" },
+    { key: "brand",           label: "Brand",         type: "text" },
+    { key: "model",           label: "Model",         type: "text" },
+    { key: "length",          label: "Length (in)",   type: "number", step: "0.01" },
+    { key: "height",          label: "Height (in)",   type: "number", step: "0.01" },
+    { key: "weight_grains",   label: "Weight (gr)",   type: "number", step: "0.1" },
+    { key: "profile",         label: "Profile",       type: "text" },
     { key: "compatible_micro",label: "Micro OK",      type: "checkbox" },
-    { key: "price_per_arrow",label: "Price / arrow",  type: "number", step: "0.01" },
-    { key: "active",         label: "Active",         type: "checkbox" },
+    { key: "price_per_arrow", label: "Price / arrow", type: "number", step: "0.01" },
+    { key: "active",          label: "Active",        type: "checkbox" },
   ],
   nocks: [
-    { key: "brand",          label: "Brand",          type: "text" },
-    { key: "model",          label: "Model",          type: "text" },
-    { key: "system",         label: "System",         type: "text", placeholder: ".204 / .166 / 5mm" },
-    { key: "style",          label: "Style",          type: "text", placeholder: "standard / pin / large" },
-    { key: "weight_grains",  label: "Weight (gr)",    type: "number", step: "0.1" },
-    { key: "price_per_arrow",label: "Price / arrow",  type: "number", step: "0.01" },
-    { key: "active",         label: "Active",         type: "checkbox" },
+    { key: "brand",          label: "Brand",         type: "text" },
+    { key: "model",          label: "Model",         type: "text" },
+    { key: "system",         label: "System",        type: "text", placeholder: ".204 / .166 / 5mm" },
+    { key: "style",          label: "Style",         type: "text", placeholder: "standard / pin / large" },
+    { key: "weight_grains",  label: "Weight (gr)",   type: "number", step: "0.1" },
+    { key: "price_per_arrow",label: "Price / arrow", type: "number", step: "0.01" },
+    { key: "active",         label: "Active",        type: "checkbox" },
   ],
   wraps: [
-    { key: "name",               label: "Name",           type: "text" },
-    { key: "length",             label: "Length (in)",    type: "number", step: "0.25" },
-    { key: "min_outer_diameter", label: "Min OD (in)",    type: "number", step: "0.001" },
-    { key: "max_outer_diameter", label: "Max OD (in)",    type: "number", step: "0.001" },
-    { key: "weight_grains",      label: "Weight (gr)",    type: "number", step: "0.1" },
-    { key: "price_per_arrow",    label: "Price / arrow",  type: "number", step: "0.01" },
-    { key: "active",             label: "Active",         type: "checkbox" },
+    { key: "name",               label: "Name",          type: "text" },
+    { key: "length",             label: "Length (in)",   type: "number", step: "0.25" },
+    { key: "min_outer_diameter", label: "Min OD (in)",   type: "number", step: "0.001" },
+    { key: "max_outer_diameter", label: "Max OD (in)",   type: "number", step: "0.001" },
+    { key: "weight_grains",      label: "Weight (gr)",   type: "number", step: "0.1" },
+    { key: "price_per_arrow",    label: "Price / arrow", type: "number", step: "0.01" },
+    { key: "active",             label: "Active",        type: "checkbox" },
   ],
   inserts: [
-    { key: "brand",                label: "Brand",           type: "text" },
-    { key: "model",                label: "Model",           type: "text" },
-    { key: "system",               label: "System",          type: "text", placeholder: ".204 / HIT / half-out" },
-    { key: "type",                 label: "Type",            type: "text", placeholder: "standard / hit / outsert" },
-    { key: "weight_grains",        label: "Weight (gr)",     type: "number", step: "0.1" },
-    { key: "price_per_arrow",      label: "Price / arrow",   type: "number", step: "0.01" },
-    { key: "requires_collar",      label: "Needs collar",    type: "checkbox" },
-    { key: "collar_weight_grains", label: "Collar wt (gr)",  type: "number", step: "0.1" },
+    { key: "brand",                 label: "Brand",          type: "text" },
+    { key: "model",                 label: "Model",          type: "text" },
+    { key: "system",                label: "System",         type: "text", placeholder: ".204 / HIT / half-out" },
+    { key: "type",                  label: "Type",           type: "text", placeholder: "standard / hit / outsert" },
+    { key: "weight_grains",         label: "Weight (gr)",    type: "number", step: "0.1" },
+    { key: "price_per_arrow",       label: "Price / arrow",  type: "number", step: "0.01" },
+    { key: "requires_collar",       label: "Needs collar",   type: "checkbox" },
+    { key: "collar_weight_grains",  label: "Collar wt (gr)", type: "number", step: "0.1" },
     { key: "collar_price_per_arrow",label: "Collar price",   type: "number", step: "0.01" },
-    { key: "active",               label: "Active",          type: "checkbox" },
+    { key: "active",                label: "Active",         type: "checkbox" },
   ],
   points: [
-    { key: "brand",         label: "Brand",          type: "text" },
-    { key: "model",         label: "Model",          type: "text" },
-    { key: "type",          label: "Type",           type: "text", placeholder: "field / broadhead" },
-    { key: "weight_grains", label: "Weight (gr)",    type: "number", step: "0.1" },
-    { key: "thread",        label: "Thread",         type: "text", placeholder: "8-32" },
-    { key: "price",         label: "Price",          type: "number", step: "0.01" },
-    { key: "active",        label: "Active",         type: "checkbox" },
+    { key: "brand",         label: "Brand",         type: "text" },
+    { key: "model",         label: "Model",         type: "text" },
+    { key: "type",          label: "Type",          type: "text", placeholder: "field / broadhead" },
+    { key: "weight_grains", label: "Weight (gr)",   type: "number", step: "0.1" },
+    { key: "thread",        label: "Thread",        type: "text", placeholder: "8-32" },
+    { key: "price",         label: "Price",         type: "number", step: "0.01" },
+    { key: "active",        label: "Active",        type: "checkbox" },
   ],
 };
+
+const DEFAULTS: Record<TypeKey, Record<string, any>> = {
+  shafts:  { brand: "", model: "", spine: 300, gpi: 8.5, inner_diameter: 0.204, outer_diameter: 0.246, max_length: 32, straightness: "", system: ".204", price_per_shaft: 0, active: 1 },
+  vanes:   { brand: "", model: "", length: 2.0, height: 0.5, weight_grains: 6.0, profile: "", compatible_micro: 0, price_per_arrow: 0, active: 1 },
+  nocks:   { brand: "", model: "", system: ".204", style: "standard", weight_grains: 0, price_per_arrow: 0, active: 1 },
+  wraps:   { name: "", length: 7, min_outer_diameter: 0.24, max_outer_diameter: 0.30, weight_grains: 0, price_per_arrow: 0, active: 1 },
+  inserts: { brand: "", model: "", system: ".204", type: "standard", weight_grains: 50, price_per_arrow: 0, requires_collar: 0, collar_weight_grains: null, collar_price_per_arrow: null, active: 1 },
+  points:  { brand: "", model: "", type: "field", weight_grains: 100, thread: "8-32", price: 0, active: 1 },
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -130,29 +141,29 @@ function titleLabel(r: Row) {
   return String(r.id);
 }
 
-// ── Inline editor form ──────────────────────────────────────────────────────
+// ── Shared form ──────────────────────────────────────────────────────────────
 
-function InlineEditor({
+function ItemForm({
   type,
   draft,
   saving,
+  submitLabel,
   onChange,
-  onSave,
+  onSubmit,
   onCancel,
 }: {
   type: TypeKey;
   draft: Record<string, any>;
   saving: boolean;
+  submitLabel: string;
   onChange: (key: string, val: any) => void;
-  onSave: () => void;
+  onSubmit: () => void;
   onCancel: () => void;
 }) {
-  const fields = FIELDS[type];
-
   return (
     <div className="border-t border-yellow-400/20 bg-white/[0.03] px-4 py-4">
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-        {fields.map((f) => (
+        {FIELDS[type].map((f) => (
           <label key={f.key} className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-white/50">{f.label}</span>
             {f.type === "checkbox" ? (
@@ -188,11 +199,11 @@ function InlineEditor({
 
       <div className="mt-4 flex gap-2">
         <button
-          onClick={onSave}
+          onClick={onSubmit}
           disabled={saving}
           className="rounded-lg bg-yellow-500 px-4 py-1.5 text-sm font-extrabold text-black hover:bg-yellow-400 disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save"}
+          {saving ? "Saving…" : submitLabel}
         </button>
         <button
           onClick={onCancel}
@@ -205,7 +216,7 @@ function InlineEditor({
   );
 }
 
-// ── Main page ───────────────────────────────────────────────────────────────
+// ── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const [type, setType] = React.useState<TypeKey>("shafts");
@@ -213,9 +224,15 @@ export default function AdminPage() {
   const [q, setQ] = React.useState("");
   const [err, setErr] = React.useState("");
 
+  // Edit state
   const [editingId, setEditingId] = React.useState<number | null>(null);
-  const [draft, setDraft] = React.useState<Record<string, any>>({});
-  const [saving, setSaving] = React.useState(false);
+  const [editDraft, setEditDraft] = React.useState<Record<string, any>>({});
+  const [editSaving, setEditSaving] = React.useState(false);
+
+  // Create state
+  const [creating, setCreating] = React.useState(false);
+  const [newDraft, setNewDraft] = React.useState<Record<string, any>>({});
+  const [createSaving, setCreateSaving] = React.useState(false);
 
   async function load() {
     setErr("");
@@ -231,29 +248,65 @@ export default function AdminPage() {
 
   React.useEffect(() => {
     setEditingId(null);
+    setCreating(false);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
+  // ── Create ────────────────────────────────────────────────────────────────
+
+  function openCreate() {
+    setCreating(true);
+    setNewDraft({ ...DEFAULTS[type] });
+    setEditingId(null);
+  }
+
+  function cancelCreate() {
+    setCreating(false);
+    setNewDraft({});
+  }
+
+  async function submitNew() {
+    setCreateSaving(true);
+    setErr("");
+    try {
+      const allowed = new Set(FIELDS[type].map((f) => f.key));
+      const body: Record<string, any> = {};
+      for (const [k, v] of Object.entries(newDraft)) {
+        if (allowed.has(k) && v !== "" && v !== null) body[k] = v;
+      }
+      await api(`/api/admin/${type}`, { method: "POST", body: JSON.stringify(body) });
+      setCreating(false);
+      setNewDraft({});
+      await load();
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setCreateSaving(false);
+    }
+  }
+
+  // ── Edit ──────────────────────────────────────────────────────────────────
+
   function startEdit(r: Row) {
     setEditingId(r.id);
-    setDraft({ ...r });
+    setEditDraft({ ...r });
+    setCreating(false);
   }
 
   function cancelEdit() {
     setEditingId(null);
-    setDraft({});
+    setEditDraft({});
   }
 
   async function saveEdit() {
     if (editingId == null) return;
-    setSaving(true);
+    setEditSaving(true);
     setErr("");
     try {
-      // Only send fields defined for this type (safe whitelist)
       const allowed = new Set(FIELDS[type].map((f) => f.key));
       const patch: Record<string, any> = {};
-      for (const [k, v] of Object.entries(draft)) {
+      for (const [k, v] of Object.entries(editDraft)) {
         if (allowed.has(k)) patch[k] = v;
       }
       await api(`/api/admin/${type}/${editingId}`, {
@@ -261,45 +314,16 @@ export default function AdminPage() {
         body: JSON.stringify(patch),
       });
       setEditingId(null);
-      setDraft({});
+      setEditDraft({});
       await load();
     } catch (e: any) {
       setErr(e?.message || String(e));
     } finally {
-      setSaving(false);
+      setEditSaving(false);
     }
   }
 
-  async function createQuick() {
-    setErr("");
-    try {
-      if (type === "wraps") {
-        const name = prompt("Wrap name?");
-        if (!name) return;
-        await api(`/api/admin/${type}`, {
-          method: "POST",
-          body: JSON.stringify({
-            name, length: 7, min_outer_diameter: 0.24, max_outer_diameter: 0.30,
-            price_per_arrow: 0, weight_grains: 0, active: 1,
-          }),
-        });
-      } else {
-        const brand = prompt("Brand?") || "";
-        const model = prompt("Model?") || "";
-        if (!brand || !model) return;
-        const body: any = { brand, model, active: 1 };
-        if (type === "shafts")  Object.assign(body, { spine: 300, gpi: 8.5, inner_diameter: 0.204, outer_diameter: 0.246, max_length: 32, price_per_shaft: 0, system: ".204" });
-        if (type === "vanes")   Object.assign(body, { length: 2.0, height: 0.5, weight_grains: 6.0, compatible_micro: 0, price_per_arrow: 0 });
-        if (type === "nocks")   Object.assign(body, { system: ".204", style: "standard", price_per_arrow: 0, weight_grains: 0 });
-        if (type === "inserts") Object.assign(body, { system: ".204", type: "standard", weight_grains: 50, price_per_arrow: 0, requires_collar: 0 });
-        if (type === "points")  Object.assign(body, { type: "field", weight_grains: 100, price: 0 });
-        await api(`/api/admin/${type}`, { method: "POST", body: JSON.stringify(body) });
-      }
-      await load();
-    } catch (e: any) {
-      setErr(e?.message || String(e));
-    }
-  }
+  // ── Other actions ─────────────────────────────────────────────────────────
 
   async function toggleActive(r: Row) {
     setErr("");
@@ -338,6 +362,8 @@ export default function AdminPage() {
     }
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       {/* Header */}
@@ -357,11 +383,16 @@ export default function AdminPage() {
             <option value="points">Points</option>
           </select>
         </div>
+
         <button
-          onClick={createQuick}
-          className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-extrabold text-black hover:bg-yellow-400"
+          onClick={creating ? cancelCreate : openCreate}
+          className={`rounded-xl px-4 py-2 text-sm font-extrabold ${
+            creating
+              ? "border border-white/10 bg-white/5 text-white/70"
+              : "bg-yellow-500 text-black hover:bg-yellow-400"
+          }`}
         >
-          + New
+          {creating ? "✕ Cancel" : "+ New"}
         </button>
       </div>
 
@@ -390,6 +421,25 @@ export default function AdminPage() {
 
       {/* Table */}
       <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
+
+        {/* New item form at top of table */}
+        {creating && (
+          <div className="border-b border-yellow-400/20">
+            <div className="flex items-center gap-2 bg-yellow-400/5 px-4 py-2">
+              <span className="text-xs font-bold text-yellow-300/80">New {type.replace(/s$/, "")}</span>
+            </div>
+            <ItemForm
+              type={type}
+              draft={newDraft}
+              saving={createSaving}
+              submitLabel="Create"
+              onChange={(key, val) => setNewDraft((d) => ({ ...d, [key]: val }))}
+              onSubmit={submitNew}
+              onCancel={cancelCreate}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-[1.4fr_.9fr_.7fr_.5fr_.8fr_.7fr] gap-2 bg-white/5 px-3 py-2 text-xs font-bold text-white/70">
           <div>Name / Model</div>
           <div>Brand</div>
@@ -401,7 +451,6 @@ export default function AdminPage() {
 
         {items.map((r) => (
           <div key={r.id} className="border-t border-white/10">
-            {/* Row summary */}
             <div className="grid grid-cols-[1.4fr_.9fr_.7fr_.5fr_.8fr_.7fr] gap-2 px-3 py-3 text-sm">
               <div className="font-semibold">
                 {titleLabel(r)}
@@ -457,21 +506,21 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Inline editor — expands below the row */}
             {editingId === r.id && (
-              <InlineEditor
+              <ItemForm
                 type={type}
-                draft={draft}
-                saving={saving}
-                onChange={(key, val) => setDraft((d) => ({ ...d, [key]: val }))}
-                onSave={saveEdit}
+                draft={editDraft}
+                saving={editSaving}
+                submitLabel="Save"
+                onChange={(key, val) => setEditDraft((d) => ({ ...d, [key]: val }))}
+                onSubmit={saveEdit}
                 onCancel={cancelEdit}
               />
             )}
           </div>
         ))}
 
-        {items.length === 0 && (
+        {items.length === 0 && !creating && (
           <div className="px-4 py-8 text-center text-sm text-white/40">No items found.</div>
         )}
       </div>
