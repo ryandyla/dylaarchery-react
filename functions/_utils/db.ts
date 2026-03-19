@@ -82,7 +82,7 @@ export async function getCatalog(DB: D1Database) {
     // wraps
     allRows(
       DB.prepare(
-        `SELECT id, name, length, min_outer_diameter, max_outer_diameter, price_per_arrow
+        `SELECT id, name, length, min_outer_diameter, max_outer_diameter, price_per_arrow, weight_grains
          FROM wraps WHERE active = 1
          ORDER BY name`
       )

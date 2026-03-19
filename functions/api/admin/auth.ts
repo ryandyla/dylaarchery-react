@@ -28,8 +28,20 @@ function getJwks(teamDomain: string) {
   return jwks;
 }
 
+function getAccessToken(req: Request): string | null {
+  // CF Access injects this header when the path is explicitly protected.
+  const header = req.headers.get("CF-Access-Jwt-Assertion");
+  if (header) return header;
+
+  // For same-origin fetch calls from the browser (e.g. /api/admin/*), CF Access
+  // sets the CF_Authorization cookie instead. Parse it out as a fallback.
+  const cookie = req.headers.get("cookie") || "";
+  const match = cookie.match(/(?:^|;\s*)CF_Authorization=([^;]+)/);
+  return match ? match[1] : null;
+}
+
 export async function requireAccess(req: Request, env: any) {
-  const token = req.headers.get("CF-Access-Jwt-Assertion");
+  const token = getAccessToken(req);
   if (!token) {
     return { ok: false as const, res: new Response("Missing Access token", { status: 401 }) };
   }

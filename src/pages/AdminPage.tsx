@@ -83,10 +83,14 @@ export default function AdminPage() {
 
   async function load() {
     setErr("");
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    const data = await api<{ ok: boolean; items: Row[] }>(`/api/admin/${type}?${params.toString()}`);
-    setItems(data.items || []);
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      const data = await api<{ ok: boolean; items: Row[] }>(`/api/admin/${type}?${params.toString()}`);
+      setItems(data.items || []);
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    }
   }
 
   React.useEffect(() => {

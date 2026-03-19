@@ -1,9 +1,15 @@
 name = "dylaarchery"
 compatibility_date = "2025-01-01"
+account_id = "c7fdb73bfe9b836c659f685c0628913d"
 
 # If you're using Pages Functions, this is fine to leave out.
 # If you later switch to Pages + Functions explicitly, you can keep this.
 # No pages_build_output_dir needed for Vite builds; Pages handles dist automatically.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dylaarchery"
+database_id = "56fe49d2-c37b-43b1-bbcc-ac63ebccf7b8"
 
 [[r2_buckets]]
 binding = "PRODUCT_IMAGES"
