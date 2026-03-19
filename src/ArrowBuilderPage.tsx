@@ -72,6 +72,7 @@ type Insert = {
   model: string;
   system: string;
   type: string;
+  shaft_id_in: number | null;
   weight_grains: number;
   price_per_arrow: number;
   requires_collar: number; // 0/1
@@ -85,8 +86,9 @@ type Nock = {
   model: string;
   system: string;
   style: string;
-  weight_grains: number;      
+  weight_grains: number;
   price_per_arrow: number;
+  shaft_id_in: number | null;
 };
 
 type ProductType = "shaft" | "wrap" | "vane" | "point" | "insert" | "nock";
@@ -349,6 +351,43 @@ function imagesFor(type: ProductType, id?: number | null) {
     const isMicro = selectedShaft.outer_diameter <= 0.265;
     return vanes.filter((v) => (isMicro ? v.compatible_micro === 1 : true));
   }, [vanes, selectedShaft]);
+
+  // Filter nocks by shaft inner diameter.
+  // press_fit nocks must match shaft_id_in exactly (±0.001 tolerance).
+  // pin, glue_on, traditional are always compatible.
+  const compatibleNocks = useMemo(() => {
+    if (!selectedShaft?.inner_diameter) return nocks;
+    const id = selectedShaft.inner_diameter;
+    const filtered = nocks.filter((n) => {
+      if (n.system !== "press_fit") return true; // pin/glue/traditional always fit
+      if (n.shaft_id_in == null) return true;    // unknown — show rather than hide
+      return Math.abs(n.shaft_id_in - id) < 0.001;
+    });
+    // Brand priority: matching shaft brand floats to top
+    const brand = selectedShaft.brand.toLowerCase();
+    return [...filtered].sort((a, b) => {
+      const aMatch = a.brand.toLowerCase() === brand ? 0 : 1;
+      const bMatch = b.brand.toLowerCase() === brand ? 0 : 1;
+      return aMatch - bMatch;
+    });
+  }, [nocks, selectedShaft]);
+
+  // Filter inserts by shaft inner diameter when shaft_id_in is set on the insert.
+  // Inserts with null shaft_id_in are shown for all shafts (generic / not yet categorised).
+  const compatibleInserts = useMemo(() => {
+    if (!selectedShaft?.inner_diameter) return inserts;
+    const id = selectedShaft.inner_diameter;
+    const filtered = inserts.filter((ins) => {
+      if (ins.shaft_id_in == null) return true; // no restriction set — always show
+      return Math.abs(ins.shaft_id_in - id) < 0.001;
+    });
+    const brand = selectedShaft.brand.toLowerCase();
+    return [...filtered].sort((a, b) => {
+      const aMatch = a.brand.toLowerCase() === brand ? 0 : 1;
+      const bMatch = b.brand.toLowerCase() === brand ? 0 : 1;
+      return aMatch - bMatch;
+    });
+  }, [inserts, selectedShaft]);
 
   // Points grouped
   const fieldPoints = useMemo(() => points.filter((p) => p.type === "field"), [points]);
@@ -924,16 +963,14 @@ function imagesFor(type: ProductType, id?: number | null) {
               onToggle={() => setOpenStep(openStep === 3 ? 0 : 3)}
             >
               <div style={styles.cardInner}>
-                {nocks.length === 0 ? (
-                  <div style={styles.help}>
-                    Nocks aren’t in the catalog response yet. (UI is ready—add <code>nocks</code> to /catalog and wire pricing later.)
-                  </div>
+                {compatibleNocks.length === 0 ? (
+                  <div style={styles.help}>No compatible nocks found for this shaft diameter.</div>
                 ) : (
                   <div style={styles.row}>
                     <button onClick={() => setState((s) => ({ ...s, nock_id: null }))} style={pillStyle(state.nock_id == null)}>
                       Default / None
                     </button>
-                    {nocks.map((n) => (
+                    {compatibleNocks.map((n) => (
                       <button
                         key={n.id}
                         onClick={() => setState((s) => ({ ...s, nock_id: n.id }))}
@@ -1078,7 +1115,7 @@ function imagesFor(type: ProductType, id?: number | null) {
                     No insert
                   </button>
 
-                  {inserts.map((ins) => (
+                  {compatibleInserts.map((ins) => (
                     <button
                       key={ins.id}
 

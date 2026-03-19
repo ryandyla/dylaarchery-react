@@ -71,6 +71,7 @@ const FIELDS: Record<TypeKey, FieldDef[]> = {
     { key: "model",                 label: "Model",          type: "text" },
     { key: "system",                label: "System",         type: "text", placeholder: ".204 / HIT / half-out" },
     { key: "type",                  label: "Type",           type: "text", placeholder: "standard / hit / outsert" },
+    { key: "shaft_id_in",           label: "Shaft ID (in)",  type: "number", step: "0.001", placeholder: "0.204 / 0.166 / blank=any" },
     { key: "weight_grains",         label: "Weight (gr)",    type: "number", step: "0.1" },
     { key: "price_per_arrow",       label: "Price / arrow",  type: "number", step: "0.01" },
     { key: "requires_collar",       label: "Needs collar",   type: "checkbox" },
@@ -94,7 +95,7 @@ const DEFAULTS: Record<TypeKey, Record<string, any>> = {
   vanes:   { brand: "", model: "", length: 2.0, height: 0.5, weight_grains: 6.0, profile: "", compatible_micro: 0, price_per_arrow: 0, active: 1 },
   nocks:   { brand: "", model: "", system: ".204", style: "standard", weight_grains: 0, price_per_arrow: 0, active: 1 },
   wraps:   { name: "", length: 7, min_outer_diameter: 0.24, max_outer_diameter: 0.30, weight_grains: 0, price_per_arrow: 0, active: 1 },
-  inserts: { brand: "", model: "", system: ".204", type: "standard", weight_grains: 50, price_per_arrow: 0, requires_collar: 0, collar_weight_grains: null, collar_price_per_arrow: null, active: 1 },
+  inserts: { brand: "", model: "", system: ".204", type: "standard", shaft_id_in: null, weight_grains: 50, price_per_arrow: 0, requires_collar: 0, collar_weight_grains: null, collar_price_per_arrow: null, active: 1 },
   points:  { brand: "", model: "", type: "field", weight_grains: 100, thread: "8-32", price: 0, active: 1 },
 };
 

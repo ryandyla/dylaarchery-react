@@ -107,7 +107,7 @@ export async function getCatalog(DB: D1Database) {
     allRows(
       DB.prepare(
         `SELECT id, brand, model, system, type, weight_grains, price_per_arrow, requires_collar,
-                collar_weight_grains, collar_price_per_arrow
+                collar_weight_grains, collar_price_per_arrow, shaft_id_in
          FROM inserts WHERE active = 1
          ORDER BY brand, model`
       )
@@ -115,7 +115,7 @@ export async function getCatalog(DB: D1Database) {
     // nocks
     allRows(
       DB.prepare(
-        `SELECT id, brand, model, system, style, price_per_arrow, weight_grains
+        `SELECT id, brand, model, system, style, price_per_arrow, weight_grains, shaft_id_in
          FROM nocks WHERE active = 1
          ORDER BY brand, model`
       )

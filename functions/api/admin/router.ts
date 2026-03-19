@@ -45,6 +45,7 @@ const COLS: Record<TypeKey, string[]> = {
     "model",
     "system",
     "type",
+    "shaft_id_in",
     "weight_grains",
     "price_per_arrow",
     "requires_collar",
