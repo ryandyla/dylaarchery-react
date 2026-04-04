@@ -1,10 +1,13 @@
-name = "dylaarchery"
+name = "dylaarchery-react"
 compatibility_date = "2025-01-01"
 account_id = "c7fdb73bfe9b836c659f685c0628913d"
 
 # If you're using Pages Functions, this is fine to leave out.
 # If you later switch to Pages + Functions explicitly, you can keep this.
 # No pages_build_output_dir needed for Vite builds; Pages handles dist automatically.
+
+[assets]
+not_found_handling = "single-page-application"
 
 [[d1_databases]]
 binding = "DB"
