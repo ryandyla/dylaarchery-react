@@ -988,6 +988,7 @@ export default function ArrowBuilderPage() {
               vaneId={state.vane_id}
               insertId={state.insert_id}
               pointId={state.point_id}
+              pointType={selectedPoint?.type ?? null}
               cutMode={state.cut_mode}
               cutLength={state.cut_length}
             />
@@ -1087,187 +1088,214 @@ type DiagramProps = {
   vaneId: number | null;
   insertId: number | null;
   pointId: number | null;
+  pointType: "field" | "broadhead" | null;
   cutMode: "uncut" | "cut";
   cutLength: number | null;
 };
 
-function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, pointId, cutMode, cutLength }: DiagramProps) {
+function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, pointId, pointType, cutMode, cutLength }: DiagramProps) {
   const hasShaft = !!shaft;
-  const hasNock = nockId != null;
-  const hasWrap = wrapId != null;
-  const hasVanes = fletchCount > 0 && vaneId != null;
+  const hasNock   = nockId   != null;
+  const hasWrap   = wrapId   != null;
+  const hasVanes  = fletchCount > 0 && vaneId != null;
   const hasInsert = insertId != null;
-  const hasPoint = pointId != null;
-  const fletchOn = fletchCount > 0;
+  const hasPoint  = pointId  != null;
+  const fletchOn  = fletchCount > 0;
 
-  // Shaft geometry: x=48 to x=712, center y=90, height=14 (y=83 to y=97)
-  const SY = 90; const SH = 14; const SY0 = SY - SH / 2; const SY1 = SY + SH / 2;
-  const SX0 = 48; const SX1 = 712;
+  // ── Geometry ──────────────────────────────────────────────────────────────
+  // viewBox 0 0 820 210
+  // Shaft: x=52..700, center y=100, height=12 → y0=94, y1=106
+  const SY = 100; const SH = 12;
+  const SY0 = SY - SH / 2;   // 94
+  const SY1 = SY + SH / 2;   // 106
+  const SX0 = 52;  // shaft start (nock junction)
+  const SX1 = 700; // shaft end (point junction)
+
+  // Wrap band edges
+  const WX0 = SX0 + 4;  // 56
+  const WX1 = SX0 + 100; // 152
+
+  // Vane attachment on shaft (starts a few px after nock, ends ~20px before wrap end)
+  const VX0 = SX0 + 12;  // 64  – front attachment
+  const VX1 = SX0 + 110; // 162 – rear attachment (near nock / wrap)
+
+  // Insert collar zone (front of shaft before point)
+  const IX0 = SX1 - 52;  // 648
+  const IX1 = SX1;        // 700
 
   const cutX = (() => {
     if (cutMode !== "cut" || !cutLength || !shaft) return null;
     return SX0 + Math.min(cutLength / shaft.max_length, 1) * (SX1 - SX0);
   })();
 
-  const T = "0.3s"; // transition duration
-  const GOLD_C = "rgba(255,212,0,.88)";
-  const GOLD_D = "rgba(255,212,0,.45)";
-  const SHAFT_C = "rgba(195,210,220,.68)";
+  // ── Colors ────────────────────────────────────────────────────────────────
+  const T       = "0.3s";
+  const GOLD_C  = "rgba(255,212,0,.90)";
+  const GOLD_D  = "rgba(255,212,0,.50)";
+  const SHAFT_C = "rgba(200,212,222,.70)";
   const SHAFT_N = "rgba(255,255,255,.07)";
-  const DIM = "rgba(255,255,255,.10)";
-  const CYAN = "rgba(80,190,255,.72)";
-  const CYAN_D = "rgba(80,190,255,.18)";
-
-  // label helpers
-  const lblFill = (on: boolean, color = GOLD_C) => on ? color : "rgba(255,255,255,.28)";
-  const connFill = (on: boolean) => on ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.06)";
+  const DIM     = "rgba(255,255,255,.09)";
+  const CYAN    = "rgba(80,190,255,.75)";
+  const CYAN_D  = "rgba(80,190,255,.16)";
   const MONO_FONT = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
 
+  const lblFill  = (on: boolean, color = GOLD_C) => on ? color : "rgba(255,255,255,.26)";
+  const connFill = (on: boolean) => on ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.05)";
+
+  // ── Vane fill ─────────────────────────────────────────────────────────────
+  const vaneFill = (primary: boolean) =>
+    hasShaft && hasVanes  ? (primary ? GOLD_D : "rgba(255,212,0,.28)") :
+    hasShaft && fletchOn  ? (primary ? "rgba(255,212,0,.18)" : "rgba(255,212,0,.10)") :
+    DIM;
+
+  // Top vane: swept wing, bezier curved top edge, peak toward rear
+  // Leading edge (front): steep rise from shaft top (VX0, SY0) up to (VX0+8, SY0-40)
+  // Curved top edge sweeps from low front to high rear peak via Q bezier
+  // Trailing edge (rear): drops from peak down to shaft top at VX1
+  const topVane   = `M ${VX0} ${SY0} L ${VX0+7} ${SY0-38} Q ${VX0+55} ${SY0-78} ${VX1} ${SY0-66} L ${VX1} ${SY0} Z`;
+  const botVane   = `M ${VX0} ${SY1} L ${VX0+7} ${SY1+38} Q ${VX0+55} ${SY1+78} ${VX1} ${SY1+66} L ${VX1} ${SY1} Z`;
+
+  // 3rd vane (in a 3-fletch, one vane is rotated ~120°; shown offset + dim)
+  const top3rd    = `M ${VX0} ${SY0} L ${VX0+6} ${SY0-22} Q ${VX0+52} ${SY0-46} ${VX1-4} ${SY0-38} L ${VX1-4} ${SY0} Z`;
+  const bot3rd    = `M ${VX0} ${SY1} L ${VX0+6} ${SY1+22} Q ${VX0+52} ${SY1+46} ${VX1-4} ${SY1+38} L ${VX1-4} ${SY1} Z`;
+
+  // 4-fletch side vanes (narrow band visible between the primary pair)
+  const top4th    = `M ${VX0} ${SY0} L ${VX0+5} ${SY0-14} Q ${VX0+50} ${SY0-28} ${VX1-6} ${SY0-20} L ${VX1-6} ${SY0} Z`;
+  const bot4th    = `M ${VX0} ${SY1} L ${VX0+5} ${SY1+14} Q ${VX0+50} ${SY1+28} ${VX1-6} ${SY1+20} L ${VX1-6} ${SY1} Z`;
+
+  // Nock: cylindrical body (x=28..52) with string groove notch at rear (x=16..28)
+  // Body is slightly taller than shaft; groove is a narrow step inward
+  const nockPath  = `M ${SX0} ${SY0} L 34 ${SY0-2} L 28 ${SY0+1} L 20 ${SY-3} L 16 ${SY} L 20 ${SY+3} L 28 ${SY1-1} L 34 ${SY1+2} L ${SX0} ${SY1} Z`;
+
+  const isBroadhead = hasPoint && pointType === "broadhead";
+
+  // Field point: collar shoulder + tapered body to tip
+  const pointPath = `M ${IX0} ${SY0-2} L ${IX0+20} ${SY0-2} L ${IX0+20} ${SY0} L ${SX1} ${SY0} L 798 ${SY} L ${SX1} ${SY1} L ${IX0+20} ${SY1} L ${IX0+20} ${SY1+2} L ${IX0} ${SY1+2} Z`;
+
+  // Broadhead: same collar + ferrule body (no taper) + two swept blades to tip
+  // Ferrule body runs at full shaft height from SX1 forward; blades sweep wide then meet at tip
+  const bhFerulePath = `M ${IX0} ${SY0-2} L ${IX0+20} ${SY0-2} L ${IX0+20} ${SY0} L ${SX1+44} ${SY0} L ${SX1+44} ${SY1} L ${IX0+20} ${SY1} L ${IX0+20} ${SY1+2} L ${IX0} ${SY1+2} Z`;
+  const bhTopBlade   = `M ${SX1} ${SY0} L ${SX1+4} ${SY0-12} L ${SX1+22} ${SY0-42} L 798 ${SY} L ${SX1+44} ${SY0} Z`;
+  const bhBotBlade   = `M ${SX1} ${SY1} L ${SX1+4} ${SY1+12} L ${SX1+22} ${SY1+42} L 798 ${SY} L ${SX1+44} ${SY1} Z`;
+
   return (
-    <div style={{
-      background: "#030305",
-      borderRadius: 14,
-      border: "1px solid rgba(255,255,255,.07)",
-      overflow: "hidden",
-    }}>
-      <svg viewBox="0 0 820 200" style={{ width: "100%", display: "block" }}>
+    <div style={{ background: "#030305", borderRadius: 14, border: "1px solid rgba(255,255,255,.07)", overflow: "hidden" }}>
+      <svg viewBox="0 0 820 210" style={{ width: "100%", display: "block" }}>
         <defs>
           <pattern id="adot" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-            <circle cx="11" cy="11" r="0.6" fill="rgba(255,255,255,.045)" />
+            <circle cx="11" cy="11" r="0.55" fill="rgba(255,255,255,.04)" />
           </pattern>
         </defs>
 
         {/* Dot grid */}
-        <rect x="0" y="0" width="820" height="200" fill="url(#adot)" />
+        <rect x="0" y="0" width="820" height="210" fill="url(#adot)" />
 
         {/* Centerline */}
-        <line x1="14" y1={SY} x2="800" y2={SY}
-          stroke="rgba(255,255,255,.035)" strokeWidth="0.5" strokeDasharray="6,4,1,4" />
+        <line x1="12" y1={SY} x2="804" y2={SY}
+          stroke="rgba(255,255,255,.03)" strokeWidth="0.5" strokeDasharray="6,4,1,4" />
 
         {/* ── Shaft body ── */}
-        <rect x={SX0} y={SY0} width={SX1 - SX0} height={SH} rx="2.5"
+        <rect x={SX0} y={SY0} width={SX1 - SX0} height={SH} rx="2"
           fill={hasShaft ? SHAFT_C : SHAFT_N}
           style={{ transition: `fill ${T}` }} />
 
         {/* ── Wrap band ── */}
-        <rect x={SX0 + 4} y={SY0} width={94} height={SH} rx="1"
+        <rect x={WX0} y={SY0} width={WX1 - WX0} height={SH} rx="0"
           fill={hasShaft && hasWrap ? GOLD_D : DIM}
-          style={{ transition: `fill ${T}, opacity ${T}` }}
-          opacity={hasShaft ? 1 : 0.3} />
-        {hasShaft && (
-          <>
-            <line x1={SX0 + 4} y1={SY0} x2={SX0 + 4} y2={SY1}
-              stroke={hasWrap ? GOLD_C : "rgba(255,255,255,.12)"} strokeWidth="1"
-              style={{ transition: `stroke ${T}` }} />
-            <line x1={SX0 + 98} y1={SY0} x2={SX0 + 98} y2={SY1}
-              stroke={hasWrap ? GOLD_C : "rgba(255,255,255,.12)"} strokeWidth="1"
-              style={{ transition: `stroke ${T}` }} />
-          </>
-        )}
-
-        {/* ── Top vane ── */}
-        <polygon
-          points={`${SX0 + 14},${SY0} ${SX0 + 102},${SY0} ${SX0 + 87},${SY0 - 58} ${SX0 + 32},${SY0 - 43}`}
-          fill={hasShaft && hasVanes ? GOLD_D : (hasShaft && fletchOn ? "rgba(255,212,0,.15)" : DIM)}
-          opacity={hasShaft ? 1 : 0.2}
+          opacity={hasShaft ? 1 : 0.25}
           style={{ transition: `fill ${T}, opacity ${T}` }} />
+        {/* Wrap edge ticks */}
+        {hasShaft && (<>
+          <line x1={WX0} y1={SY0-2} x2={WX0} y2={SY1+2} stroke={hasWrap ? GOLD_C : "rgba(255,255,255,.14)"} strokeWidth="1.5" style={{ transition: `stroke ${T}` }} />
+          <line x1={WX1} y1={SY0-2} x2={WX1} y2={SY1+2} stroke={hasWrap ? GOLD_C : "rgba(255,255,255,.14)"} strokeWidth="1.5" style={{ transition: `stroke ${T}` }} />
+        </>)}
 
-        {/* ── Bottom vane ── */}
-        <polygon
-          points={`${SX0 + 14},${SY1} ${SX0 + 102},${SY1} ${SX0 + 87},${SY1 + 58} ${SX0 + 32},${SY1 + 43}`}
-          fill={hasShaft && hasVanes ? GOLD_D : (hasShaft && fletchOn ? "rgba(255,212,0,.15)" : DIM)}
-          opacity={hasShaft ? 1 : 0.2}
-          style={{ transition: `fill ${T}, opacity ${T}` }} />
+        {/* ── Vanes ── rendered back-to-front so primary pair is on top ── */}
 
-        {/* ── 4-fletch side vanes ── */}
-        {fletchCount === 4 && (
-          <>
-            <polygon
-              points={`${SX0 + 14},${SY0} ${SX0 + 102},${SY0} ${SX0 + 94},${SY0 - 24} ${SX0 + 26},${SY0 - 18}`}
-              fill={hasVanes ? GOLD_D : "rgba(255,212,0,.08)"}
-              opacity={0.6}
-              style={{ transition: `fill ${T}` }} />
-            <polygon
-              points={`${SX0 + 14},${SY1} ${SX0 + 102},${SY1} ${SX0 + 94},${SY1 + 24} ${SX0 + 26},${SY1 + 18}`}
-              fill={hasVanes ? GOLD_D : "rgba(255,212,0,.08)"}
-              opacity={0.6}
-              style={{ transition: `fill ${T}` }} />
-          </>
-        )}
+        {/* 3rd / 4th secondary vanes (behind primary) */}
+        {(fletchCount === 3 || fletchCount === 4) && (<>
+          <path d={top3rd} fill={vaneFill(false)} opacity={hasShaft ? 0.7 : 0.12} style={{ transition: `fill ${T}` }} />
+          <path d={bot3rd} fill={vaneFill(false)} opacity={hasShaft ? 0.7 : 0.12} style={{ transition: `fill ${T}` }} />
+        </>)}
+        {fletchCount === 4 && (<>
+          <path d={top4th} fill={vaneFill(false)} opacity={hasShaft ? 0.55 : 0.08} style={{ transition: `fill ${T}` }} />
+          <path d={bot4th} fill={vaneFill(false)} opacity={hasShaft ? 0.55 : 0.08} style={{ transition: `fill ${T}` }} />
+        </>)}
+
+        {/* Primary top & bottom vanes */}
+        <path d={topVane} fill={vaneFill(true)} opacity={hasShaft ? 1 : 0.15} style={{ transition: `fill ${T}, opacity ${T}` }} />
+        <path d={botVane} fill={vaneFill(true)} opacity={hasShaft ? 1 : 0.15} style={{ transition: `fill ${T}, opacity ${T}` }} />
 
         {/* ── Nock ── */}
-        <polygon
-          points={`${SX0},${SY0} ${SX0},${SY1} ${SX0 - 20},${SY1 + 6} ${SX0 - 34},${SY} ${SX0 - 20},${SY0 - 6}`}
-          fill={hasShaft && hasNock ? GOLD_C : (hasShaft ? "rgba(255,255,255,.32)" : SHAFT_N)}
+        <path d={nockPath}
+          fill={hasShaft && hasNock ? GOLD_C : (hasShaft ? "rgba(255,255,255,.30)" : SHAFT_N)}
           style={{ transition: `fill ${T}` }} />
 
-        {/* ── Insert zone ── */}
-        <rect x={SX1 - 50} y={SY0} width={50} height={SH} rx="1"
+        {/* ── Insert collar zone ── */}
+        <rect x={IX0} y={SY0} width={IX1 - IX0} height={SH} rx="0"
           fill={hasShaft && hasInsert ? CYAN : CYAN_D}
-          opacity={hasShaft ? 0.85 : 0.2}
+          opacity={hasShaft ? 0.82 : 0.15}
           style={{ transition: `fill ${T}, opacity ${T}` }} />
 
-        {/* ── Point ── */}
-        <polygon
-          points={`${SX1},${SY0} ${SX1 + 90},${SY} ${SX1},${SY1}`}
-          fill={hasShaft && hasPoint ? GOLD_C : (hasShaft ? "rgba(255,255,255,.38)" : SHAFT_N)}
-          style={{ transition: `fill ${T}` }} />
-
-        {/* ── Cut overlay ── */}
-        {cutX !== null && (
-          <>
-            <rect x={cutX} y={SY0 - 5} width={SX1 - cutX} height={SH + 10}
-              fill="rgba(0,0,0,.6)" rx="1" />
-            <line x1={cutX} y1={SY0 - 16} x2={cutX} y2={SY1 + 10}
-              stroke={GOLD_C} strokeWidth="1.5" strokeDasharray="4,3" />
-            {/* dimension line */}
-            <line x1={SX0} y1={SY1 + 18} x2={cutX} y2={SY1 + 18}
-              stroke={GOLD_D} strokeWidth="0.75" />
-            <line x1={SX0} y1={SY1 + 14} x2={SX0} y2={SY1 + 22} stroke={GOLD_D} strokeWidth="0.75" />
-            <line x1={cutX} y1={SY1 + 14} x2={cutX} y2={SY1 + 22} stroke={GOLD_D} strokeWidth="0.75" />
-            <text x={(SX0 + cutX) / 2} y={SY1 + 33}
-              textAnchor="middle" fill={GOLD_D} fontSize="9"
-              fontFamily={MONO_FONT} letterSpacing="0.5">
-              {cutLength?.toFixed(2)}"
-            </text>
-          </>
+        {/* ── Point ── field-point or broadhead based on selection ── */}
+        {!isBroadhead && (
+          <path d={pointPath}
+            fill={hasShaft && hasPoint ? GOLD_C : (hasShaft ? "rgba(255,255,255,.36)" : SHAFT_N)}
+            style={{ transition: `fill ${T}` }} />
         )}
+        {isBroadhead && (<>
+          <path d={bhFerulePath} fill={GOLD_C} style={{ transition: `fill ${T}` }} />
+          <path d={bhTopBlade}   fill={GOLD_C} opacity={0.82} style={{ transition: `fill ${T}` }} />
+          <path d={bhBotBlade}   fill={GOLD_C} opacity={0.82} style={{ transition: `fill ${T}` }} />
+          {/* Blade edge highlight */}
+          <line x1={SX1+4} y1={SY0-12} x2={798} y2={SY} stroke="rgba(255,255,255,.30)" strokeWidth="0.8" />
+          <line x1={SX1+4} y1={SY1+12} x2={798} y2={SY} stroke="rgba(255,255,255,.30)" strokeWidth="0.8" />
+        </>)}
 
-        {/* Uncut span indicator */}
-        {hasShaft && cutMode === "uncut" && (
-          <>
-            <line x1={SX0} y1={SY1 + 18} x2={SX1} y2={SY1 + 18}
-              stroke="rgba(255,255,255,.06)" strokeWidth="0.75" />
-            <line x1={SX0} y1={SY1 + 14} x2={SX0} y2={SY1 + 22} stroke="rgba(255,255,255,.06)" strokeWidth="0.75" />
-            <line x1={SX1} y1={SY1 + 14} x2={SX1} y2={SY1 + 22} stroke="rgba(255,255,255,.06)" strokeWidth="0.75" />
-            <text x={(SX0 + SX1) / 2} y={SY1 + 33}
-              textAnchor="middle" fill="rgba(255,255,255,.18)" fontSize="9"
-              fontFamily={MONO_FONT} letterSpacing="0.5">
-              UNCUT · MAX {shaft?.max_length}"
-            </text>
-          </>
-        )}
+        {/* ── Cut line overlay ── */}
+        {cutX !== null && (<>
+          <rect x={cutX} y={SY0 - 6} width={SX1 - cutX + 120} height={SH + 12}
+            fill="rgba(0,0,0,.62)" rx="1" />
+          <line x1={cutX} y1={SY0 - 18} x2={cutX} y2={SY1 + 12}
+            stroke={GOLD_C} strokeWidth="1.5" strokeDasharray="4,3" />
+          {/* Dimension line */}
+          <line x1={SX0} y1={SY1 + 20} x2={cutX} y2={SY1 + 20} stroke={GOLD_D} strokeWidth="0.75" />
+          <line x1={SX0} y1={SY1 + 16} x2={SX0} y2={SY1 + 24} stroke={GOLD_D} strokeWidth="0.75" />
+          <line x1={cutX} y1={SY1 + 16} x2={cutX} y2={SY1 + 24} stroke={GOLD_D} strokeWidth="0.75" />
+          <text x={(SX0 + cutX) / 2} y={SY1 + 35} textAnchor="middle"
+            fill={GOLD_D} fontSize="9" fontFamily={MONO_FONT} letterSpacing="0.5">
+            {cutLength?.toFixed(2)}"
+          </text>
+        </>)}
 
-        {/* ── Connector lines ── */}
+        {/* ── Uncut span ── */}
+        {hasShaft && cutMode === "uncut" && (<>
+          <line x1={SX0} y1={SY1 + 20} x2={SX1} y2={SY1 + 20} stroke="rgba(255,255,255,.06)" strokeWidth="0.75" />
+          <line x1={SX0} y1={SY1 + 16} x2={SX0} y2={SY1 + 24} stroke="rgba(255,255,255,.06)" strokeWidth="0.75" />
+          <line x1={SX1} y1={SY1 + 16} x2={SX1} y2={SY1 + 24} stroke="rgba(255,255,255,.06)" strokeWidth="0.75" />
+          <text x={(SX0 + SX1) / 2} y={SY1 + 35} textAnchor="middle"
+            fill="rgba(255,255,255,.16)" fontSize="9" fontFamily={MONO_FONT} letterSpacing="0.5">
+            UNCUT · MAX {shaft?.max_length}"
+          </text>
+        </>)}
+
+        {/* ── Labels ── */}
         {([
-          { x: SX0 - 17, y0: SY1 + 6, label: "NOCK", on: hasShaft && hasNock },
-          { x: SX0 + 51, y0: SY1, label: "WRAP", on: hasShaft && hasWrap },
-          { x: SX0 + 58, y0: SY1, label: fletchOn ? `${fletchCount}× VANE` : "VANES", on: hasShaft && hasVanes, yOff: 10 },
-          { x: 380, y0: SY1, label: hasShaft ? `${shaft!.brand.toUpperCase()} ${shaft!.model.toUpperCase()} · ${shaft!.spine}` : "— SHAFT —", on: hasShaft, color: hasShaft ? "rgba(255,255,255,.48)" : undefined },
-          { x: SX1 - 25, y0: SY1, label: "INSERT", on: hasShaft && hasInsert, color: hasShaft && hasInsert ? CYAN : undefined },
-          { x: SX1 + 45, y0: SY1, label: "POINT", on: hasShaft && hasPoint },
+          { x: 34,          y0: SY1 + 6,  label: "NOCK",   on: hasShaft && hasNock },
+          { x: WX0 + 48,    y0: SY1,      label: "WRAP",   on: hasShaft && hasWrap },
+          { x: VX0 + 53,    y0: SY1,      label: fletchOn ? `${fletchCount}× VANE` : "VANES", on: hasShaft && hasVanes, yOff: 10 },
+          { x: 376,         y0: SY1,      label: hasShaft ? `${shaft!.brand.toUpperCase()} ${shaft!.model.toUpperCase()} · ${shaft!.spine}` : "— SHAFT —", on: hasShaft, color: hasShaft ? "rgba(255,255,255,.45)" : undefined },
+          { x: IX0 + 26,    y0: SY1,      label: "INSERT", on: hasShaft && hasInsert, color: hasShaft && hasInsert ? CYAN : undefined },
+          { x: SX1 + 50,    y0: SY1,      label: "POINT",  on: hasShaft && hasPoint },
         ] as Array<{ x: number; y0: number; label: string; on: boolean; yOff?: number; color?: string }>).map((item, i) => {
-          const lineEnd = 155 + (item.yOff ?? 0);
+          const lineEnd = 163 + (item.yOff ?? 0);
           return (
             <g key={i}>
               <line x1={item.x} y1={item.y0} x2={item.x} y2={lineEnd - 8}
                 stroke={connFill(item.on)} strokeWidth="0.5" strokeDasharray="2,2" />
-              <text x={item.x} y={lineEnd}
-                textAnchor="middle"
-                fill={item.color ?? lblFill(item.on)}
-                fontSize="8.5"
-                fontFamily={MONO_FONT}
-                letterSpacing="0.8"
+              <text x={item.x} y={lineEnd} textAnchor="middle"
+                fill={item.color ?? lblFill(item.on)} fontSize="8.5"
+                fontFamily={MONO_FONT} letterSpacing="0.8"
                 style={{ transition: `fill ${T}` }}>
                 {item.label}
               </text>
