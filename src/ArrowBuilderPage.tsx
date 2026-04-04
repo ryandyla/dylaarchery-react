@@ -1148,20 +1148,18 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
     hasShaft && fletchOn  ? (primary ? "rgba(255,212,0,.18)" : "rgba(255,212,0,.10)") :
     DIM;
 
-  // Top vane: swept wing, bezier curved top edge, peak toward rear
-  // Leading edge (front): steep rise from shaft top (VX0, SY0) up to (VX0+8, SY0-40)
-  // Curved top edge sweeps from low front to high rear peak via Q bezier
-  // Trailing edge (rear): drops from peak down to shaft top at VX1
-  const topVane   = `M ${VX0} ${SY0} L ${VX0+7} ${SY0-38} Q ${VX0+55} ${SY0-78} ${VX1} ${SY0-66} L ${VX1} ${SY0} Z`;
-  const botVane   = `M ${VX0} ${SY1} L ${VX0+7} ${SY1+38} Q ${VX0+55} ${SY1+78} ${VX1} ${SY1+66} L ${VX1} ${SY1} Z`;
+  // Vanes: flat (blunt) edge at VX0 (nock/back), taper forward to VX1 (point direction)
+  // Primary: H=28px tall at back, curves down to shaft at front
+  const topVane   = `M ${VX0} ${SY0} L ${VX0} ${SY0-28} Q ${VX0+44} ${SY0-30} ${VX1} ${SY0} Z`;
+  const botVane   = `M ${VX0} ${SY1} L ${VX0} ${SY1+28} Q ${VX0+44} ${SY1+30} ${VX1} ${SY1} Z`;
 
-  // 3rd vane (in a 3-fletch, one vane is rotated ~120°; shown offset + dim)
-  const top3rd    = `M ${VX0} ${SY0} L ${VX0+6} ${SY0-22} Q ${VX0+52} ${SY0-46} ${VX1-4} ${SY0-38} L ${VX1-4} ${SY0} Z`;
-  const bot3rd    = `M ${VX0} ${SY1} L ${VX0+6} ${SY1+22} Q ${VX0+52} ${SY1+46} ${VX1-4} ${SY1+38} L ${VX1-4} ${SY1} Z`;
+  // 3rd vane (120° offset — shorter, dimmer)
+  const top3rd    = `M ${VX0} ${SY0} L ${VX0} ${SY0-17} Q ${VX0+42} ${SY0-18} ${VX1-4} ${SY0} Z`;
+  const bot3rd    = `M ${VX0} ${SY1} L ${VX0} ${SY1+17} Q ${VX0+42} ${SY1+18} ${VX1-4} ${SY1} Z`;
 
-  // 4-fletch side vanes (narrow band visible between the primary pair)
-  const top4th    = `M ${VX0} ${SY0} L ${VX0+5} ${SY0-14} Q ${VX0+50} ${SY0-28} ${VX1-6} ${SY0-20} L ${VX1-6} ${SY0} Z`;
-  const bot4th    = `M ${VX0} ${SY1} L ${VX0+5} ${SY1+14} Q ${VX0+50} ${SY1+28} ${VX1-6} ${SY1+20} L ${VX1-6} ${SY1} Z`;
+  // 4th vane (side vane, narrowest)
+  const top4th    = `M ${VX0} ${SY0} L ${VX0} ${SY0-10} Q ${VX0+42} ${SY0-11} ${VX1-6} ${SY0} Z`;
+  const bot4th    = `M ${VX0} ${SY1} L ${VX0} ${SY1+10} Q ${VX0+42} ${SY1+11} ${VX1-6} ${SY1} Z`;
 
   // Nock: cylindrical body (x=28..52) with string groove notch at rear (x=16..28)
   // Body is slightly taller than shaft; groove is a narrow step inward
