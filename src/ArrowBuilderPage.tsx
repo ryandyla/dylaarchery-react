@@ -1523,11 +1523,23 @@ function Step(props: {
 
 // ─── ComponentCard ────────────────────────────────────────────────────────────
 
+function ComponentCardPlaceholder() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="4" y="13" width="20" height="2" rx="1" fill="rgba(255,255,255,.12)" />
+      <circle cx="14" cy="14" r="4" stroke="rgba(255,255,255,.10)" strokeWidth="1" fill="none" />
+    </svg>
+  );
+}
+
 function ComponentCard({ selected, onClick, image, title, specs, price, badge }: {
   selected: boolean; onClick: () => void;
   image?: string; title: string; specs: string[]; price: string; badge?: string;
 }) {
   const MONO_FONT = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImg = image && !imgFailed;
+
   return (
     <button onClick={onClick} style={{
       textAlign: "left", cursor: "pointer",
@@ -1542,13 +1554,10 @@ function ComponentCard({ selected, onClick, image, title, specs, price, badge }:
       transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
     }}>
       <div style={{ width: 64, height: 64, flexShrink: 0, overflow: "hidden", background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {image ? (
-          <img src={image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        {showImg ? (
+          <img src={image} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         ) : (
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <rect x="4" y="13" width="20" height="2" rx="1" fill="rgba(255,255,255,.12)" />
-            <circle cx="14" cy="14" r="4" stroke="rgba(255,255,255,.10)" strokeWidth="1" fill="none" />
-          </svg>
+          <ComponentCardPlaceholder />
         )}
       </div>
       <div style={{ padding: "8px 10px", flex: 1, minWidth: 0 }}>
