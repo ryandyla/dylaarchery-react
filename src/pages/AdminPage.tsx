@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 type TypeKey = "shafts" | "nocks" | "vanes" | "wraps" | "inserts" | "points";
 
@@ -217,6 +217,102 @@ function ItemForm({
   );
 }
 
+// ── Image manager panel ──────────────────────────────────────────────────────
+
+type ProductImage = { id: number; url: string; alt: string | null; is_primary: number };
+
+function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; onUpload: () => void }) {
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    setLoading(true);
+    setErr("");
+    fetch(`/api/admin/${type}/${rowId}/images`)
+      .then((r) => r.json())
+      .then((d: any) => setImages(d.images ?? []))
+      .catch((e) => setErr(e?.message || String(e)))
+      .finally(() => setLoading(false));
+  }, [type, rowId]);
+
+  async function deleteImg(imgId: number) {
+    if (!confirm("Delete this image? This also removes it from R2.")) return;
+    setDeleting(imgId);
+    try {
+      const r = await fetch(`/api/admin/${type}/${rowId}/images/${imgId}`, { method: "DELETE" });
+      if (!r.ok) throw new Error(await r.text());
+      setImages((prev) => prev.filter((i) => i.id !== imgId));
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  async function upload() {
+    setErr("");
+    try {
+      const file = await pickFile("image/*");
+      if (!file) return;
+      await uploadImage(`/api/admin/${type}/${rowId}/images`, file);
+      // reload images
+      const r = await fetch(`/api/admin/${type}/${rowId}/images`);
+      const d: any = await r.json();
+      setImages(d.images ?? []);
+      onUpload();
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    }
+  }
+
+  return (
+    <div className="border-t border-white/10 bg-white/[0.02] px-4 py-3">
+      {err && <div className="mb-2 text-xs text-red-400">{err}</div>}
+      {loading ? (
+        <div className="text-xs text-white/40">Loading images…</div>
+      ) : (
+        <div className="flex flex-wrap items-start gap-3">
+          {images.length === 0 && (
+            <div className="text-xs text-white/30">No images.</div>
+          )}
+          {images.map((img) => (
+            <div key={img.id} className="relative flex flex-col gap-1">
+              <a href={img.url} target="_blank" rel="noreferrer">
+                <img
+                  src={img.url}
+                  alt={img.alt ?? ""}
+                  className="h-20 w-20 rounded-lg border border-white/10 object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              </a>
+              <div className="flex items-center gap-1">
+                {!!img.is_primary && (
+                  <span className="rounded bg-yellow-400/15 px-1 py-0 text-[9px] font-bold text-yellow-300">PRIMARY</span>
+                )}
+                <button
+                  onClick={() => deleteImg(img.id)}
+                  disabled={deleting === img.id}
+                  className="rounded border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold text-red-400 hover:bg-red-500/20 disabled:opacity-40"
+                >
+                  {deleting === img.id ? "…" : "Delete"}
+                </button>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={upload}
+            className="self-start rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/70 hover:bg-white/10"
+          >
+            + Upload
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -234,6 +330,9 @@ export default function AdminPage() {
   const [creating, setCreating] = React.useState(false);
   const [newDraft, setNewDraft] = React.useState<Record<string, any>>({});
   const [createSaving, setCreateSaving] = React.useState(false);
+
+  // Images panel state
+  const [imagesOpenId, setImagesOpenId] = React.useState<number | null>(null);
 
   async function load() {
     setErr("");
@@ -351,16 +450,8 @@ export default function AdminPage() {
     }
   }
 
-  async function uploadForRow(r: Row) {
-    setErr("");
-    try {
-      const file = await pickFile("image/*");
-      if (!file) return;
-      await uploadImage(`/api/admin/${type}/${r.id}/images`, file);
-      await load();
-    } catch (e: any) {
-      setErr(e?.message || String(e));
-    }
+  function toggleImages(r: Row) {
+    setImagesOpenId((prev) => (prev === r.id ? null : r.id));
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -493,10 +584,14 @@ export default function AdminPage() {
                   {editingId === r.id ? "Editing…" : "Edit"}
                 </button>
                 <button
-                  onClick={() => uploadForRow(r)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs font-bold text-white/70 hover:bg-white/10"
+                  onClick={() => toggleImages(r)}
+                  className={`rounded-lg border px-2 py-1 text-xs font-bold ${
+                    imagesOpenId === r.id
+                      ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"
+                      : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                  }`}
                 >
-                  Image
+                  Images
                 </button>
                 <button
                   onClick={() => delRow(r)}
@@ -517,6 +612,9 @@ export default function AdminPage() {
                 onSubmit={saveEdit}
                 onCancel={cancelEdit}
               />
+            )}
+            {imagesOpenId === r.id && (
+              <ImagePanel type={type} rowId={r.id} onUpload={load} />
             )}
           </div>
         ))}

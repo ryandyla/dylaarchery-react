@@ -225,6 +225,54 @@ export async function handleAdmin(req: Request, env: any, ctx: ExecutionContext)
   }
 
   // -----------------------------------
+  // GET /api/admin/:type/:id/images
+  // -----------------------------------
+  if (req.method === "GET" && typeof id === "number" && rest === "images") {
+    const imgType = IMAGE_TYPE[t];
+    const rows = await env.DB.prepare(
+      `SELECT id, url, alt, sort, is_primary FROM product_images WHERE product_type = ? AND product_id = ? ORDER BY is_primary DESC, sort ASC, id ASC`
+    ).bind(imgType, id).all();
+    return json({ ok: true, images: rows.results });
+  }
+
+  // -------------------------------------------
+  // DELETE /api/admin/:type/:id/images/:imageId
+  // -------------------------------------------
+  if (req.method === "DELETE" && typeof id === "number" && rest.startsWith("images/")) {
+    const imageId = asInt(rest.split("/")[1]);
+    if (!Number.isFinite(imageId)) return json({ ok: false, error: "Invalid image id" }, { status: 400 });
+
+    const imgType = IMAGE_TYPE[t];
+    const row = await env.DB.prepare(
+      `SELECT url FROM product_images WHERE id = ? AND product_type = ? AND product_id = ?`
+    ).bind(imageId, imgType, id).first() as { url: string } | null;
+
+    if (!row) return json({ ok: false, error: "Image not found" }, { status: 404 });
+
+    // Delete from R2 — extract key from relative or absolute URL
+    const marker = "/api/images/";
+    const markerIdx = row.url.indexOf(marker);
+    if (markerIdx !== -1) {
+      const r2Key = decodeURIComponent(row.url.slice(markerIdx + marker.length));
+      await env.PRODUCT_IMAGES.delete(r2Key);
+    }
+
+    await env.DB.prepare(`DELETE FROM product_images WHERE id = ?`).bind(imageId).run();
+
+    // Update product table's image_url to the next remaining image or null
+    if (COLS[t].includes("image_url")) {
+      const next = await env.DB.prepare(
+        `SELECT url FROM product_images WHERE product_type = ? AND product_id = ? ORDER BY is_primary DESC, id DESC LIMIT 1`
+      ).bind(imgType, id).first() as { url: string } | null;
+      await env.DB.prepare(`UPDATE ${table} SET image_url = ? WHERE id = ?`)
+        .bind(next?.url ?? null, id)
+        .run();
+    }
+
+    return json({ ok: true });
+  }
+
+  // -----------------------------------
   // POST /api/admin/:type/:id/images
   // multipart form-data with "file"
   // -----------------------------------
