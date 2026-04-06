@@ -120,6 +120,15 @@ function normalizePatchValue(key: string, val: any) {
 }
 
 export async function handleAdmin(req: Request, env: any, ctx: ExecutionContext) {
+  try {
+    return await handleAdminInner(req, env, ctx);
+  } catch (err: any) {
+    console.error("Admin handler error:", err);
+    return json({ ok: false, error: err?.message ?? String(err) }, { status: 500 });
+  }
+}
+
+async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
   // Gate everything behind Cloudflare Access
   const gate = await requireAccess(req, env);
   if (!gate.ok) return gate.res;
@@ -178,8 +187,42 @@ export async function handleAdmin(req: Request, env: any, ctx: ExecutionContext)
       if (COLS[t].includes("model") && !body.model) return json({ ok: false, error: "model is required" }, { status: 400 });
     }
 
-    const sql = `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${qs.join(", ")})`;
-    const r = await env.DB.prepare(sql).bind(...args).run();
+    // Inject legacy NOT NULL columns that exist in the original schema but
+    // aren't in the COLS whitelist. Without these, INSERT fails with a
+    // constraint error on tables that predate the commerce migration.
+    const legacyCols: string[] = [];
+    const legacyQs: string[] = [];
+    const legacyArgs: any[] = [];
+
+    if (t === "points") {
+      legacyCols.push("category", "product_type");
+      legacyQs.push("?", "?");
+      legacyArgs.push(
+        body.type === "broadhead" ? "Broadhead" : "Field Point",
+        body.type || "field"
+      );
+    } else if (t === "nocks") {
+      legacyCols.push("nock_type");
+      legacyQs.push("?");
+      const nockType =
+        body.style === "pin" ? "pin"
+        : body.style === "large" ? "press_fit_large"
+        : body.style === "glue_on" ? "glue_on"
+        : body.style === "traditional" ? "traditional"
+        : "press_fit";
+      legacyArgs.push(nockType);
+    } else if (t === "inserts") {
+      legacyCols.push("product_type");
+      legacyQs.push("?");
+      legacyArgs.push(body.type || body.system || "standard");
+    }
+
+    const allCols = [...cols, ...legacyCols];
+    const allQs = [...qs, ...legacyQs];
+    const allArgs = [...args, ...legacyArgs];
+
+    const sql = `INSERT INTO ${table} (${allCols.join(", ")}) VALUES (${allQs.join(", ")})`;
+    const r = await env.DB.prepare(sql).bind(...allArgs).run();
 
     // D1 returns last_row_id for AUTOINCREMENT tables
     const newId = r.meta?.last_row_id;
