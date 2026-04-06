@@ -142,6 +142,16 @@ const VANE_CENTER_FROM_NOCK_IN = 1.75;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Diameter compatibility schools, keyed on inner_diameter (inches).
+// Covers common label aliases: 4mm ≈ .157"–.166", 5mm ≈ .197"–.204", 6.5mm ≈ .256"
+type DiameterSchool = "micro" | "small" | "standard";
+
+function diameterSchool(id: number): DiameterSchool {
+  if (id <= 0.175) return "micro";    // .166 / 4mm
+  if (id <= 0.215) return "small";    // .204 / 5mm
+  return "standard";                  // .244 / .246 / .247 / 6.5mm
+}
+
 function formatMoney(n?: number) {
   if (n == null || !Number.isFinite(n)) return "—";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -307,8 +317,8 @@ export default function ArrowBuilderPage() {
 
   const compatibleVanes = useMemo(() => {
     if (!selectedShaft) return vanes;
-    const isMicro = selectedShaft.outer_diameter <= 0.265;
-    return vanes.filter((v) => (isMicro ? v.compatible_micro === 1 : true));
+    const school = diameterSchool(selectedShaft.inner_diameter);
+    return vanes.filter((v) => school === "micro" ? v.compatible_micro === 1 : true);
   }, [vanes, selectedShaft]);
 
   const groupedVanes = useMemo(() => {
@@ -326,11 +336,11 @@ export default function ArrowBuilderPage() {
 
   const compatibleNocks = useMemo(() => {
     if (!selectedShaft?.inner_diameter) return nocks;
-    const id = selectedShaft.inner_diameter;
+    const school = diameterSchool(selectedShaft.inner_diameter);
     const filtered = nocks.filter((n) => {
       if (n.system !== "press_fit") return true;
       if (n.shaft_id_in == null) return true;
-      return Math.abs(n.shaft_id_in - id) < 0.001;
+      return diameterSchool(n.shaft_id_in) === school;
     });
     const brand = selectedShaft.brand.toLowerCase();
     return [...filtered].sort((a, b) => {
@@ -342,10 +352,10 @@ export default function ArrowBuilderPage() {
 
   const compatibleInserts = useMemo(() => {
     if (!selectedShaft?.inner_diameter) return inserts;
-    const id = selectedShaft.inner_diameter;
+    const school = diameterSchool(selectedShaft.inner_diameter);
     const filtered = inserts.filter((ins) => {
       if (ins.shaft_id_in == null) return true;
-      return Math.abs(ins.shaft_id_in - id) < 0.001;
+      return diameterSchool(ins.shaft_id_in) === school;
     });
     const brand = selectedShaft.brand.toLowerCase();
     return [...filtered].sort((a, b) => {
