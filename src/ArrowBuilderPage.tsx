@@ -622,14 +622,17 @@ export default function ArrowBuilderPage() {
                 SELECT BRAND
               </div>
               {/* Brand tabs */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-                {grouped.map((b) => (
-                  <button key={b.brand}
-                    onClick={() => setOpenBrand(b.brand)}
-                    style={tabBtnStyle(openBrand === b.brand || selectedBrand === b.brand)}>
-                    {b.brand}
-                  </button>
-                ))}
+              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                {grouped.map((b) => {
+                  const isActive = openBrand === b.brand || selectedBrand === b.brand;
+                  return (
+                    <button key={b.brand}
+                      onClick={() => setOpenBrand(b.brand)}
+                      style={brandBtnStyle(isActive)}>
+                      <BrandLogo brand={b.brand} active={isActive} />
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Model cards */}
@@ -1103,11 +1106,11 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
   const fletchOn  = fletchCount > 0;
 
   // ── Geometry ──────────────────────────────────────────────────────────────
-  // viewBox 0 0 820 210
-  // Shaft: x=52..700, center y=100, height=12 → y0=94, y1=106
-  const SY = 100; const SH = 12;
-  const SY0 = SY - SH / 2;   // 94
-  const SY1 = SY + SH / 2;   // 106
+  // viewBox 0 0 820 265
+  // Shaft: x=52..700, center y=128, height=20 → y0=118, y1=138
+  const SY = 128; const SH = 20;
+  const SY0 = SY - SH / 2;   // 118
+  const SY1 = SY + SH / 2;   // 138
   const SX0 = 52;  // shaft start (nock junction)
   const SX1 = 700; // shaft end (point junction)
 
@@ -1149,17 +1152,17 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
     DIM;
 
   // Vanes: flat (blunt) edge at VX0 (nock/back), taper forward to VX1 (point direction)
-  // Primary: H=28px tall at back, curves down to shaft at front
-  const topVane   = `M ${VX0} ${SY0} L ${VX0} ${SY0-28} Q ${VX0+44} ${SY0-30} ${VX1} ${SY0} Z`;
-  const botVane   = `M ${VX0} ${SY1} L ${VX0} ${SY1+28} Q ${VX0+44} ${SY1+30} ${VX1} ${SY1} Z`;
+  // Primary: H=42px tall at back, curves down to shaft at front
+  const topVane   = `M ${VX0} ${SY0} L ${VX0} ${SY0-42} Q ${VX0+44} ${SY0-44} ${VX1} ${SY0} Z`;
+  const botVane   = `M ${VX0} ${SY1} L ${VX0} ${SY1+42} Q ${VX0+44} ${SY1+44} ${VX1} ${SY1} Z`;
 
   // 3rd vane (120° offset — shorter, dimmer)
-  const top3rd    = `M ${VX0} ${SY0} L ${VX0} ${SY0-17} Q ${VX0+42} ${SY0-18} ${VX1-4} ${SY0} Z`;
-  const bot3rd    = `M ${VX0} ${SY1} L ${VX0} ${SY1+17} Q ${VX0+42} ${SY1+18} ${VX1-4} ${SY1} Z`;
+  const top3rd    = `M ${VX0} ${SY0} L ${VX0} ${SY0-26} Q ${VX0+42} ${SY0-28} ${VX1-4} ${SY0} Z`;
+  const bot3rd    = `M ${VX0} ${SY1} L ${VX0} ${SY1+26} Q ${VX0+42} ${SY1+28} ${VX1-4} ${SY1} Z`;
 
   // 4th vane (side vane, narrowest)
-  const top4th    = `M ${VX0} ${SY0} L ${VX0} ${SY0-10} Q ${VX0+42} ${SY0-11} ${VX1-6} ${SY0} Z`;
-  const bot4th    = `M ${VX0} ${SY1} L ${VX0} ${SY1+10} Q ${VX0+42} ${SY1+11} ${VX1-6} ${SY1} Z`;
+  const top4th    = `M ${VX0} ${SY0} L ${VX0} ${SY0-15} Q ${VX0+42} ${SY0-16} ${VX1-6} ${SY0} Z`;
+  const bot4th    = `M ${VX0} ${SY1} L ${VX0} ${SY1+15} Q ${VX0+42} ${SY1+16} ${VX1-6} ${SY1} Z`;
 
   // Nock: cylindrical body (x=28..52) with string groove notch at rear (x=16..28)
   // Body is slightly taller than shaft; groove is a narrow step inward
@@ -1178,7 +1181,7 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
 
   return (
     <div style={{ background: "#030305", borderRadius: 14, border: "1px solid rgba(255,255,255,.07)", overflow: "hidden" }}>
-      <svg viewBox="0 0 820 210" style={{ width: "100%", display: "block" }}>
+      <svg viewBox="0 0 820 265" style={{ width: "100%", display: "block" }}>
         <defs>
           <pattern id="adot" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
             <circle cx="11" cy="11" r="0.55" fill="rgba(255,255,255,.04)" />
@@ -1186,10 +1189,10 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
         </defs>
 
         {/* Dot grid */}
-        <rect x="0" y="0" width="820" height="210" fill="url(#adot)" />
+        <rect x="0" y="0" width="820" height="265" fill="url(#adot)" />
 
         {/* Centerline */}
-        <line x1="12" y1={SY} x2="804" y2={SY}
+        <line x1="12" y1={SY} x2="808" y2={SY}
           stroke="rgba(255,255,255,.03)" strokeWidth="0.5" strokeDasharray="6,4,1,4" />
 
         {/* ── Shaft body ── */}
@@ -1286,7 +1289,7 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
           { x: IX0 + 26,    y0: SY1,      label: "INSERT", on: hasShaft && hasInsert, color: hasShaft && hasInsert ? CYAN : undefined },
           { x: SX1 + 50,    y0: SY1,      label: "POINT",  on: hasShaft && hasPoint },
         ] as Array<{ x: number; y0: number; label: string; on: boolean; yOff?: number; color?: string }>).map((item, i) => {
-          const lineEnd = 163 + (item.yOff ?? 0);
+          const lineEnd = 215 + (item.yOff ?? 0);
           return (
             <g key={i}>
               <line x1={item.x} y1={item.y0} x2={item.x} y2={lineEnd - 8}
@@ -1532,17 +1535,22 @@ function ComponentCard({ selected, onClick, image, title, specs, price, badge }:
       border: `1px solid ${selected ? "rgba(255,212,0,.45)" : "rgba(255,255,255,.10)"}`,
       background: selected ? "rgba(255,212,0,.06)" : "rgba(255,255,255,.025)",
       boxShadow: selected ? "0 0 0 3px rgba(255,212,0,.08)" : "none",
-      padding: image ? 0 : "10px 12px",
+      padding: 0,
       color: "rgba(255,255,255,.92)",
       overflow: "hidden",
-      display: "flex", flexDirection: image ? "row" : "column",
+      display: "flex", flexDirection: "row",
       transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
     }}>
-      {image && (
-        <div style={{ width: 64, height: 64, flexShrink: 0, overflow: "hidden", background: "rgba(0,0,0,.25)" }}>
+      <div style={{ width: 64, height: 64, flexShrink: 0, overflow: "hidden", background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {image ? (
           <img src={image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-        </div>
-      )}
+        ) : (
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect x="4" y="13" width="20" height="2" rx="1" fill="rgba(255,255,255,.12)" />
+            <circle cx="14" cy="14" r="4" stroke="rgba(255,255,255,.10)" strokeWidth="1" fill="none" />
+          </svg>
+        )}
+      </div>
       <div style={{ padding: "8px 10px", flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4 }}>
           <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: -0.1, color: selected ? GOLD : "rgba(255,255,255,.92)", lineHeight: 1.2 }}>
@@ -1684,6 +1692,75 @@ function OptionPill({ label, sub, active, onClick }: { label: string; sub?: stri
       {sub && <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9.5, color: active ? "rgba(255,212,0,.7)" : "rgba(255,255,255,.35)", letterSpacing: "0.2px" }}>{sub}</span>}
     </button>
   );
+}
+
+// ─── Brand Logo ───────────────────────────────────────────────────────────────
+
+const BRAND_MARK: Record<string, { lines: string[]; accentColor: string; tracking: string }> = {
+  "Easton": {
+    lines: ["EASTON"],
+    accentColor: "#FFD400",
+    tracking: "3px",
+  },
+  "Victory": {
+    lines: ["VICTORY"],
+    accentColor: "#e53935",
+    tracking: "2.5px",
+  },
+  "Black Eagle": {
+    lines: ["BLACK", "EAGLE"],
+    accentColor: "#c8cdd3",
+    tracking: "2px",
+  },
+  "Gold Tip": {
+    lines: ["GOLD", "TIP"],
+    accentColor: "#f5a623",
+    tracking: "2.5px",
+  },
+};
+
+function BrandLogo({ brand, active }: { brand: string; active: boolean }) {
+  const mark = BRAND_MARK[brand];
+  const accentColor = mark?.accentColor ?? "#FFD400";
+  const tracking = mark?.tracking ?? "2px";
+  const lines = mark?.lines ?? [brand.toUpperCase()];
+  const isTwoLine = lines.length === 2;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+      {/* Accent bar */}
+      <div style={{
+        width: "100%", height: 2, borderRadius: 1,
+        background: active ? accentColor : "rgba(255,255,255,.12)",
+        marginBottom: isTwoLine ? 5 : 6,
+        transition: "background 0.2s",
+      }} />
+      {lines.map((line, i) => (
+        <span key={i} style={{
+          fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+          fontSize: isTwoLine ? 9 : 10,
+          fontWeight: 800,
+          letterSpacing: tracking,
+          color: active ? accentColor : "rgba(255,255,255,.6)",
+          lineHeight: 1.15,
+          transition: "color 0.2s",
+        }}>{line}</span>
+      ))}
+    </div>
+  );
+}
+
+function brandBtnStyle(active: boolean): React.CSSProperties {
+  return {
+    borderRadius: 8,
+    border: `1px solid ${active ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)"}`,
+    background: active ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.02)",
+    boxShadow: active ? "0 0 0 2px rgba(255,212,0,.10)" : "none",
+    padding: "9px 14px",
+    minWidth: 68,
+    cursor: "pointer",
+    transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
+  };
 }
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
