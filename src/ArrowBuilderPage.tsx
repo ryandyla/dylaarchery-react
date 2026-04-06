@@ -218,6 +218,7 @@ export default function ArrowBuilderPage() {
   const [state, setState] = useState<BuilderState>({ ...DEFAULT_STATE });
   const grouped = useMemo(() => groupShaftsByBrandModel(shafts), [shafts]);
   const [openBrand, setOpenBrand] = useState<string>("Easton");
+  const [openVaneBrand, setOpenVaneBrand] = useState<string | null>(null);
 
   const selectedShaft = useMemo(
     () => shafts.find((s) => s.id === state.shaft_id) ?? null,
@@ -309,6 +310,19 @@ export default function ArrowBuilderPage() {
     const isMicro = selectedShaft.outer_diameter <= 0.265;
     return vanes.filter((v) => (isMicro ? v.compatible_micro === 1 : true));
   }, [vanes, selectedShaft]);
+
+  const groupedVanes = useMemo(() => {
+    const brands = new Map<string, Vane[]>();
+    for (const v of compatibleVanes) {
+      if (!brands.has(v.brand)) brands.set(v.brand, []);
+      brands.get(v.brand)!.push(v);
+    }
+    return Array.from(brands.entries())
+      .map(([brand, items]) => ({ brand, items }))
+      .sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [compatibleVanes]);
+
+  const activVaneBrand = openVaneBrand ?? groupedVanes[0]?.brand ?? null;
 
   const compatibleNocks = useMemo(() => {
     if (!selectedShaft?.inner_diameter) return nocks;
@@ -627,7 +641,12 @@ export default function ArrowBuilderPage() {
                   const isActive = openBrand === b.brand || selectedBrand === b.brand;
                   return (
                     <button key={b.brand}
-                      onClick={() => setOpenBrand(b.brand)}
+                      onClick={() => {
+                        setOpenBrand(b.brand);
+                        if (selectedShaft?.brand !== b.brand) {
+                          setState((s) => ({ ...DEFAULT_STATE, quantity: s.quantity }));
+                        }
+                      }}
                       style={brandBtnStyle(isActive)}>
                       <BrandLogo brand={b.brand} active={isActive} />
                     </button>
@@ -826,15 +845,33 @@ export default function ArrowBuilderPage() {
                   <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 10 }}>
                     SELECT VANE
                   </div>
+
+                  {/* Vane brand tabs */}
+                  {groupedVanes.length > 1 && (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                      {groupedVanes.map((g) => {
+                        const isActive = activVaneBrand === g.brand;
+                        const hasSel = g.items.some((v) => v.id === state.vane_id);
+                        return (
+                          <button key={g.brand}
+                            onClick={() => setOpenVaneBrand(g.brand)}
+                            style={brandBtnStyle(isActive || hasSel)}>
+                            <BrandLogo brand={g.brand} active={isActive || hasSel} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                    {compatibleVanes.map((v) => {
+                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.items ?? compatibleVanes).map((v) => {
                       const sel = v.id === state.vane_id;
                       const imgs = imagesFor("vane", v.id);
                       return (
                         <ComponentCard key={v.id} selected={sel}
                           onClick={() => setState((s) => ({ ...s, vane_id: v.id }))}
                           image={imgs[0]?.url}
-                          title={`${v.brand} ${v.model}`}
+                          title={v.model}
                           specs={[
                             v.length ? `${v.length}" L` : null,
                             v.weight_grains ? `${v.weight_grains}gr` : null,
