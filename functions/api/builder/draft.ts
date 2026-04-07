@@ -91,8 +91,8 @@ export const onRequest = async ({ request, env }: any) => {
     const point_id = build.point_id == null ? null : Number(build.point_id);
     const nock_id = build.nock_id == null ? null : Number(build.nock_id);
 
-    // cut_length should already be nullable when uncut
-    const cut_length = build.cut_length == null ? null : Number(build.cut_length);
+    const cut_mode: "uncut" | "cut" = build.cut_mode === "cut" ? "cut" : "uncut";
+    const cut_length = cut_mode === "cut" && build.cut_length != null ? Number(build.cut_length) : null;
 
     const quantity = Number(build.quantity);
     const fletch_count = build.fletch_count == null ? 3 : Number(build.fletch_count);
@@ -122,7 +122,7 @@ export const onRequest = async ({ request, env }: any) => {
     if (nock_id != null && !nock) return badRequest("Selected nock not found.", "build.nock_id");
 
     // Validate (your db.ts validateBuild now supports insert/nock + nullable cut_length if you updated it)
-    const v = validateBuild({ shaft, wrap, vane, insert, point, nock, cut_length, quantity, fletch_count });
+    const v = validateBuild({ shaft, wrap, vane, insert, point, nock, cut_mode, cut_length, quantity, fletch_count });
     if (!v.ok) return json(v, 400, cors);
 
     // Price snapshot
