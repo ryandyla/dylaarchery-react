@@ -17,6 +17,52 @@ import {
   validateBuild,
 } from "../../_utils/db";
 
+async function createStripeCheckoutSession({
+  secretKey,
+  origin,
+  orderId,
+  customerEmail,
+  amountCents,
+  quantity,
+  shaftLabel,
+}: {
+  secretKey: string;
+  origin: string;
+  orderId: number;
+  customerEmail: string;
+  amountCents: number;
+  quantity: number;
+  shaftLabel: string;
+}) {
+  const params = new URLSearchParams();
+  params.set("mode", "payment");
+  params.set("customer_email", customerEmail);
+  params.set("line_items[0][price_data][currency]", "usd");
+  params.set("line_items[0][price_data][product_data][name]", `Custom Arrow Build — Set of ${quantity}`);
+  params.set("line_items[0][price_data][product_data][description]", shaftLabel);
+  params.set("line_items[0][price_data][unit_amount]", String(amountCents));
+  params.set("line_items[0][quantity]", "1");
+  params.set("success_url", `${origin}/order/success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`);
+  params.set("cancel_url", `${origin}/builder`);
+  params.set("metadata[order_id]", String(orderId));
+
+  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    const err: any = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Stripe error ${res.status}`);
+  }
+
+  return res.json() as Promise<{ url: string; id: string }>;
+}
+
 export const onRequest = async ({ request, env }: any) => {
   try {
     const cors = corsHeaders(request);
@@ -96,10 +142,26 @@ export const onRequest = async ({ request, env }: any) => {
       insert_id,
       point_id,
       nock_id,
-      cut_length: cut_length ?? 0, // if your schema still requires NOT NULL, keep this as a safe fallback
+      cut_length: cut_length ?? 0,
       quantity,
       fletch_count,
       price_per_arrow: price.per_arrow,
+    });
+
+    // Create Stripe Checkout Session
+    const stripeKey = env.STRIPE_SECRET_KEY;
+    if (!stripeKey) return serverError("Payment system not configured.");
+
+    const origin = new URL(request.url).origin;
+    const shaftLabel = `${(shaft as any).brand} ${(shaft as any).model} ${(shaft as any).spine} spine`;
+    const session = await createStripeCheckoutSession({
+      secretKey: stripeKey,
+      origin,
+      orderId: order.id,
+      customerEmail: email,
+      amountCents: Math.round(price.subtotal * 100),
+      quantity,
+      shaftLabel,
     });
 
     return json(
@@ -109,6 +171,7 @@ export const onRequest = async ({ request, env }: any) => {
         build_id: buildRow.id,
         status: order.status,
         price,
+        checkout_url: session.url,
       },
       200,
       cors

@@ -3,19 +3,22 @@ import AppShell from "./ui/AppShell";
 import HomePage from "./pages/HomePage";
 import ContactPage from "./pages/ContactPage";
 import ArrowBuilderPage from "./ArrowBuilderPage";
-import ProcessPage from "./pages/ProcessPage"; // 👈 add this
+import ProcessPage from "./pages/ProcessPage";
 import ToolsPage from "./pages/ToolsPage";
 import AdminPage from "./pages/AdminPage";
+import OrderSuccessPage from "./pages/OrderSuccessPage";
+
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
     children: [
       { path: "/", element: <HomePage /> },
       { path: "/builder", element: <ArrowBuilderPage /> },
-      { path: "/process", element: <ProcessPage /> }, // 👈 add this
+      { path: "/process", element: <ProcessPage /> },
       { path: "/tools", element: <ToolsPage /> },
       { path: "/contact", element: <ContactPage /> },
       { path: "/admin", element: <AdminPage /> },
+      { path: "/order/success", element: <OrderSuccessPage /> },
     ],
   },
 ]);

@@ -101,7 +101,7 @@ type PriceResponse =
   | { ok: false; field?: string; message: string };
 
 type DraftResponse =
-  | { ok: true; order_id: number; build_id: number; status: string; price: { per_arrow: number; subtotal: number } }
+  | { ok: true; order_id: number; build_id: number; status: string; price: { per_arrow: number; subtotal: number }; checkout_url?: string }
   | { ok: false; field?: string; message: string };
 
 // ─── Builder state ────────────────────────────────────────────────────────────
@@ -554,7 +554,11 @@ export default function ArrowBuilderPage() {
         setServerErr({ field: (data as any)?.field, message: (data as any)?.message || "Unable to create draft." });
         return;
       }
-      setDraftResult({ order_id: data.order_id });
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        setDraftResult({ order_id: data.order_id });
+      }
     } catch (e: any) {
       setServerErr({ message: e?.message || "Draft request failed." });
     } finally {
@@ -1006,7 +1010,7 @@ export default function ArrowBuilderPage() {
                   style={ctaBtn(canProceedToDraft)}
                   onClick={createDraft}
                   disabled={!canProceedToDraft || draftBusy}>
-                  {draftBusy ? "Creating draft…" : "Submit Draft Order →"}
+                  {draftBusy ? "Redirecting to checkout…" : "Proceed to Checkout →"}
                 </button>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,.45)", fontFamily: MONO, letterSpacing: "0.3px" }}>
                   SHAFTS-ONLY BUILDS ACCEPTED
