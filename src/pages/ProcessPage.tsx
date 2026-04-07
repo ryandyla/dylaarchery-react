@@ -152,10 +152,11 @@ export default function ProcessPage() {
         <div className={tw.container}>
           <div className="flex flex-wrap items-center justify-between gap-6">
             <div>
-              <div className="text-sm font-black">Easton + Victory only.</div>
+              <div className="text-sm font-black">Built for the shot that matters.</div>
               <div className="mt-1 max-w-md text-xs leading-relaxed text-white/55">
-                We work with premium shaft brands because tolerance is the product — not a
-                promise. If a component doesn't meet spec, it doesn't ship.
+                We source from precision brands with the tightest published tolerances in the
+                industry. When you draw back, you're not guessing — you know exactly what
+                you built, and you can trust it.
               </div>
             </div>
             <a href="/builder" className={tw.btnPrimary}>Start Your Build</a>
