@@ -62,9 +62,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className={`${tw.container} pb-10 text-xs text-white/60`}>
-        © {new Date().getFullYear()} Dyla Archery • Built for hunters & precision shooters
-      </footer>
+
     </div>
   );
 }
