@@ -1765,8 +1765,53 @@ function PointPicker({ fieldPoints, broadheads, selectedId, imagesFor, onSelect 
 
 // ─── ImageCarousel ────────────────────────────────────────────────────────────
 
+function ImageLightbox({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,.88)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "zoom-out",
+      }}
+    >
+      <img
+        src={url}
+        alt={alt}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: "92vw", maxHeight: "88vh",
+          objectFit: "contain", borderRadius: 12,
+          boxShadow: "0 24px 80px rgba(0,0,0,.8)",
+          cursor: "default",
+        }}
+      />
+      <button
+        onClick={onClose}
+        style={{
+          position: "absolute", top: 20, right: 20,
+          background: "rgba(255,255,255,.12)", border: "none",
+          color: "#fff", borderRadius: 999, width: 36, height: 36,
+          fontSize: 18, cursor: "pointer", lineHeight: 1,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function ImageCarousel({ images, height = 200 }: { images: ProductImage[]; height?: number }) {
   const [i, setI] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
+
   if (!images?.length) return (
     <div style={{ height, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(0,0,0,.2)", display: "grid", placeItems: "center", fontSize: 11, color: "rgba(255,255,255,.3)", fontFamily: "ui-monospace, monospace", letterSpacing: "0.5px" }}>
       NO IMAGE
@@ -1775,8 +1820,17 @@ function ImageCarousel({ images, height = 200 }: { images: ProductImage[]; heigh
   const cur = images[Math.min(i, images.length - 1)];
   return (
     <div>
-      <div style={{ height, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(0,0,0,.2)" }}>
-        <img src={cur.url} alt={cur.alt ?? ""} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+      {lightbox && <ImageLightbox url={cur.url} alt={cur.alt ?? ""} onClose={() => setLightbox(false)} />}
+      <div
+        onClick={() => setLightbox(true)}
+        style={{ height, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(0,0,0,.2)", cursor: "zoom-in", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <img
+          src={cur.url}
+          alt={cur.alt ?? ""}
+          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
+          loading="lazy"
+        />
       </div>
       {images.length > 1 && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
