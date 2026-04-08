@@ -54,10 +54,11 @@ export default function HomePage() {
       {/* Optional lower section */}
       <section style={styles.lowerSection}>
         <div style={styles.lowerInner}>
-          <h2 style={styles.h2}>Why we only build with Easton and Victory</h2>
+          <h2 style={styles.h2}>We only source from brands with a proven record</h2>
           <p style={styles.p}>
-            Your whole brand story is precision. These two manufacturers are the easiest to defend on
-            straightness, batch consistency, and real-world reliability.
+            Every shaft, vane, and component we build with comes from manufacturers with
+            established reputations for tight tolerances, batch consistency, and real-world
+            reliability. We don't experiment with your arrows.
           </p>
         </div>
       </section>
