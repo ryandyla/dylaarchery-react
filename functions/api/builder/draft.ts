@@ -81,6 +81,7 @@ export const onRequest = async ({ request, env }: any) => {
 
     const email = String(customer.email || "").trim();
     const name = String(customer.name || "").trim();
+    const couponCode = String(body.coupon_code || "").trim().toUpperCase() || null;
 
     if (!email) return badRequest("Email is required.", "customer.email");
 
@@ -128,11 +129,35 @@ export const onRequest = async ({ request, env }: any) => {
     // Price snapshot
     const price = calculatePrice({ shaft, wrap, vane, insert, point, nock, fletch_count, quantity });
 
+    // Validate coupon if provided
+    let discountAmount = 0;
+    let validatedCouponCode: string | null = null;
+    if (couponCode) {
+      const coupon = await DB.prepare(
+        `SELECT discount_amount, used, expires_at FROM coupons WHERE code = ?`
+      ).bind(couponCode).first() as any;
+
+      if (coupon && !coupon.used) {
+        const expired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
+        if (!expired) {
+          discountAmount = Number(coupon.discount_amount) || 0;
+          validatedCouponCode = couponCode;
+        }
+      }
+    }
+
+    const discountedSubtotal = Math.max(0, price.subtotal - discountAmount);
+
     // Write order data
     const cust = await upsertCustomer(DB, { email, name });
     if (!cust) return badRequest("Invalid email.", "customer.email");
 
-    const order = await createDraftOrder(DB, { customer_id: cust.id, subtotal: price.subtotal });
+    const order = await createDraftOrder(DB, {
+      customer_id: cust.id,
+      subtotal: price.subtotal,
+      discountAmount,
+      couponCode: validatedCouponCode,
+    });
 
     const buildRow = await createArrowBuild(DB, {
       order_id: order.id,
@@ -159,7 +184,7 @@ export const onRequest = async ({ request, env }: any) => {
       origin,
       orderId: order.id,
       customerEmail: email,
-      amountCents: Math.round(price.subtotal * 100),
+      amountCents: Math.round(discountedSubtotal * 100),
       quantity,
       shaftLabel,
     });

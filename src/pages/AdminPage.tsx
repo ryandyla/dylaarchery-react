@@ -1,5 +1,9 @@
 import React, { useState } from "react";
+import OrdersSection from "./admin/OrdersSection";
+import CustomersSection from "./admin/CustomersSection";
+import MarketingSection from "./admin/MarketingSection";
 
+type Section = "catalog" | "orders" | "customers" | "marketing";
 type TypeKey = "shafts" | "nocks" | "vanes" | "wraps" | "inserts" | "points";
 
 type Row = Record<string, any> & {
@@ -316,6 +320,7 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
+  const [section, setSection] = React.useState<Section>("orders");
   const [type, setType] = React.useState<TypeKey>("shafts");
   const [items, setItems] = React.useState<Row[]>([]);
   const [q, setQ] = React.useState("");
@@ -460,8 +465,47 @@ export default function AdminPage() {
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-black">Admin</h1>
+      </div>
+
+      {/* Top-level section tabs */}
+      <div className="mt-4 flex flex-wrap gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+        {(["orders", "customers", "marketing", "catalog"] as Section[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setSection(s)}
+            className={`rounded-xl px-4 py-2 text-sm font-extrabold transition-colors ${
+              section === s
+                ? "bg-yellow-500 text-black"
+                : "text-white/50 hover:text-white/80 hover:bg-white/5"
+            }`}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Orders / Customers / Marketing sections */}
+      {section === "orders" && (
+        <div className="mt-6">
+          <OrdersSection />
+        </div>
+      )}
+      {section === "customers" && (
+        <div className="mt-6">
+          <CustomersSection />
+        </div>
+      )}
+      {section === "marketing" && (
+        <div className="mt-6">
+          <MarketingSection />
+        </div>
+      )}
+
+      {/* Catalog section */}
+      {section === "catalog" && (<>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-black">Admin</h1>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as TypeKey)}
@@ -627,6 +671,7 @@ export default function AdminPage() {
       <p className="mt-4 text-xs text-white/40">
         Protected by Cloudflare Access · JWT verified server-side on every request
       </p>
+      </>)}
     </div>
   );
 }

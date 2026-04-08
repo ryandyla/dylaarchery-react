@@ -341,19 +341,27 @@ export async function upsertCustomer(DB: any, { email, name }: { email: string; 
   return { id: res.meta.last_row_id, email: e, name: nm };
 }
 
-export async function createDraftOrder(DB: any, { customer_id, subtotal }: { customer_id: number; subtotal: number }) {
+export async function createDraftOrder(
+  DB: any,
+  {
+    customer_id,
+    subtotal,
+    discountAmount = 0,
+    couponCode = null,
+  }: { customer_id: number; subtotal: number; discountAmount?: number; couponCode?: string | null }
+) {
   const shipping = 0;
   const tax = 0;
-  const total = round2(subtotal + shipping + tax);
+  const total = round2(Math.max(0, subtotal - discountAmount) + shipping + tax);
 
   const res = await DB.prepare(
-    `INSERT INTO orders (customer_id, status, subtotal, shipping, tax, total)
-     VALUES (?1, 'draft', ?2, ?3, ?4, ?5)`
+    `INSERT INTO orders (customer_id, status, subtotal, shipping, tax, total, discount_amount, coupon_code)
+     VALUES (?1, 'draft', ?2, ?3, ?4, ?5, ?6, ?7)`
   )
-    .bind(customer_id, subtotal, shipping, tax, total)
+    .bind(customer_id, subtotal, shipping, tax, total, discountAmount, couponCode)
     .run();
 
-  return { id: res.meta.last_row_id, status: "draft", subtotal, shipping, tax, total };
+  return { id: res.meta.last_row_id, status: "draft", subtotal, shipping, tax, total, discountAmount };
 }
 
 export async function createArrowBuild(

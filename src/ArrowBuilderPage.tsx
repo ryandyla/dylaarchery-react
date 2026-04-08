@@ -248,9 +248,19 @@ export default function ArrowBuilderPage() {
   const [serverErr, setServerErr] = useState<{ field?: string; message: string } | null>(null);
   const [pricingBusy, setPricingBusy] = useState(false);
   const [customer, setCustomer] = useState<{ email: string; name: string }>({ email: "", name: "" });
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState<{ ok: boolean; discount_amount?: number; message?: string } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftResult, setDraftResult] = useState<{ order_id: number } | null>(null);
   const [openStep, setOpenStep] = useState<number>(1);
+
+  // Read coupon code from URL params (set by abandoned-cart email link)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlCoupon = params.get("coupon");
+    if (urlCoupon) setCouponCode(urlCoupon.toUpperCase());
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -525,16 +535,50 @@ export default function ArrowBuilderPage() {
     setState((s) => n === 0 ? { ...s, fletch_count: 0, vane_id: null } : { ...s, fletch_count: n });
   }
 
+  // Silently capture a marketing lead when we have enough info (fire-and-forget)
+  function captureLead() {
+    const email = customer.email.trim();
+    if (!email || !email.includes("@") || !state.shaft_id) return;
+    const shaft = catalog?.shafts?.find((s: any) => s.id === state.shaft_id);
+    const cartSnapshot = {
+      shaft: shaft ? `${shaft.brand} ${shaft.model} ${shaft.spine}` : null,
+      quantity: state.quantity,
+    };
+    fetch("/api/marketing/lead", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, name: customer.name.trim() || null, cart: cartSnapshot }),
+    }).catch(() => {}); // ignore errors — this is best-effort
+  }
+
+  async function validateCoupon() {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponStatus(null);
+    try {
+      const res = await fetch(`/api/builder/coupon?code=${encodeURIComponent(code)}`);
+      const data = await res.json() as any;
+      setCouponStatus(data);
+    } catch {
+      setCouponStatus({ ok: false, message: "Could not validate coupon." });
+    } finally {
+      setCouponBusy(false);
+    }
+  }
+
   async function createDraft() {
     setDraftBusy(true);
     setServerErr(null);
     setDraftResult(null);
+    captureLead();
     try {
       const res = await fetch(API.draft, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           customer: { email: customer.email.trim(), name: customer.name.trim() },
+          coupon_code: couponStatus?.ok ? couponCode.trim().toUpperCase() : null,
           build: {
             shaft_id: state.shaft_id,
             cut_mode: state.cut_mode,
@@ -1002,6 +1046,43 @@ export default function ArrowBuilderPage() {
                     onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))}
                   />
                   {serverErr?.field === "customer.email" && <FieldError msg={serverErr.message} />}
+
+                  {/* Coupon code */}
+                  <label style={{ ...S.fieldLabel, marginTop: 10 }}>COUPON CODE (optional)</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      style={{ ...inputStyle(false), flex: 1, textTransform: "uppercase", fontFamily: MONO, letterSpacing: "1px" }}
+                      placeholder="SAVE10-XXXXXXXX"
+                      value={couponCode}
+                      onChange={(e) => {
+                        setCouponCode(e.target.value.toUpperCase());
+                        setCouponStatus(null);
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && validateCoupon()}
+                    />
+                    <button
+                      type="button"
+                      onClick={validateCoupon}
+                      disabled={couponBusy || !couponCode.trim()}
+                      style={{
+                        padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)",
+                        fontSize: 12, fontFamily: MONO, cursor: "pointer", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {couponBusy ? "…" : "Apply"}
+                    </button>
+                  </div>
+                  {couponStatus?.ok && (
+                    <div style={{ marginTop: 6, fontSize: 12, color: "#4ade80", fontFamily: MONO }}>
+                      ✓ ${couponStatus.discount_amount?.toFixed(2)} discount applied
+                    </div>
+                  )}
+                  {couponStatus && !couponStatus.ok && (
+                    <div style={{ marginTop: 6, fontSize: 12, color: "#f87171", fontFamily: MONO }}>
+                      {couponStatus.message}
+                    </div>
+                  )}
                 </div>
               </div>
 
