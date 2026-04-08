@@ -116,6 +116,26 @@ export async function sendOrderMessage(
   return send(env, { from: ORDER_FROM, to, subject: `Re: Order #${orderId} — ${subject}`, html });
 }
 
+export async function sendWelcomeEmail(
+  env: any,
+  opts: { to: string; name: string }
+) {
+  const { to, name } = opts;
+  const html = shell(`
+    <p>Hey ${name || "there"},</p>
+    <p>Thanks for joining the Dyla Archery list. We'll keep it simple — no spam, just the occasional update when something worth sharing comes up.</p>
+    <p>In the meantime, if you want to see how we build or put together a custom set, the builder is ready for you:</p>
+    <p><a href="https://dylaarchery.com/builder" class="cta">Build Your Arrows &rarr;</a></p>
+    <p style="margin-top:24px">&mdash; Ryan &amp; the Dyla Archery Team</p>
+  `);
+  return send(env, {
+    from: ORDER_FROM,
+    to,
+    subject: "You're on the Dyla Archery list",
+    html,
+  });
+}
+
 export async function sendAbandonedCartEmail(
   env: any,
   opts: {
