@@ -1,5 +1,4 @@
 import React from "react";
-import { tw } from "../ui/tw";
 import { heroBandStyle, heroOverlayNone, heroInnerBottom } from "../ui/hero";
 
 const HERO_IMAGES = [
