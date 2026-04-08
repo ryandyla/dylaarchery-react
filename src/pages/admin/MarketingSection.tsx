@@ -111,6 +111,75 @@ function CouponModal({
   );
 }
 
+function AddContactForm({ onAdded }: { onAdded: () => void }) {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function submit() {
+    if (!email.trim()) return;
+    setSaving(true);
+    setStatus(null);
+    try {
+      const d = await api<{ ok: boolean; existed: boolean }>(
+        "/api/admin/marketing",
+        { method: "POST", body: JSON.stringify({ email: email.trim(), name: name.trim() || null }) }
+      );
+      setStatus(d.existed ? "Already in list — name updated." : "Added!");
+      setEmail("");
+      setName("");
+      onAdded();
+    } catch (e: any) {
+      setStatus(`Error: ${e?.message || String(e)}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="mb-3 text-xs font-bold text-white/50 uppercase tracking-wider">Add Contact Manually</div>
+      <div className="flex flex-wrap gap-2 items-end">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-white/40">Email *</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            placeholder="archer@example.com"
+            className="w-56 rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-yellow-400/40"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-white/40">Name (optional)</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            placeholder="First Last"
+            className="w-44 rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-yellow-400/40"
+          />
+        </div>
+        <button
+          onClick={submit}
+          disabled={saving || !email.trim()}
+          className="rounded-xl bg-yellow-500 px-4 py-1.5 text-sm font-extrabold text-black hover:bg-yellow-400 disabled:opacity-40"
+        >
+          {saving ? "Adding…" : "Add"}
+        </button>
+        {status && (
+          <span className={`text-xs ${status.startsWith("Error") ? "text-red-400" : "text-green-400"}`}>
+            {status}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MarketingSection() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filter, setFilter] = useState<"all" | "unconverted" | "converted">("unconverted");
@@ -148,6 +217,7 @@ export default function MarketingSection() {
 
   return (
     <div>
+      <AddContactForm onAdded={load} />
       {couponLead && (
         <CouponModal
           lead={couponLead}

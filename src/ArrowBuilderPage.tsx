@@ -1002,6 +1002,11 @@ export default function ArrowBuilderPage() {
                 imagesFor={imagesFor}
                 onSelect={(id) => setState((s) => ({ ...s, point_id: id }))}
               />
+              {state.point_id && imagesFor("point", state.point_id).length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <ImageCarousel images={imagesFor("point", state.point_id)} height={200} />
+                </div>
+              )}
               <div style={{ marginTop: 12 }}>
                 <button style={primaryBtn(true)} onClick={() => setOpenStep(8)}>Continue →</button>
               </div>

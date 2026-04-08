@@ -478,6 +478,46 @@ async function handleOrders(req: Request, url: URL, id: number | undefined, rest
     return json({ ok: true });
   }
 
+  // POST /api/admin/orders/:id/cancel  — cancel with optional reason email
+  if (req.method === "POST" && typeof id === "number" && rest === "cancel") {
+    const body: any = await req.json().catch(() => ({}));
+    const reason = String(body.reason || "").trim();
+
+    const order = await DB.prepare(`SELECT status FROM orders WHERE id = ?`).bind(id).first();
+    if (!order) return json({ ok: false, error: "Order not found" }, { status: 404 });
+    if (order.status === "cancelled") return json({ ok: false, error: "Already cancelled" }, { status: 400 });
+
+    const now = new Date().toISOString();
+    await DB.prepare(`UPDATE orders SET status = 'cancelled' WHERE id = ?`).bind(id).run();
+    await DB.prepare(
+      `INSERT INTO order_status_history (order_id, status, changed_at, changed_by) VALUES (?, 'cancelled', ?, 'admin')`
+    ).bind(id, now).run();
+
+    // Send cancellation message if a reason was provided
+    if (reason) {
+      const row = await DB.prepare(
+        `SELECT c.email, c.name FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.id = ?`
+      ).bind(id).first() as { email: string; name: string } | null;
+
+      if (row) {
+        const msgBody = `We're sorry to let you know that your order has been cancelled.\n\n${reason}\n\nIf you have any questions or would like to place a new order, just reply to this email — we're happy to help.`;
+        await DB.prepare(
+          `INSERT INTO order_messages (order_id, subject, body, sent_at) VALUES (?, ?, ?, ?)`
+        ).bind(id, "Your order has been cancelled", msgBody, now).run();
+
+        await sendOrderMessage(env, {
+          to: row.email,
+          name: row.name || "",
+          orderId: id,
+          subject: "Your order has been cancelled",
+          body: msgBody,
+        });
+      }
+    }
+
+    return json({ ok: true });
+  }
+
   // POST /api/admin/orders/:id/mark-paid  — manual pay (cash / Venmo)
   if (req.method === "POST" && typeof id === "number" && rest === "mark-paid") {
     const now = new Date().toISOString();
@@ -583,6 +623,25 @@ async function handleCustomers(req: Request, url: URL, id: number | undefined, r
 
 async function handleMarketing(req: Request, url: URL, id: number | undefined, rest: string, env: any) {
   const DB = env.DB;
+
+  // POST /api/admin/marketing  — manually add a contact
+  if (req.method === "POST" && id === undefined) {
+    const body: any = await req.json().catch(() => ({}));
+    const email = String(body.email || "").trim().toLowerCase();
+    const name = String(body.name || "").trim() || null;
+    if (!email || !email.includes("@")) return json({ ok: false, error: "Valid email required" }, { status: 400 });
+
+    const now = new Date().toISOString();
+    const existing = await DB.prepare(`SELECT id FROM marketing_leads WHERE email = ? LIMIT 1`).bind(email).first();
+    if (existing) {
+      if (name) await DB.prepare(`UPDATE marketing_leads SET name = COALESCE(?, name), updated_at = ? WHERE id = ?`).bind(name, now, existing.id).run();
+      return json({ ok: true, id: existing.id, existed: true });
+    }
+    const res = await DB.prepare(
+      `INSERT INTO marketing_leads (email, name, created_at, updated_at) VALUES (?, ?, ?, ?)`
+    ).bind(email, name, now, now).run();
+    return json({ ok: true, id: res.meta.last_row_id, existed: false });
+  }
 
   // GET /api/admin/marketing?converted=0
   if (req.method === "GET" && id === undefined) {

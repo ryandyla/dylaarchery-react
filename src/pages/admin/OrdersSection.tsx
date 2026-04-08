@@ -91,6 +91,11 @@ function OrderDetail({
   const [tracking, setTracking] = useState("");
   const [savingShipping, setSavingShipping] = useState(false);
 
+  // Cancel state
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+
   // Message compose
   const [msgSubject, setMsgSubject] = useState("");
   const [msgBody, setMsgBody] = useState("");
@@ -155,6 +160,26 @@ function OrderDetail({
       onUpdated();
     } catch (e: any) {
       setErr(e?.message || String(e));
+    }
+  }
+
+  async function cancelOrder() {
+    if (!order) return;
+    setCancelling(true);
+    setErr("");
+    try {
+      await api(`/api/admin/orders/${order.id}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({ reason: cancelReason.trim() }),
+      });
+      setCancelOpen(false);
+      setCancelReason("");
+      await load();
+      onUpdated();
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -276,7 +301,43 @@ function OrderDetail({
                   → {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}
                 </button>
               )}
+              {order.status !== "cancelled" && order.status !== "delivered" && (
+                <button
+                  onClick={() => setCancelOpen((v) => !v)}
+                  className="ml-auto rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/10"
+                >
+                  Cancel Order
+                </button>
+              )}
             </div>
+
+            {cancelOpen && (
+              <div className="mt-2 rounded-xl border border-red-500/20 bg-red-500/[0.04] p-3 space-y-2">
+                <div className="text-xs font-bold text-red-400">Cancel this order</div>
+                <textarea
+                  className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-red-400/40"
+                  rows={3}
+                  placeholder="Reason for cancellation (optional — will be emailed to the customer if provided)"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelOrder}
+                    disabled={cancelling}
+                    className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-extrabold text-white hover:bg-red-500 disabled:opacity-50"
+                  >
+                    {cancelling ? "Cancelling…" : "Confirm Cancel"}
+                  </button>
+                  <button
+                    onClick={() => { setCancelOpen(false); setCancelReason(""); }}
+                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold text-white/60 hover:bg-white/10"
+                  >
+                    Never mind
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Status history */}
             {history.length > 0 && (
               <div className="mt-2 space-y-0.5">
