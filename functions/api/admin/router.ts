@@ -344,7 +344,9 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
     // How your site serves images today:
     // you already use /api/images/<something>. If your images function expects a key,
     // store a URL that matches that.
-    const servedUrl = `/api/images/${encodeURIComponent(key)}`;
+    // Key chars (alphanumeric, hyphens, dots, forward slashes) are all URL-safe;
+    // do NOT encode the whole key — that turns slashes into %2F and breaks routing.
+    const servedUrl = `/api/images/${key}`;
 
     // Insert row
     const imgType = IMAGE_TYPE[t];

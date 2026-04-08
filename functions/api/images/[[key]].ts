@@ -3,9 +3,14 @@
 // GET /api/images/<key...>
 // Example: /api/images/796892.jpg
 
-export const onRequestGet: PagesFunction = async ({ env, params, request }) => {
-const parts = params.key;
-const key = Array.isArray(parts) ? parts.join("/") : null;
+export const onRequestGet: PagesFunction = async ({ env, request }) => {
+  // Parse the R2 key directly from the URL so it works whether the path
+  // uses real slashes (/api/images/products/points/1/x.jpg) or the old
+  // %2F-encoded form (/api/images/products%2Fpoints%2F1%2Fx.jpg).
+  const url = new URL(request.url);
+  const prefix = "/api/images/";
+  const rawKey = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length) : null;
+  const key = rawKey ? decodeURIComponent(rawKey) : null;
 
   if (!key) {
     return new Response("Missing image key", { status: 400 });
