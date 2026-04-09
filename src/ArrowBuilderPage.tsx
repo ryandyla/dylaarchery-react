@@ -229,6 +229,7 @@ export default function ArrowBuilderPage() {
   const grouped = useMemo(() => groupShaftsByBrandModel(shafts), [shafts]);
   const [openBrand, setOpenBrand] = useState<string>("Easton");
   const [openVaneBrand, setOpenVaneBrand] = useState<string | null>(null);
+  const [openNockBrand, setOpenNockBrand] = useState<string | null>(null);
 
   const selectedShaft = useMemo(
     () => shafts.find((s) => s.id === state.shaft_id) ?? null,
@@ -359,6 +360,24 @@ export default function ArrowBuilderPage() {
       return aM - bM;
     });
   }, [nocks, selectedShaft]);
+
+  const groupedNocks = useMemo(() => {
+    const brands = new Map<string, Nock[]>();
+    for (const n of compatibleNocks) {
+      if (!brands.has(n.brand)) brands.set(n.brand, []);
+      brands.get(n.brand)!.push(n);
+    }
+    return Array.from(brands.entries())
+      .map(([brand, items]) => ({ brand, items }))
+      .sort((a, b) => {
+        const preferred = selectedShaft?.brand ?? "";
+        if (a.brand === preferred) return -1;
+        if (b.brand === preferred) return 1;
+        return a.brand.localeCompare(b.brand);
+      });
+  }, [compatibleNocks, selectedShaft]);
+
+  const activNockBrand = openNockBrand ?? groupedNocks[0]?.brand ?? null;
 
   const compatibleInserts = useMemo(() => {
     if (!selectedShaft?.inner_diameter) return inserts;
@@ -846,17 +865,35 @@ export default function ArrowBuilderPage() {
               {compatibleNocks.length === 0 ? (
                 <div style={S.helpText}>No compatible nocks for this shaft diameter.</div>
               ) : (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <OptionPill label="Default / None" active={state.nock_id == null}
-                    onClick={() => setState((s) => ({ ...s, nock_id: null }))} />
-                  {compatibleNocks.map((n) => (
-                    <OptionPill key={n.id}
-                      label={`${n.brand} ${n.model}`}
-                      sub={`${n.weight_grains}gr · +${formatMoney(n.price_per_arrow)}/ea`}
-                      active={state.nock_id === n.id}
-                      onClick={() => setState((s) => ({ ...s, nock_id: n.id }))} />
-                  ))}
-                </div>
+                <>
+                  {/* Nock brand tabs */}
+                  {groupedNocks.length > 1 && (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                      {groupedNocks.map((g) => {
+                        const isActive = activNockBrand === g.brand;
+                        const hasSel = g.items.some((n) => n.id === state.nock_id);
+                        return (
+                          <button key={g.brand}
+                            onClick={() => setOpenNockBrand(g.brand)}
+                            style={brandBtnStyle(isActive || hasSel)}>
+                            <BrandLogo brand={g.brand} active={isActive || hasSel} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <OptionPill label="Default / None" active={state.nock_id == null}
+                      onClick={() => setState((s) => ({ ...s, nock_id: null }))} />
+                    {(groupedNocks.find((g) => g.brand === activNockBrand)?.items ?? compatibleNocks).map((n) => (
+                      <OptionPill key={n.id}
+                        label={n.model}
+                        sub={`${n.weight_grains}gr · +${formatMoney(n.price_per_arrow)}/ea`}
+                        active={state.nock_id === n.id}
+                        onClick={() => setState((s) => ({ ...s, nock_id: n.id }))} />
+                    ))}
+                  </div>
+                </>
               )}
               <div style={{ marginTop: 12 }}>
                 <button style={primaryBtn(true)} onClick={() => setOpenStep(4)}>Continue →</button>
@@ -1896,16 +1933,18 @@ function OptionPill({ label, sub, active, onClick }: { label: string; sub?: stri
 
 // ─── Brand Logo ───────────────────────────────────────────────────────────────
 
-const BRAND_MARK: Record<string, { lines: string[]; accentColor: string; tracking: string }> = {
+const BRAND_MARK: Record<string, { lines: string[]; accentColor: string; tracking: string; logoUrl?: string }> = {
   "Easton": {
     lines: ["EASTON"],
     accentColor: "#FFD400",
     tracking: "3px",
+    logoUrl: "/brand-easton.jpg",
   },
   "Victory": {
     lines: ["VICTORY"],
     accentColor: "#e53935",
     tracking: "2.5px",
+    logoUrl: "/brand-victory.png",
   },
   "Black Eagle": {
     lines: ["BLACK", "EAGLE"],
@@ -1925,6 +1964,7 @@ function BrandLogo({ brand, active }: { brand: string; active: boolean }) {
   const tracking = mark?.tracking ?? "2px";
   const lines = mark?.lines ?? [brand.toUpperCase()];
   const isTwoLine = lines.length === 2;
+  const logoUrl = mark?.logoUrl;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
@@ -1932,20 +1972,35 @@ function BrandLogo({ brand, active }: { brand: string; active: boolean }) {
       <div style={{
         width: "100%", height: 2, borderRadius: 1,
         background: active ? accentColor : "rgba(255,255,255,.12)",
-        marginBottom: isTwoLine ? 5 : 6,
+        marginBottom: logoUrl ? 6 : isTwoLine ? 5 : 6,
         transition: "background 0.2s",
       }} />
-      {lines.map((line, i) => (
-        <span key={i} style={{
-          fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-          fontSize: isTwoLine ? 9 : 10,
-          fontWeight: 800,
-          letterSpacing: tracking,
-          color: active ? accentColor : "rgba(255,255,255,.6)",
-          lineHeight: 1.15,
-          transition: "color 0.2s",
-        }}>{line}</span>
-      ))}
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={brand}
+          style={{
+            height: 20,
+            maxWidth: 64,
+            objectFit: "contain",
+            opacity: active ? 1 : 0.45,
+            transition: "opacity 0.2s",
+            display: "block",
+          }}
+        />
+      ) : (
+        lines.map((line, i) => (
+          <span key={i} style={{
+            fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+            fontSize: isTwoLine ? 9 : 10,
+            fontWeight: 800,
+            letterSpacing: tracking,
+            color: active ? accentColor : "rgba(255,255,255,.6)",
+            lineHeight: 1.15,
+            transition: "color 0.2s",
+          }}>{line}</span>
+        ))
+      )}
     </div>
   );
 }
