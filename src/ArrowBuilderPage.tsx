@@ -1956,6 +1956,24 @@ const BRAND_MARK: Record<string, { lines: string[]; accentColor: string; trackin
     accentColor: "#f5a623",
     tracking: "2.5px",
   },
+  "AAE": {
+    lines: ["AAE"],
+    accentColor: "#3a7bd5",
+    tracking: "3px",
+    logoUrl: "/brand-aae.png",
+  },
+  "Bohning": {
+    lines: ["BOHNING"],
+    accentColor: "#cc2222",
+    tracking: "2px",
+    logoUrl: "/brand-bohning.webp",
+  },
+  "Altra": {
+    lines: ["ALTRA"],
+    accentColor: "#e0e0e0",
+    tracking: "2.5px",
+    logoUrl: "/brand-altra.png",
+  },
 };
 
 function BrandLogo({ brand, active }: { brand: string; active: boolean }) {
