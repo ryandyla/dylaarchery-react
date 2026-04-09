@@ -265,7 +265,11 @@ export default function ArrowBuilderPage() {
   useEffect(() => {
     if (!openStep) return;
     const el = document.getElementById(`step-${openStep}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el) return;
+    const navEl = document.querySelector("header");
+    const navHeight = navEl ? navEl.getBoundingClientRect().height : 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - navHeight - 12;
+    window.scrollTo({ top, behavior: "smooth" });
   }, [openStep]);
 
   // Read coupon code from URL params (set by abandoned-cart email link)
