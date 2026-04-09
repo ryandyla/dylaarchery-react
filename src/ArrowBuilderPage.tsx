@@ -1946,15 +1946,41 @@ const BRAND_MARK: Record<string, { lines: string[]; accentColor: string; trackin
     tracking: "2.5px",
     logoUrl: "/brand-victory.png",
   },
-  "Black Eagle": {
-    lines: ["BLACK", "EAGLE"],
-    accentColor: "#c8cdd3",
-    tracking: "2px",
-  },
   "Gold Tip": {
     lines: ["GOLD", "TIP"],
     accentColor: "#f5a623",
     tracking: "2.5px",
+    logoUrl: "/brand-gold-tip.jpg",
+  },
+  "Black Eagle": {
+    lines: ["BLACK", "EAGLE"],
+    accentColor: "#c8cdd3",
+    tracking: "2px",
+    logoUrl: "/brand-black-eagle.png",
+  },
+  "Beiter": {
+    lines: ["BEITER"],
+    accentColor: "#e0e0e0",
+    tracking: "2px",
+    logoUrl: "/brand-beiter.png",
+  },
+  "Flex Fletch": {
+    lines: ["FLEX", "FLETCH"],
+    accentColor: "#22bb55",
+    tracking: "2px",
+    logoUrl: "/brand-flex-fletch.jpg",
+  },
+  "Flex-Fletch": {
+    lines: ["FLEX", "FLETCH"],
+    accentColor: "#22bb55",
+    tracking: "2px",
+    logoUrl: "/brand-flex-fletch.jpg",
+  },
+  "Carbon Express": {
+    lines: ["CARBON", "EXPRESS"],
+    accentColor: "#e53935",
+    tracking: "2px",
+    logoUrl: "/brand-carbon-express.png",
   },
   "AAE": {
     lines: ["AAE"],
@@ -1998,8 +2024,8 @@ function BrandLogo({ brand, active }: { brand: string; active: boolean }) {
           src={logoUrl}
           alt={brand}
           style={{
-            height: 20,
-            maxWidth: 64,
+            height: 30,
+            maxWidth: 90,
             objectFit: "contain",
             opacity: active ? 1 : 0.45,
             transition: "opacity 0.2s",
@@ -2029,8 +2055,8 @@ function brandBtnStyle(active: boolean): React.CSSProperties {
     border: `1px solid ${active ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)"}`,
     background: active ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.02)",
     boxShadow: active ? "0 0 0 2px rgba(255,212,0,.10)" : "none",
-    padding: "9px 14px",
-    minWidth: 68,
+    padding: "10px 20px",
+    minWidth: 96,
     cursor: "pointer",
     transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
   };
