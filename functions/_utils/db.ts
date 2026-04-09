@@ -262,12 +262,6 @@ export function validateBuild(args: any) {
     }
   }
 
-  // Point thread check only if chosen
-  if (point) {
-    if (point.thread && point.thread !== "8-32") {
-      return { ok: false, field: "point_id", message: "Point thread type is not supported." };
-    }
-  }
 
   return { ok: true };
 }
