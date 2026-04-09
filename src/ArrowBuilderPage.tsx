@@ -1178,9 +1178,12 @@ export default function ArrowBuilderPage() {
             <ArrowDiagram
               shaft={selectedShaft}
               nockId={state.nock_id}
+              nockColor={state.nock_color}
               wrapId={state.wrap_id}
               fletchCount={state.fletch_count}
               vaneId={state.vane_id}
+              vaneColor={state.vane_color}
+              vaneHeight={selectedVane?.height ?? null}
               insertId={state.insert_id}
               pointId={state.point_id}
               pointType={selectedPoint?.type ?? null}
@@ -1278,9 +1281,12 @@ export default function ArrowBuilderPage() {
 type DiagramProps = {
   shaft: Shaft | null;
   nockId: number | null;
+  nockColor: string | null;
   wrapId: number | null;
   fletchCount: 0 | 3 | 4;
   vaneId: number | null;
+  vaneColor: string | null;
+  vaneHeight: number | null; // actual vane height in inches
   insertId: number | null;
   pointId: number | null;
   pointType: "field" | "broadhead" | null;
@@ -1288,7 +1294,7 @@ type DiagramProps = {
   cutLength: number | null;
 };
 
-function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, pointId, pointType, cutMode, cutLength }: DiagramProps) {
+function ArrowDiagram({ shaft, nockId, nockColor, wrapId, fletchCount, vaneId, vaneColor, vaneHeight, insertId, pointId, pointType, cutMode, cutLength }: DiagramProps) {
   const hasShaft = !!shaft;
   const hasNock   = nockId   != null;
   const hasWrap   = wrapId   != null;
@@ -1314,6 +1320,15 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
   const VX0 = SX0 + 12;  // 64  – front attachment
   const VX1 = SX0 + 110; // 162 – rear attachment (near nock / wrap)
 
+  // Scale vane height: reference is 0.5" = 42px. Clamp 20–58px.
+  const VANE_H_REF_IN = 0.5;
+  const VANE_H_REF_PX = 42;
+  const vaneH = vaneHeight
+    ? Math.max(20, Math.min(58, (vaneHeight / VANE_H_REF_IN) * VANE_H_REF_PX))
+    : VANE_H_REF_PX;
+  const vaneH3rd = vaneH * 0.62;
+  const vaneH4th = vaneH * 0.36;
+
   // Insert collar zone (front of shaft before point)
   const IX0 = SX1 - 52;  // 648
   const IX1 = SX1;        // 700
@@ -1338,23 +1353,30 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
   const connFill = (on: boolean) => on ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.05)";
 
   // ── Vane fill ─────────────────────────────────────────────────────────────
-  const vaneFill = (primary: boolean) =>
-    hasShaft && hasVanes  ? (primary ? GOLD_D : "rgba(255,212,0,.28)") :
-    hasShaft && fletchOn  ? (primary ? "rgba(255,212,0,.18)" : "rgba(255,212,0,.10)") :
-    DIM;
+  // When a color is picked, use it; otherwise fall back to gold/dim
+  const vaneColorHex = (vaneColor && COLOR_HEX[vaneColor.toLowerCase()]) ?? null;
+  const nockColorHex = (nockColor && COLOR_HEX[nockColor.toLowerCase()]) ?? null;
 
-  // Vanes: flat (blunt) edge at VX0 (nock/back), taper forward to VX1 (point direction)
-  // Primary: H=42px tall at back, curves down to shaft at front
-  const topVane   = `M ${VX0} ${SY0} L ${VX0} ${SY0-42} Q ${VX0+44} ${SY0-44} ${VX1} ${SY0} Z`;
-  const botVane   = `M ${VX0} ${SY1} L ${VX0} ${SY1+42} Q ${VX0+44} ${SY1+44} ${VX1} ${SY1} Z`;
+  const vaneFill = (primary: boolean) => {
+    if (hasShaft && hasVanes && vaneColorHex) {
+      return primary ? vaneColorHex : vaneColorHex + "bb";
+    }
+    if (hasShaft && hasVanes)  return primary ? GOLD_D : "rgba(255,212,0,.28)";
+    if (hasShaft && fletchOn)  return primary ? "rgba(255,212,0,.18)" : "rgba(255,212,0,.10)";
+    return DIM;
+  };
+
+  // Vanes: flat (blunt) edge at VX0 (nock/back), taper forward to VX1 — height scaled
+  const topVane = `M ${VX0} ${SY0} L ${VX0} ${SY0-vaneH} Q ${VX0+44} ${SY0-vaneH*1.05} ${VX1} ${SY0} Z`;
+  const botVane = `M ${VX0} ${SY1} L ${VX0} ${SY1+vaneH} Q ${VX0+44} ${SY1+vaneH*1.05} ${VX1} ${SY1} Z`;
 
   // 3rd vane (120° offset — shorter, dimmer)
-  const top3rd    = `M ${VX0} ${SY0} L ${VX0} ${SY0-26} Q ${VX0+42} ${SY0-28} ${VX1-4} ${SY0} Z`;
-  const bot3rd    = `M ${VX0} ${SY1} L ${VX0} ${SY1+26} Q ${VX0+42} ${SY1+28} ${VX1-4} ${SY1} Z`;
+  const top3rd = `M ${VX0} ${SY0} L ${VX0} ${SY0-vaneH3rd} Q ${VX0+42} ${SY0-vaneH3rd*1.05} ${VX1-4} ${SY0} Z`;
+  const bot3rd = `M ${VX0} ${SY1} L ${VX0} ${SY1+vaneH3rd} Q ${VX0+42} ${SY1+vaneH3rd*1.05} ${VX1-4} ${SY1} Z`;
 
   // 4th vane (side vane, narrowest)
-  const top4th    = `M ${VX0} ${SY0} L ${VX0} ${SY0-15} Q ${VX0+42} ${SY0-16} ${VX1-6} ${SY0} Z`;
-  const bot4th    = `M ${VX0} ${SY1} L ${VX0} ${SY1+15} Q ${VX0+42} ${SY1+16} ${VX1-6} ${SY1} Z`;
+  const top4th = `M ${VX0} ${SY0} L ${VX0} ${SY0-vaneH4th} Q ${VX0+42} ${SY0-vaneH4th*1.05} ${VX1-6} ${SY0} Z`;
+  const bot4th = `M ${VX0} ${SY1} L ${VX0} ${SY1+vaneH4th} Q ${VX0+42} ${SY1+vaneH4th*1.05} ${VX1-6} ${SY1} Z`;
 
   // Nock: cylindrical body (x=28..52) with string groove notch at rear (x=16..28)
   // Body is slightly taller than shaft; groove is a narrow step inward
@@ -1421,7 +1443,7 @@ function ArrowDiagram({ shaft, nockId, wrapId, fletchCount, vaneId, insertId, po
 
         {/* ── Nock ── */}
         <path d={nockPath}
-          fill={hasShaft && hasNock ? GOLD_C : (hasShaft ? "rgba(255,255,255,.30)" : SHAFT_N)}
+          fill={hasShaft && hasNock ? (nockColorHex ?? GOLD_C) : (hasShaft ? "rgba(255,255,255,.30)" : SHAFT_N)}
           style={{ transition: `fill ${T}` }} />
 
         {/* ── Insert collar zone ── */}
