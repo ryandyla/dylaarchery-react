@@ -1975,23 +1975,71 @@ function OptionPill({ label, sub, active, onClick }: { label: string; sub?: stri
 
 // ─── Color support ───────────────────────────────────────────────────────────
 
+// Solid hex values used for SVG diagram fills (patterns map to base color)
 const COLOR_HEX: Record<string, string> = {
-  black:      "#1a1a1a",
-  white:      "#f0f0f0",
-  orange:     "#ff6600",
-  yellow:     "#ffd400",
-  green:      "#22bb44",
-  blue:       "#2255cc",
-  red:        "#cc2222",
-  pink:       "#ff69b4",
-  purple:     "#8833cc",
-  chartreuse: "#80ff00",
-  "neon green": "#39ff14",
-  "neon orange": "#ff4500",
-  brown:      "#7b4f2e",
-  gray:       "#888888",
-  clear:      "rgba(255,255,255,0.12)",
+  black:           "#1a1a1a",
+  blackout:        "#050505",
+  white:           "#f0f0f0",
+  silver:          "#a8a8a8",
+  gray:            "#888888",
+  brown:           "#7b4f2e",
+  tan:             "#c4a87a",
+  olive:           "#4b5320",
+  navy:            "#0a1a5c",
+  red:             "#cc2222",
+  "neon red":      "#ff1133",
+  orange:          "#ff6600",
+  "neon orange":   "#ff4500",
+  yellow:          "#ffd400",
+  "neon yellow":   "#ffe000",
+  green:           "#22bb44",
+  "neon green":    "#39ff14",
+  kiwi:            "#8db600",
+  teal:            "#009b8d",
+  blue:            "#2255cc",
+  "satin blue":    "#1e5fa8",
+  purple:          "#8833cc",
+  pink:            "#ff69b4",
+  "hot pink":      "#ff1493",
+  chartreuse:      "#80ff00",
+  clear:           "rgba(255,255,255,0.12)",
+  // Patterns — solid base color used in SVG diagram
+  "white tiger":   "#e8e8e8",
+  "red tiger":     "#cc2222",
+  "orange tiger":  "#ff6600",
+  "yellow tiger":  "#ffd400",
+  "green tiger":   "#22bb44",
+  "teal tiger":    "#009b8d",
+  "pink tiger":    "#ff1493",
+  "purple tiger":  "#8833cc",
+  "american flag": "#cc2222",
+  "american made": "#cc2222",
+  "don't tread on me": "#e8c800",
+  "fred bear":     "#e8e8e8",
+  "realtree":      "#3a4a2a",
 };
+
+// CSS backgrounds for UI swatches — can be gradients for patterned colors
+const COLOR_SWATCH_BG: Record<string, string> = {
+  ...COLOR_HEX,
+  "white tiger":   "repeating-linear-gradient(45deg,#e8e8e8 0px,#e8e8e8 4px,#444 4px,#444 7px)",
+  "red tiger":     "repeating-linear-gradient(45deg,#cc2222 0px,#cc2222 4px,#111 4px,#111 7px)",
+  "orange tiger":  "repeating-linear-gradient(45deg,#ff6600 0px,#ff6600 4px,#111 4px,#111 7px)",
+  "yellow tiger":  "repeating-linear-gradient(45deg,#ffd400 0px,#ffd400 4px,#111 4px,#111 7px)",
+  "green tiger":   "repeating-linear-gradient(45deg,#22bb44 0px,#22bb44 4px,#111 4px,#111 7px)",
+  "teal tiger":    "repeating-linear-gradient(45deg,#009b8d 0px,#009b8d 4px,#111 4px,#111 7px)",
+  "pink tiger":    "repeating-linear-gradient(45deg,#ff1493 0px,#ff1493 4px,#111 4px,#111 7px)",
+  "purple tiger":  "repeating-linear-gradient(45deg,#8833cc 0px,#8833cc 4px,#111 4px,#111 7px)",
+  "american flag": "linear-gradient(90deg,#cc2222 0%,#cc2222 33%,#f5f5f5 33%,#f5f5f5 66%,#002868 66%)",
+  "american made": "linear-gradient(90deg,#cc2222 0%,#f5f5f5 50%,#002868 100%)",
+  "don't tread on me": "#e8c800",
+  "realtree":      "repeating-linear-gradient(30deg,#3a4a2a 0px,#5a6a3a 6px,#2a3520 11px)",
+};
+
+const LIGHT_COLORS = new Set([
+  "white","white tiger","silver","yellow","neon yellow","kiwi","chartreuse",
+  "neon green","tan","don't tread on me","fred bear","american made",
+]);
 
 function parseColors(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -2013,11 +2061,12 @@ function ColorSwatches({
       <div style={{ fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace", fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 8 }}>
         COLOR
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
         {colors.map((c) => {
-          const hex = COLOR_HEX[c.toLowerCase()] ?? "#666";
+          const key = c.toLowerCase();
+          const bg = COLOR_SWATCH_BG[key] ?? "#666";
           const isSel = selected === c;
-          const isLight = ["white", "yellow", "chartreuse", "neon green", "clear"].includes(c.toLowerCase());
+          const isLight = LIGHT_COLORS.has(key);
           return (
             <button
               key={c}
@@ -2026,7 +2075,7 @@ function ColorSwatches({
               style={{
                 width: 28, height: 28,
                 borderRadius: "50%",
-                background: hex,
+                background: bg,
                 border: isSel
                   ? "2px solid rgba(255,212,0,1)"
                   : "2px solid rgba(255,255,255,.15)",
