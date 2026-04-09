@@ -36,6 +36,7 @@ type Vane = {
   profile?: string | null;
   compatible_micro: number;
   price_per_arrow: number;
+  colors?: string | null; // JSON array string
 };
 
 type Point = {
@@ -71,6 +72,7 @@ type Nock = {
   weight_grains: number;
   price_per_arrow: number;
   shaft_id_in: number | null;
+  colors?: string | null; // JSON array string
 };
 
 type ProductType = "shaft" | "wrap" | "vane" | "point" | "insert" | "nock";
@@ -111,8 +113,10 @@ type BuilderState = {
   cut_mode: "uncut" | "cut";
   cut_length: number | null;
   nock_id: number | null;
+  nock_color: string | null;
   wrap_id: number | null;
   vane_id: number | null;
+  vane_color: string | null;
   fletch_count: 0 | 3 | 4;
   insert_id: number | null;
   point_id: number | null;
@@ -123,8 +127,10 @@ const DEFAULT_STATE: BuilderState = {
   cut_mode: "uncut",
   cut_length: null,
   nock_id: null,
+  nock_color: null,
   wrap_id: null,
   vane_id: null,
+  vane_color: null,
   fletch_count: 0,
   insert_id: null,
   point_id: null,
@@ -603,8 +609,10 @@ export default function ArrowBuilderPage() {
             cut_mode: state.cut_mode,
             cut_length: state.cut_mode === "cut" ? state.cut_length : null,
             nock_id: state.nock_id ?? null,
+            nock_color: state.nock_color ?? null,
             wrap_id: state.wrap_id ?? null,
             vane_id: state.fletch_count === 0 ? null : (state.vane_id ?? null),
+            vane_color: state.fletch_count === 0 ? null : (state.vane_color ?? null),
             fletch_count: state.fletch_count,
             insert_id: state.insert_id ?? null,
             point_id: state.point_id ?? null,
@@ -884,15 +892,20 @@ export default function ArrowBuilderPage() {
                   )}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <OptionPill label="Default / None" active={state.nock_id == null}
-                      onClick={() => setState((s) => ({ ...s, nock_id: null }))} />
+                      onClick={() => setState((s) => ({ ...s, nock_id: null, nock_color: null }))} />
                     {(groupedNocks.find((g) => g.brand === activNockBrand)?.items ?? compatibleNocks).map((n) => (
                       <OptionPill key={n.id}
                         label={n.model}
                         sub={`${n.weight_grains}gr · +${formatMoney(n.price_per_arrow)}/ea`}
                         active={state.nock_id === n.id}
-                        onClick={() => setState((s) => ({ ...s, nock_id: n.id }))} />
+                        onClick={() => setState((s) => ({ ...s, nock_id: n.id, nock_color: null }))} />
                     ))}
                   </div>
+                  {state.nock_id != null && (() => {
+                    const selNock = compatibleNocks.find((n) => n.id === state.nock_id);
+                    const colors = parseColors(selNock?.colors);
+                    return <ColorSwatches colors={colors} selected={state.nock_color} onSelect={(c) => setState((s) => ({ ...s, nock_color: c }))} />;
+                  })()}
                 </>
               )}
               <div style={{ marginTop: 12 }}>
@@ -964,7 +977,7 @@ export default function ArrowBuilderPage() {
                       const imgs = imagesFor("vane", v.id);
                       return (
                         <ComponentCard key={v.id} selected={sel}
-                          onClick={() => setState((s) => ({ ...s, vane_id: v.id }))}
+                          onClick={() => setState((s) => ({ ...s, vane_id: v.id, vane_color: null }))}
                           image={imgs[0]?.url}
                           title={v.model}
                           specs={[
@@ -979,6 +992,11 @@ export default function ArrowBuilderPage() {
                       );
                     })}
                   </div>
+                  {state.vane_id && (() => {
+                    const selVane = compatibleVanes.find((v) => v.id === state.vane_id);
+                    const colors = parseColors(selVane?.colors);
+                    return <ColorSwatches colors={colors} selected={state.vane_color} onSelect={(c) => setState((s) => ({ ...s, vane_color: c }))} />;
+                  })()}
                   {state.fletch_count > 0 && !state.vane_id && (
                     <FieldError msg="Select a vane or switch to bare shaft." />
                   )}
@@ -1932,6 +1950,90 @@ function OptionPill({ label, sub, active, onClick }: { label: string; sub?: stri
 }
 
 // ─── Brand Logo ───────────────────────────────────────────────────────────────
+
+// ─── Color support ───────────────────────────────────────────────────────────
+
+const COLOR_HEX: Record<string, string> = {
+  black:      "#1a1a1a",
+  white:      "#f0f0f0",
+  orange:     "#ff6600",
+  yellow:     "#ffd400",
+  green:      "#22bb44",
+  blue:       "#2255cc",
+  red:        "#cc2222",
+  pink:       "#ff69b4",
+  purple:     "#8833cc",
+  chartreuse: "#80ff00",
+  "neon green": "#39ff14",
+  "neon orange": "#ff4500",
+  brown:      "#7b4f2e",
+  gray:       "#888888",
+  clear:      "rgba(255,255,255,0.12)",
+};
+
+function parseColors(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
+function ColorSwatches({
+  colors,
+  selected,
+  onSelect,
+}: {
+  colors: string[];
+  selected: string | null;
+  onSelect: (c: string | null) => void;
+}) {
+  if (colors.length === 0) return null;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace", fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 8 }}>
+        COLOR
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {colors.map((c) => {
+          const hex = COLOR_HEX[c.toLowerCase()] ?? "#666";
+          const isSel = selected === c;
+          const isLight = ["white", "yellow", "chartreuse", "neon green", "clear"].includes(c.toLowerCase());
+          return (
+            <button
+              key={c}
+              title={c.charAt(0).toUpperCase() + c.slice(1)}
+              onClick={() => onSelect(isSel ? null : c)}
+              style={{
+                width: 28, height: 28,
+                borderRadius: "50%",
+                background: hex,
+                border: isSel
+                  ? "2px solid rgba(255,212,0,1)"
+                  : "2px solid rgba(255,255,255,.15)",
+                boxShadow: isSel ? "0 0 0 3px rgba(255,212,0,.25)" : "none",
+                cursor: "pointer",
+                position: "relative",
+                flexShrink: 0,
+                transition: "border-color 0.15s, box-shadow 0.15s",
+              }}
+            >
+              {isSel && (
+                <span style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, color: isLight ? "#000" : "#fff", fontWeight: 900,
+                }}>✓</span>
+              )}
+            </button>
+          );
+        })}
+        {selected && (
+          <span style={{ fontSize: 11, color: "rgba(255,212,0,.8)", fontFamily: "ui-monospace, monospace", marginLeft: 2 }}>
+            {selected.charAt(0).toUpperCase() + selected.slice(1)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const BRAND_MARK: Record<string, { lines: string[]; accentColor: string; tracking: string; logoUrl?: string }> = {
   "Easton": {

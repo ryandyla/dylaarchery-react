@@ -90,7 +90,7 @@ export async function getCatalog(DB: D1Database) {
     // vanes
     allRows(
       DB.prepare(
-        `SELECT id, brand, model, length, height, weight_grains, profile, compatible_micro, price_per_arrow
+        `SELECT id, brand, model, length, height, weight_grains, profile, compatible_micro, price_per_arrow, colors
          FROM vanes WHERE active = 1
          ORDER BY brand, model`
       )
@@ -115,7 +115,7 @@ export async function getCatalog(DB: D1Database) {
     // nocks
     allRows(
       DB.prepare(
-        `SELECT id, brand, model, system, style, price_per_arrow, weight_grains, shaft_id_in
+        `SELECT id, brand, model, system, style, price_per_arrow, weight_grains, shaft_id_in, colors
          FROM nocks WHERE active = 1
          ORDER BY brand, model`
       )
@@ -285,7 +285,7 @@ export function calculatePrice(args: any) {
 
 
 export function buildSummary(args: any) {
-  const { shaft, wrap, vane, point, insert, nock, cut_mode, cut_length, quantity, fletch_count } = args;
+  const { shaft, wrap, vane, point, insert, nock, cut_mode, cut_length, quantity, fletch_count, vane_color, nock_color } = args;
 
   const shaftLabel = `${shaft.brand} ${shaft.model} ${shaft.spine}`;
   const wrapLabel = wrap ? wrap.name : "None";
@@ -293,12 +293,12 @@ export function buildSummary(args: any) {
     fletch_count === 0
       ? "None"
       : vane
-      ? `${vane.brand} ${vane.model} (${fletch_count}-fletch)`
+      ? `${vane.brand} ${vane.model} (${fletch_count}-fletch)${vane_color ? ` · ${vane_color}` : ""}`
       : "None";
 
   const insertLabel = insert ? `${insert.brand} ${insert.model}${insert.requires_collar ? " (+collar)" : ""}` : "None";
   const pointLabel = point ? (`${point.brand || ""} ${point.model || ""}`.trim() || `${point.type} ${point.weight_grains}gr`) : "None";
-  const nockLabel = nock ? `${nock.brand} ${nock.model}` : "None";
+  const nockLabel = nock ? `${nock.brand} ${nock.model}${nock_color ? ` · ${nock_color}` : ""}` : "None";
 
   const mode: "uncut" | "cut" = cut_mode === "cut" ? "cut" : "uncut";
 
@@ -365,29 +365,32 @@ export async function createArrowBuild(
     shaft_id: number;
     wrap_id: number | null;
     vane_id: number | null;
+    vane_color: string | null;
     insert_id: number | null;
     point_id: number | null;
     nock_id: number | null;
+    nock_color: string | null;
     cut_length: number;
     quantity: number;
     fletch_count: number;
     price_per_arrow: number;
   }
-) 
- {
+) {
   const res = await DB.prepare(
     `INSERT INTO arrow_builds
-      (order_id, shaft_id, wrap_id, vane_id, insert_id, point_id, nock_id, cut_length, quantity, fletch_count, price_per_arrow)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
+      (order_id, shaft_id, wrap_id, vane_id, vane_primary_color, insert_id, point_id, nock_id, nock_color, cut_length, quantity, fletch_count, price_per_arrow)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`
   )
     .bind(
       args.order_id,
       args.shaft_id,
       args.wrap_id ?? null,
       args.vane_id ?? null,
+      args.vane_color ?? null,
       args.insert_id ?? null,
       args.point_id ?? null,
       args.nock_id ?? null,
+      args.nock_color ?? null,
       args.cut_length,
       args.quantity,
       args.fletch_count,

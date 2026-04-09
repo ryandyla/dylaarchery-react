@@ -92,6 +92,9 @@ export const onRequest = async ({ request, env }: any) => {
     const point_id = build.point_id == null ? null : Number(build.point_id);
     const nock_id = build.nock_id == null ? null : Number(build.nock_id);
 
+    const vane_color = build.vane_color ? String(build.vane_color).trim() : null;
+    const nock_color = build.nock_color ? String(build.nock_color).trim() : null;
+
     const cut_mode: "uncut" | "cut" = build.cut_mode === "cut" ? "cut" : "uncut";
     const cut_length = cut_mode === "cut" && build.cut_length != null ? Number(build.cut_length) : null;
 
@@ -164,9 +167,11 @@ export const onRequest = async ({ request, env }: any) => {
       shaft_id,
       wrap_id,
       vane_id,
+      vane_color,
       insert_id,
       point_id,
       nock_id,
+      nock_color,
       cut_length: cut_length ?? 0,
       quantity,
       fletch_count,

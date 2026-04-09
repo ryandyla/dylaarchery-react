@@ -22,7 +22,7 @@ type Row = Record<string, any> & {
 type FieldDef = {
   key: string;
   label: string;
-  type: "text" | "number" | "checkbox";
+  type: "text" | "number" | "checkbox" | "colors";
   placeholder?: string;
   step?: string;
 };
@@ -50,6 +50,7 @@ const FIELDS: Record<TypeKey, FieldDef[]> = {
     { key: "profile",         label: "Profile",       type: "text" },
     { key: "compatible_micro",label: "Micro OK",      type: "checkbox" },
     { key: "price_per_arrow", label: "Price / arrow", type: "number", step: "0.01" },
+    { key: "colors",          label: "Colors",        type: "colors", placeholder: "black, white, red, orange…" },
     { key: "active",          label: "Active",        type: "checkbox" },
   ],
   nocks: [
@@ -59,6 +60,7 @@ const FIELDS: Record<TypeKey, FieldDef[]> = {
     { key: "style",          label: "Style",         type: "text", placeholder: "standard / pin / large" },
     { key: "weight_grains",  label: "Weight (gr)",   type: "number", step: "0.1" },
     { key: "price_per_arrow",label: "Price / arrow", type: "number", step: "0.01" },
+    { key: "colors",         label: "Colors",        type: "colors", placeholder: "black, white, orange…" },
     { key: "active",         label: "Active",        type: "checkbox" },
   ],
   wraps: [
@@ -181,6 +183,22 @@ function ItemForm({
                 />
                 <span className="text-xs text-white/60">{draft[f.key] ? "Yes" : "No"}</span>
               </div>
+            ) : f.type === "colors" ? (
+              <input
+                type="text"
+                placeholder={f.placeholder}
+                value={(() => {
+                  const v = draft[f.key];
+                  if (!v) return "";
+                  try { return JSON.parse(v).join(", "); } catch { return v; }
+                })()}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const arr = raw.split(",").map((s: string) => s.trim()).filter(Boolean);
+                  onChange(f.key, arr.length ? JSON.stringify(arr) : null);
+                }}
+                className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white outline-none focus:border-yellow-400/50"
+              />
             ) : (
               <input
                 type={f.type}
