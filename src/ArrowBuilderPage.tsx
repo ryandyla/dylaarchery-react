@@ -262,6 +262,12 @@ export default function ArrowBuilderPage() {
   const [draftResult, setDraftResult] = useState<{ order_id: number } | null>(null);
   const [openStep, setOpenStep] = useState<number>(1);
 
+  useEffect(() => {
+    if (!openStep) return;
+    const el = document.getElementById(`step-${openStep}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [openStep]);
+
   // Read coupon code from URL params (set by abandoned-cart email link)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1676,7 +1682,7 @@ function Step(props: {
   const MONO_FONT = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
 
   return (
-    <div style={{
+    <div id={`step-${n}`} style={{
       borderRadius: 16,
       border: `1px solid ${open ? "rgba(255,212,0,.18)" : "rgba(255,255,255,.08)"}`,
       background: open ? "rgba(255,255,255,.035)" : "rgba(255,255,255,.018)",
