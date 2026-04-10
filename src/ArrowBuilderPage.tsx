@@ -1326,7 +1326,7 @@ export default function ArrowBuilderPage() {
       {/* Sticky price footer — mobile only */}
       {isMobile && !!pricing.per_arrow && pricing.per_arrow > 0 && (
         <div style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          position: "fixed", bottom: 0, left: 0, right: 0, width: "100vw", zIndex: 200,
           background: "rgba(8,8,16,0.96)",
           borderTop: "1px solid rgba(255,212,0,.18)",
           backdropFilter: "blur(12px)",
@@ -2434,6 +2434,7 @@ function useIsMobile() {
 const S: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
+    overflowX: "hidden",
     background:
       "radial-gradient(800px 500px at 10% 5%, rgba(255,212,0,.07), transparent 55%)," +
       "radial-gradient(800px 500px at 90% 10%, rgba(255,106,0,.07), transparent 55%)," +
