@@ -347,7 +347,7 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
           >
             + Upload
           </button>
-          {type === "shaft" && images.length > 0 && (
+          {type === "shafts" && images.length > 0 && (
             <button
               onClick={applyToModel}
               disabled={applying}
