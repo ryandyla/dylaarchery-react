@@ -219,6 +219,7 @@ function gaugeArc(cx: number, cy: number, r: number, startDeg: number, endDeg: n
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ArrowBuilderPage() {
+  const isMobile = useIsMobile();
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -236,6 +237,7 @@ export default function ArrowBuilderPage() {
   const [openBrand, setOpenBrand] = useState<string>("Easton");
   const [openVaneBrand, setOpenVaneBrand] = useState<string | null>(null);
   const [openNockBrand, setOpenNockBrand] = useState<string | null>(null);
+  const pendingRestore = useRef<BuilderState | null>(null);
 
   const selectedShaft = useMemo(
     () => shafts.find((s) => s.id === state.shaft_id) ?? null,
@@ -272,11 +274,26 @@ export default function ArrowBuilderPage() {
     window.scrollTo({ top, behavior: "smooth" });
   }, [openStep]);
 
-  // Read coupon code from URL params (set by abandoned-cart email link)
+  // Read coupon code from URL params (set by abandoned-cart email link) and fetch saved cart
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlCoupon = params.get("coupon");
-    if (urlCoupon) setCouponCode(urlCoupon.toUpperCase());
+    if (!urlCoupon) return;
+    setCouponCode(urlCoupon.toUpperCase());
+    fetch(`/api/marketing/cart?coupon=${encodeURIComponent(urlCoupon)}`)
+      .then((r) => r.json())
+      .then((data: any) => {
+        if (data?.ok && data.cart?.state) {
+          const saved = data.cart.state as BuilderState;
+          // If catalog already loaded, restore immediately; otherwise stash for catalog effect
+          if (!pendingRestore.current && catalog) {
+            setState(saved);
+          } else {
+            pendingRestore.current = saved;
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -288,6 +305,10 @@ export default function ArrowBuilderPage() {
         const data = (await res.json()) as any;
         if (!res.ok || !data?.ok) throw new Error(data?.message || "Failed to load catalog.");
         setCatalog(data as CatalogResponse);
+        if (pendingRestore.current) {
+          setState(pendingRestore.current);
+          pendingRestore.current = null;
+        }
       } catch (e: any) {
         setCatalogError(e?.message || "Failed to load catalog.");
       } finally {
@@ -578,6 +599,21 @@ export default function ArrowBuilderPage() {
     const cartSnapshot = {
       shaft: shaft ? `${shaft.brand} ${shaft.model} ${shaft.spine}` : null,
       quantity: state.quantity,
+      // Full state for cart restoration via email link
+      state: {
+        shaft_id: state.shaft_id,
+        cut_mode: state.cut_mode,
+        cut_length: state.cut_length,
+        nock_id: state.nock_id,
+        nock_color: state.nock_color,
+        wrap_id: state.wrap_id,
+        vane_id: state.vane_id,
+        vane_color: state.vane_color,
+        fletch_count: state.fletch_count,
+        insert_id: state.insert_id,
+        point_id: state.point_id,
+        quantity: state.quantity,
+      },
     };
     fetch("/api/marketing/lead", {
       method: "POST",
@@ -691,35 +727,39 @@ export default function ArrowBuilderPage() {
 
   return (
     <div style={S.page}>
-      <div style={S.container}>
+      <div style={{ ...S.container, padding: isMobile ? "14px 12px 90px" : "24px 18px 64px" }}>
 
         {/* Page header */}
-        <div style={S.pageHeader}>
+        <div style={{ ...S.pageHeader, flexWrap: "wrap", gap: isMobile ? 10 : 14, padding: isMobile ? "12px 14px" : "16px 18px" }}>
           <div>
-            <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1.5px", marginBottom: 4 }}>
-              PRECISION BUILD CONFIGURATOR
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: -0.5, color: "rgba(255,255,255,.93)" }}>
+            {!isMobile && (
+              <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1.5px", marginBottom: 4 }}>
+                PRECISION BUILD CONFIGURATOR
+              </div>
+            )}
+            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 950, letterSpacing: -0.5, color: "rgba(255,255,255,.93)" }}>
               Build Your Arrows
             </div>
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
             {/* Progress bar */}
             <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
               <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px" }}>
                 {doneCount} / 7 CONFIGURED
               </div>
-              <div style={{ width: 120, height: 3, background: "rgba(255,255,255,.08)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ width: isMobile ? 90 : 120, height: 3, background: "rgba(255,255,255,.08)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${(doneCount / 7) * 100}%`, background: `linear-gradient(90deg, ${GOLD}, #ff9800)`, borderRadius: 2, transition: "width 0.4s ease" }}/>
               </div>
             </div>
-            <div style={S.specPill}>
-              EASTON · VICTORY · HARDCORE SPEC
-            </div>
+            {!isMobile && (
+              <div style={S.specPill}>
+                EASTON · VICTORY · HARDCORE SPEC
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={S.grid}>
+        <div style={{ ...S.grid, gridTemplateColumns: isMobile ? "1fr" : "1.35fr 0.65fr" }}>
           {/* ── Left: Steps ── */}
           <div>
 
@@ -1081,7 +1121,7 @@ export default function ArrowBuilderPage() {
             <Step n={8} title="Review" sub="Pack size · contact · submit draft"
               open={openStep === 8} done={false} disabled={!stepDone[2]}
               onToggle={() => setOpenStep(openStep === 8 ? 0 : 8)}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                 <div>
                   <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 10 }}>
                     PACK SIZE
@@ -1182,7 +1222,7 @@ export default function ArrowBuilderPage() {
           </div>
 
           {/* ── Right: Sticky Panel ── */}
-          <div style={S.stickyPanel}>
+          <div style={isMobile ? {} : S.stickyPanel}>
 
             {/* Arrow diagram */}
             <ArrowDiagram
@@ -1282,6 +1322,40 @@ export default function ArrowBuilderPage() {
           </div>
         </div>
       </div>
+
+      {/* Sticky price footer — mobile only */}
+      {isMobile && pricing.per_arrow > 0 && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "rgba(8,8,16,0.96)",
+          borderTop: "1px solid rgba(255,212,0,.18)",
+          backdropFilter: "blur(12px)",
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "12px 16px",
+          paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 900, color: "rgba(255,255,255,.95)", letterSpacing: -0.5 }}>
+              {formatMoney(pricing.per_arrow)}
+              <span style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,.4)", marginLeft: 4 }}>/arrow</span>
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.4)", marginTop: 2 }}>
+              {state.quantity}× PACK · {formatMoney(pricing.subtotal)} TOTAL
+            </div>
+          </div>
+          {canProceedToDraft ? (
+            <button
+              style={{ ...ctaBtn(true), padding: "10px 18px", fontSize: 13, minWidth: 0 }}
+              onClick={() => setOpenStep(8)}>
+              Review →
+            </button>
+          ) : (
+            <div style={{ fontFamily: MONO, fontSize: 10, color: GOLD, letterSpacing: "0.3px", textAlign: "right" }}>
+              {pricingBusy ? "PRICING…" : "LIVE PRICE"}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2343,6 +2417,19 @@ function miniBtn(): React.CSSProperties {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return mobile;
+}
 
 const S: Record<string, React.CSSProperties> = {
   page: {
