@@ -53,7 +53,7 @@ export const onRequestPost = async ({ request, env }: any) => {
 
   // Build login URL
   const origin = new URL(request.url).origin;
-  const loginUrl = `${origin}/member/verify?token=${encodeURIComponent(token)}`;
+  const loginUrl = `${origin}/api/member/auth/verify?token=${encodeURIComponent(token)}`;
 
   try {
     const memberName = name || (existing?.name ?? null);

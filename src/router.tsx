@@ -7,6 +7,12 @@ import ProcessPage from "./pages/ProcessPage";
 import ToolsPage from "./pages/ToolsPage";
 import AdminPage from "./pages/AdminPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
+import MemberLoginPage from "./pages/member/MemberLoginPage";
+import MemberShell from "./pages/member/MemberShell";
+import MemberDashboard from "./pages/member/MemberDashboard";
+import MemberBowsPage from "./pages/member/MemberBowsPage";
+import MemberBuildsPage from "./pages/member/MemberBuildsPage";
+import MemberOrdersPage from "./pages/member/MemberOrdersPage";
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +25,17 @@ export const router = createBrowserRouter([
       { path: "/contact", element: <ContactPage /> },
       { path: "/admin", element: <AdminPage /> },
       { path: "/order/success", element: <OrderSuccessPage /> },
+      { path: "/member", element: <MemberLoginPage /> },
+      {
+        path: "/member",
+        element: <MemberShell />,
+        children: [
+          { path: "dashboard", element: <MemberDashboard /> },
+          { path: "bows", element: <MemberBowsPage /> },
+          { path: "builds", element: <MemberBuildsPage /> },
+          { path: "orders", element: <MemberOrdersPage /> },
+        ],
+      },
     ],
   },
 ]);

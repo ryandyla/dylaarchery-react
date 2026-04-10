@@ -96,6 +96,13 @@ export default function AppShell() {
             <NavLink to="/process" className={linkClass}>Our Process</NavLink>
             <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
             <NavLink to="/contact" className={linkClass}>Contact</NavLink>
+            <NavLink to="/member" className={({ isActive }) =>
+              `px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                isActive
+                  ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
+                  : "border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
+              }`
+            }>My Account</NavLink>
           </nav>
         </div>
       </header>
