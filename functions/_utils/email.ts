@@ -136,6 +136,32 @@ export async function sendWelcomeEmail(
   });
 }
 
+export async function sendWelcomeDiscount(
+  env: any,
+  opts: { to: string; name: string; code: string; discountAmount: number; siteOrigin: string }
+) {
+  const { to, name, code, discountAmount, siteOrigin } = opts;
+  const html = shell(`
+    <p>Hey ${name || "there"},</p>
+    <p>Thanks for your interest in Dyla Archery — here's your discount code, good for <strong>$${discountAmount.toFixed(0)} off</strong> your first order:</p>
+    <div class="coupon">
+      <p class="label">Your Discount Code</p>
+      <p class="code">${code}</p>
+      <p class="fine">$${discountAmount.toFixed(0)} off &bull; single use &bull; expires in 30 days</p>
+    </div>
+    <p>Enter it at checkout when you're ready to build:</p>
+    <p><a href="${siteOrigin}/builder" class="cta">Build Your Arrows &rarr;</a></p>
+    <p style="font-size:13px;color:#555">Questions? Just reply to this email.</p>
+    <p>&mdash; Ryan &amp; the Dyla Archery Team</p>
+  `);
+  return send(env, {
+    from: MARKETING_FROM,
+    to,
+    subject: "Your Dyla Archery discount code",
+    html,
+  });
+}
+
 export async function sendAbandonedCartEmail(
   env: any,
   opts: {
