@@ -141,6 +141,7 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
   if (type === "orders") return handleOrders(req, url, id, rest, env);
   if (type === "customers") return handleCustomers(req, url, id, rest, env);
   if (type === "marketing") return handleMarketing(req, url, id, rest, env);
+  if (type === "specials") return handleSpecials(req, url, id, env);
 
   const t = getTable(type);
   if (!t) return json({ ok: false, error: "Invalid admin type" }, { status: 404 });
@@ -754,6 +755,77 @@ async function handleMarketing(req: Request, url: URL, id: number | undefined, r
     });
 
     return json({ ok: true, code });
+  }
+
+  return json({ ok: false, error: "Not found" }, { status: 404 });
+}
+
+// ── Specials handler ─────────────────────────────────────────────────────────
+
+async function handleSpecials(req: Request, url: URL, id: number | undefined, env: any) {
+  const DB = env.DB;
+  const now = new Date().toISOString();
+
+  // GET /api/admin/specials
+  if (req.method === "GET" && id === undefined) {
+    const rows = await DB.prepare(
+      `SELECT * FROM specials ORDER BY active DESC, id DESC`
+    ).all();
+    return json({ ok: true, specials: rows.results });
+  }
+
+  // POST /api/admin/specials — create
+  if (req.method === "POST" && id === undefined) {
+    const body: any = await req.json().catch(() => ({}));
+    if (!body.name || !body.type) return json({ ok: false, error: "name and type required" }, { status: 400 });
+    const r = await DB.prepare(
+      `INSERT INTO specials (name, description, type, value, active, member_only, max_uses, starts_at, ends_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      body.name.trim(),
+      body.description?.trim() || null,
+      body.type,
+      body.value != null ? Number(body.value) : null,
+      body.active ? 1 : 0,
+      body.member_only !== false ? 1 : 0,
+      body.max_uses ? Number(body.max_uses) : null,
+      body.starts_at || null,
+      body.ends_at || null,
+      now, now
+    ).run();
+    return json({ ok: true, id: r.meta.last_row_id });
+  }
+
+  // PATCH /api/admin/specials/:id — update / toggle active
+  if (req.method === "PATCH" && typeof id === "number") {
+    const body: any = await req.json().catch(() => ({}));
+    const updates: string[] = [];
+    const args: any[] = [];
+
+    const fields: Record<string, string> = {
+      name: "text", description: "text", type: "text",
+      value: "number", active: "bool", member_only: "bool",
+      max_uses: "number", starts_at: "text", ends_at: "text",
+    };
+    for (const [field, kind] of Object.entries(fields)) {
+      if (field in body) {
+        updates.push(`${field} = ?`);
+        if (kind === "bool") args.push(body[field] ? 1 : 0);
+        else if (kind === "number") args.push(body[field] != null ? Number(body[field]) : null);
+        else args.push(body[field] != null ? String(body[field]).trim() || null : null);
+      }
+    }
+    if (!updates.length) return json({ ok: true });
+    updates.push("updated_at = ?");
+    args.push(now, id);
+    await DB.prepare(`UPDATE specials SET ${updates.join(", ")} WHERE id = ?`).bind(...args).run();
+    return json({ ok: true });
+  }
+
+  // DELETE /api/admin/specials/:id
+  if (req.method === "DELETE" && typeof id === "number") {
+    await DB.prepare(`DELETE FROM specials WHERE id = ?`).bind(id).run();
+    return json({ ok: true });
   }
 
   return json({ ok: false, error: "Not found" }, { status: 404 });

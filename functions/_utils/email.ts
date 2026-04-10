@@ -136,6 +136,27 @@ export async function sendWelcomeEmail(
   });
 }
 
+export async function sendMagicLink(
+  env: any,
+  opts: { to: string; name: string | null; loginUrl: string }
+) {
+  const { to, name, loginUrl } = opts;
+  const html = shell(`
+    <p>Hey ${name || "there"},</p>
+    <p>Here's your login link for Dyla Archery. It expires in 15 minutes and can only be used once:</p>
+    <p style="text-align:center;margin:24px 0">
+      <a href="${loginUrl}" class="cta">Log In to Dyla Archery &rarr;</a>
+    </p>
+    <p style="font-size:12px;color:#555">If you didn't request this, you can safely ignore it — no account changes were made.</p>
+  `);
+  return send(env, {
+    from: MARKETING_FROM,
+    to,
+    subject: "Your Dyla Archery login link",
+    html,
+  });
+}
+
 export async function sendWelcomeDiscount(
   env: any,
   opts: { to: string; name: string; code: string; discountAmount: number; siteOrigin: string }
