@@ -1324,7 +1324,7 @@ export default function ArrowBuilderPage() {
       </div>
 
       {/* Sticky price footer — mobile only */}
-      {isMobile && pricing.per_arrow > 0 && (
+      {isMobile && !!pricing.per_arrow && pricing.per_arrow > 0 && (
         <div style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
           background: "rgba(8,8,16,0.96)",

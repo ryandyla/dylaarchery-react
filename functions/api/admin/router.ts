@@ -298,12 +298,17 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
 
     if (!row) return json({ ok: false, error: "Image not found" }, { status: 404 });
 
-    // Delete from R2 — extract key from relative or absolute URL
-    const marker = "/api/images/";
-    const markerIdx = row.url.indexOf(marker);
-    if (markerIdx !== -1) {
-      const r2Key = decodeURIComponent(row.url.slice(markerIdx + marker.length));
-      await env.PRODUCT_IMAGES.delete(r2Key);
+    // Delete from R2 only if no other product_images row shares this URL (shared references)
+    const sharedCount = await env.DB.prepare(
+      `SELECT COUNT(*) as n FROM product_images WHERE url = ? AND id != ?`
+    ).bind(row.url, imageId).first() as { n: number } | null;
+    if (!sharedCount?.n) {
+      const marker = "/api/images/";
+      const markerIdx = row.url.indexOf(marker);
+      if (markerIdx !== -1) {
+        const r2Key = decodeURIComponent(row.url.slice(markerIdx + marker.length));
+        await env.PRODUCT_IMAGES.delete(r2Key);
+      }
     }
 
     await env.DB.prepare(`DELETE FROM product_images WHERE id = ?`).bind(imageId).run();
@@ -380,6 +385,50 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
     }
 
     return json({ ok: true, url: servedUrl, key });
+  }
+
+  // -------------------------------------------------------
+  // POST /api/admin/shaft/:id/images/apply-to-model
+  // Copies all image rows from this shaft to every other
+  // shaft with the same brand + model (no R2 upload).
+  // -------------------------------------------------------
+  if (req.method === "POST" && t === "shaft" && typeof id === "number" && rest === "images/apply-to-model") {
+    const imgType = IMAGE_TYPE[t]; // "shaft"
+
+    // 1. Find source shaft's brand + model
+    const source = await env.DB.prepare(`SELECT brand, model FROM shafts WHERE id = ?`)
+      .bind(id)
+      .first() as { brand: string; model: string } | null;
+    if (!source) return json({ ok: false, error: "Shaft not found" }, { status: 404 });
+
+    // 2. Get image rows for source shaft
+    const srcImages = await env.DB.prepare(
+      `SELECT url, alt, sort, is_primary FROM product_images WHERE product_type = ? AND product_id = ? ORDER BY sort ASC, id ASC`
+    ).bind(imgType, id).all();
+    if (!srcImages.results.length) return json({ ok: false, error: "No images on source shaft" }, { status: 400 });
+
+    // 3. Find sibling shaft IDs (same brand + model, different id)
+    const siblings = await env.DB.prepare(
+      `SELECT id FROM shafts WHERE brand = ? AND model = ? AND id != ?`
+    ).bind(source.brand, source.model, id).all();
+
+    let applied = 0;
+    for (const sib of siblings.results as { id: number }[]) {
+      // Skip siblings that already have images
+      const existing = await env.DB.prepare(
+        `SELECT COUNT(*) as n FROM product_images WHERE product_type = ? AND product_id = ?`
+      ).bind(imgType, sib.id).first() as { n: number } | null;
+      if (existing?.n) continue;
+
+      for (const img of srcImages.results as { url: string; alt: string | null; sort: number; is_primary: number }[]) {
+        await env.DB.prepare(
+          `INSERT INTO product_images (product_type, product_id, url, alt, sort, is_primary, active) VALUES (?, ?, ?, ?, ?, ?, 1)`
+        ).bind(imgType, sib.id, img.url, img.alt, img.sort, img.is_primary).run();
+      }
+      applied++;
+    }
+
+    return json({ ok: true, applied, siblings: siblings.results.length });
   }
 
   return json({ ok: false, error: "Not found" }, { status: 404 });

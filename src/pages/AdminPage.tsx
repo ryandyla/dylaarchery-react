@@ -248,6 +248,7 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [applying, setApplying] = useState(false);
 
   React.useEffect(() => {
     setLoading(true);
@@ -286,6 +287,23 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
       onUpload();
     } catch (e: any) {
       setErr(e?.message || String(e));
+    }
+  }
+
+  async function applyToModel() {
+    if (!confirm("Copy these images to all other spine variants of this model that have no images yet?")) return;
+    setApplying(true);
+    setErr("");
+    try {
+      const r = await fetch(`/api/admin/${type}/${rowId}/images/apply-to-model`, { method: "POST" });
+      const d: any = await r.json();
+      if (!d.ok) throw new Error(d.error || "Failed");
+      alert(`Done — applied to ${d.applied} of ${d.siblings} sibling spine(s).`);
+      onUpload();
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -329,6 +347,15 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
           >
             + Upload
           </button>
+          {type === "shaft" && images.length > 0 && (
+            <button
+              onClick={applyToModel}
+              disabled={applying}
+              className="self-start rounded-lg border border-yellow-400/20 bg-yellow-400/5 px-3 py-1.5 text-xs font-bold text-yellow-300/70 hover:bg-yellow-400/10 disabled:opacity-40"
+            >
+              {applying ? "Applying…" : "Apply to all spines"}
+            </button>
+          )}
         </div>
       )}
     </div>
