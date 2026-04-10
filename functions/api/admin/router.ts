@@ -392,7 +392,7 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
   // Copies all image rows from this shaft to every other
   // shaft with the same brand + model (no R2 upload).
   // -------------------------------------------------------
-  if (req.method === "POST" && t === "shaft" && typeof id === "number" && rest === "images/apply-to-model") {
+  if (req.method === "POST" && t === "shafts" && typeof id === "number" && rest === "images/apply-to-model") {
     const imgType = IMAGE_TYPE[t]; // "shaft"
 
     // 1. Find source shaft's brand + model
