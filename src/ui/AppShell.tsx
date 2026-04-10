@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { useState } from "react";
+import LeadWidget from "../LeadWidget";
 
 function MailingListSignup() {
   const [email, setEmail] = useState("");
@@ -102,6 +103,8 @@ export default function AppShell() {
       <main className="mx-auto px-0 py-0">
         <Outlet />
       </main>
+
+      <LeadWidget />
 
       <footer className="border-t border-white/10 py-10">
         <div className="mx-auto max-w-6xl px-4">
