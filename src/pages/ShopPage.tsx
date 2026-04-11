@@ -5,24 +5,27 @@ import { Link } from "react-router-dom";
 
 type CartItemType = "shaft" | "nock" | "vane" | "wrap" | "field_point" | "broadhead";
 
-type ShaftVariant = {
+// A variant within a grouped product (size, spine, weight, etc.)
+type ProductVariant = {
   id: number;
-  spine: number;
-  gpi: number | null;
-  outer_diameter: number | null;
-  max_length: number | null;
-  unit_price: number;
+  label: string;       // shown on picker chip: "340", "1.8\"", "100 gr"
+  sublabel?: string;   // shown below selected: "8.9 GPI · OD 0.244\""
   pack_price: number;
+  unit_price: number;
 };
 
-type ShaftGroup = {
+// A product group (brand+model with 1+ variants)
+type ProductGroup = {
+  key: string;
+  type: CartItemType;
   brand: string;
-  model: string;
+  name: string;
   pack_qty: number;
   image_url: string | null;
-  variants: ShaftVariant[];
+  variants: ProductVariant[];
 };
 
+// A flat (non-grouped) product — nocks, wraps
 type ShopItem = {
   id: number;
   type: CartItemType;
@@ -36,20 +39,31 @@ type ShopItem = {
   lighted?: boolean;
 };
 
-type CartItem = ShopItem & { qty: number };
+type CartItem = {
+  id: number;
+  type: CartItemType;
+  name: string;
+  meta?: string;
+  brand?: string;
+  pack_qty: number;
+  pack_price: number;
+  unit_price: number;
+  image_url?: string | null;
+  lighted?: boolean;
+  qty: number;
+};
 
-const PACK_LABELS: Record<CartItemType, string | ((item: ShopItem) => string)> = {
+const PACK_LABELS: Partial<Record<CartItemType, string>> = {
   shaft: "12-shaft pack",
-  nock: (item) => item.lighted ? "3-pack" : "12-pack",
   vane: "36-pack",
   wrap: "13-pack",
   field_point: "12-pack",
   broadhead: "3-pack",
 };
 
-function packLabel(item: ShopItem): string {
-  const v = PACK_LABELS[item.type];
-  return typeof v === "function" ? v(item) : v;
+function packLabel(type: CartItemType, pack_qty: number, lighted?: boolean): string {
+  if (type === "nock") return lighted ? "3-pack" : "12-pack";
+  return PACK_LABELS[type] ?? `${pack_qty}-pack`;
 }
 
 const TAB_LABELS: { key: CartItemType | "all"; label: string }[] = [
@@ -67,97 +81,69 @@ type SortKey = "name_asc" | "price_asc" | "price_desc";
 // ── Cart helpers ──────────────────────────────────────────────────────────────
 
 const CART_KEY = "dyla_shop_cart";
-
 function loadCart(): CartItem[] {
   try { return JSON.parse(localStorage.getItem(CART_KEY) ?? "[]"); } catch { return []; }
 }
-function saveCart(cart: CartItem[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart));
-}
-function cartItemKey(item: Pick<ShopItem, "type" | "id">) {
-  return `${item.type}-${item.id}`;
-}
+function saveCart(cart: CartItem[]) { localStorage.setItem(CART_KEY, JSON.stringify(cart)); }
+function cartKey(type: CartItemType, id: number) { return `${type}-${id}`; }
 
 // ── Catalog transform ─────────────────────────────────────────────────────────
 
-function transformItems(d: any): { groups: ShaftGroup[]; items: ShopItem[] } {
-  const groups: ShaftGroup[] = d.shaft_groups ?? [];
+type RawCatalog = {
+  shaft_groups: any[];
+  vane_groups: any[];
+  field_point_groups: any[];
+  broadhead_groups: any[];
+  nocks: any[];
+  wraps: any[];
+};
 
-  const items: ShopItem[] = [];
-
-  for (const n of d.nocks ?? []) {
-    items.push({
-      id: n.id, type: "nock", brand: n.brand,
-      name: `${n.brand} ${n.model}`,
-      meta: [n.system, n.style, n.weight_grains ? `${n.weight_grains}gr` : null].filter(Boolean).join(" · "),
-      pack_qty: n.pack_qty, pack_price: n.pack_price, unit_price: n.price_per_arrow,
-      image_url: n.image_url, lighted: !!n.lighted,
-    });
-  }
-  for (const v of d.vanes ?? []) {
-    items.push({
-      id: v.id, type: "vane", brand: v.brand,
-      name: `${v.brand} ${v.model}`,
-      meta: [v.length ? `${v.length}" L` : null, v.height ? `${v.height}" H` : null, v.weight_grains ? `${v.weight_grains}gr` : null].filter(Boolean).join(" · "),
-      pack_qty: v.pack_qty, pack_price: v.pack_price, unit_price: v.price_per_arrow,
-      image_url: v.image_url,
-    });
-  }
-  for (const w of d.wraps ?? []) {
-    items.push({
-      id: w.id, type: "wrap", brand: "Wrap",
-      name: w.name,
-      meta: [w.length ? `${w.length}"` : null, w.min_outer_diameter && w.max_outer_diameter ? `OD ${w.min_outer_diameter}–${w.max_outer_diameter}"` : null].filter(Boolean).join(" · "),
-      pack_qty: w.pack_qty, pack_price: w.pack_price, unit_price: w.price_per_arrow,
-      image_url: w.image_url,
-    });
-  }
-  for (const p of d.field_points ?? []) {
-    items.push({
-      id: p.id, type: "field_point", brand: p.brand,
-      name: `${p.brand || ""} ${p.model || ""}`.trim() || "Field Point",
-      meta: [p.weight_grains ? `${p.weight_grains}gr` : null, p.thread].filter(Boolean).join(" · "),
-      pack_qty: p.pack_qty, pack_price: p.pack_price, unit_price: p.price,
-      image_url: p.image_url,
-    });
-  }
-  for (const p of d.broadheads ?? []) {
-    items.push({
-      id: p.id, type: "broadhead", brand: p.brand,
-      name: `${p.brand || ""} ${p.model || ""}`.trim() || "Broadhead",
-      meta: [p.weight_grains ? `${p.weight_grains}gr` : null, p.thread].filter(Boolean).join(" · "),
-      pack_qty: p.pack_qty, pack_price: p.pack_price, unit_price: p.price,
-      image_url: p.image_url,
-    });
-  }
-
-  return { groups, items };
+function toGroups(raw: any[], type: CartItemType): ProductGroup[] {
+  return raw.map((g, i) => ({
+    key: `${type}-${g.brand}-${g.name}-${i}`,
+    type,
+    brand: g.brand,
+    name: g.name,
+    pack_qty: g.pack_qty,
+    image_url: g.image_url ?? null,
+    variants: g.variants,
+  }));
 }
 
-// ── Shaft Group Card (brand/model + spine variant picker) ─────────────────────
+function toItems(raw: any[], type: CartItemType): ShopItem[] {
+  return raw.map((r) => ({
+    id: r.id, type, brand: r.brand, name: r.name, meta: r.meta,
+    pack_qty: r.pack_qty, pack_price: r.pack_price, unit_price: r.unit_price,
+    image_url: r.image_url ?? null, lighted: r.lighted,
+  }));
+}
 
-function ShaftGroupCard({
-  group, cart, onAdd,
-}: {
-  group: ShaftGroup;
+// ── Variant Group Card ────────────────────────────────────────────────────────
+
+function VariantGroupCard({ group, cart, onAdd }: {
+  group: ProductGroup;
   cart: CartItem[];
-  onAdd: (item: ShopItem) => void;
+  onAdd: (item: Omit<CartItem, "qty">) => void;
 }) {
-  const [selectedSpine, setSelectedSpine] = useState<number>(group.variants[0]?.spine ?? 0);
-  const variant = group.variants.find((v) => v.spine === selectedSpine) ?? group.variants[0];
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const variant = group.variants[selectedIdx] ?? group.variants[0];
+  const hasVariants = group.variants.length > 1;
+  const key = cartKey(group.type, variant.id);
+  const inCart = cart.some((c) => cartKey((c as any).type, (c as any).id) === key);
 
-  if (!variant) return null;
-
-  const key = cartItemKey({ type: "shaft", id: variant.id });
-  const inCart = cart.some((c) => cartItemKey(c) === key);
+  // Infer the variant attribute name for the label row
+  const variantAttr =
+    group.type === "shaft" ? "Spine" :
+    group.type === "vane" ? "Length" :
+    (group.type === "field_point" || group.type === "broadhead") ? "Weight" : "";
 
   function handleAdd() {
     onAdd({
       id: variant.id,
-      type: "shaft",
+      type: group.type,
       brand: group.brand,
-      name: `${group.brand} ${group.model}`,
-      meta: `${variant.spine} spine${variant.gpi ? ` · ${variant.gpi} GPI` : ""}`,
+      name: group.name,
+      meta: hasVariants ? variant.label : (variant.sublabel ?? ""),
       pack_qty: group.pack_qty,
       pack_price: variant.pack_price,
       unit_price: variant.unit_price,
@@ -170,47 +156,55 @@ function ShaftGroupCard({
       {/* Image */}
       <div className="aspect-square bg-white/5 flex items-center justify-center overflow-hidden">
         {group.image_url
-          ? <img src={group.image_url} alt={`${group.brand} ${group.model}`} className="w-full h-full object-contain p-3" />
+          ? <img src={group.image_url} alt={group.name} className="w-full h-full object-contain p-3" />
           : <div className="text-3xl opacity-20">🏹</div>
         }
       </div>
 
       <div className="p-4 flex flex-col flex-1">
-        <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">12-SHAFT PACK</div>
-        <div className="font-black text-white text-sm leading-snug">{group.brand}</div>
-        <div className="text-white/60 text-sm mb-3">{group.model}</div>
+        <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">
+          {packLabel(group.type, group.pack_qty).toUpperCase()}
+        </div>
+        <div className="font-black text-white text-sm leading-snug mb-3">{group.name}</div>
 
-        {/* Spine selector */}
-        <div className="mb-3">
-          <div className="text-[10px] font-bold tracking-widest text-white/25 mb-1.5">SPINE</div>
-          <div className="flex flex-wrap gap-1">
-            {group.variants.map((v) => (
-              <button
-                key={v.spine}
-                onClick={() => setSelectedSpine(v.spine)}
-                className={`rounded-lg px-2 py-1 text-xs font-mono font-bold transition-colors border ${
-                  v.spine === selectedSpine
-                    ? "bg-yellow-400/20 border-yellow-400/40 text-yellow-300"
-                    : "border-white/10 text-white/40 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {v.spine}
-              </button>
-            ))}
+        {/* Variant picker — only shown when there are multiple */}
+        {hasVariants && (
+          <div className="mb-3">
+            <div className="text-[10px] font-bold tracking-widest text-white/25 mb-1.5">
+              {variantAttr.toUpperCase()}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {group.variants.map((v, i) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedIdx(i)}
+                  className={`rounded-lg px-2 py-1 text-xs font-mono font-bold border transition-colors ${
+                    i === selectedIdx
+                      ? "bg-yellow-400/20 border-yellow-400/40 text-yellow-300"
+                      : "border-white/10 text-white/40 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+            {variant.sublabel && (
+              <div className="text-[10px] text-white/25 mt-1.5">{variant.sublabel}</div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Selected variant specs */}
-        <div className="flex flex-wrap gap-3 text-xs text-white/30 mb-3">
-          {variant.gpi && <span>{variant.gpi} GPI</span>}
-          {variant.outer_diameter && <span>OD {variant.outer_diameter}"</span>}
-          {variant.max_length && <span>Max {variant.max_length}"</span>}
-        </div>
+        {/* Single variant — show sublabel inline */}
+        {!hasVariants && variant.sublabel && (
+          <div className="text-xs text-white/35 mb-3">{variant.sublabel}</div>
+        )}
 
         <div className="mt-auto flex items-center justify-between">
           <div>
-            <div className="font-mono font-black text-yellow-400 text-base">${variant.pack_price.toFixed(2)}</div>
-            <div className="text-[10px] text-white/25">${variant.unit_price.toFixed(2)}/shaft</div>
+            <div className="font-mono font-black text-yellow-400 text-base">
+              ${variant.pack_price.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-white/25">${variant.unit_price.toFixed(2)}/ea</div>
           </div>
           <button
             onClick={handleAdd}
@@ -228,7 +222,7 @@ function ShaftGroupCard({
   );
 }
 
-// ── Individual Product Card ───────────────────────────────────────────────────
+// ── Flat Product Card (nocks, wraps) ──────────────────────────────────────────
 
 function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean; onAdd: () => void }) {
   return (
@@ -240,7 +234,9 @@ function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean;
         }
       </div>
       <div className="p-4 flex flex-col flex-1">
-        <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">{packLabel(item).toUpperCase()}</div>
+        <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">
+          {packLabel(item.type, item.pack_qty, item.lighted).toUpperCase()}
+        </div>
         <div className="font-bold text-white text-sm leading-snug mb-1">{item.name}</div>
         {item.meta && <div className="text-xs text-white/35 mb-3 leading-relaxed">{item.meta}</div>}
         <div className="mt-auto flex items-center justify-between">
@@ -248,14 +244,12 @@ function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean;
             <div className="font-mono font-black text-yellow-400 text-base">${item.pack_price.toFixed(2)}</div>
             <div className="text-[10px] text-white/25">${item.unit_price.toFixed(2)}/ea</div>
           </div>
-          <button
-            onClick={onAdd}
+          <button onClick={onAdd}
             className={`rounded-xl px-3 py-1.5 text-xs font-extrabold transition-colors ${
               inCart
                 ? "bg-green-500/20 border border-green-400/30 text-green-400 hover:bg-green-500/30"
                 : "bg-yellow-500 text-black hover:bg-yellow-400"
-            }`}
-          >
+            }`}>
             {inCart ? "✓ Added" : "Add to Cart"}
           </button>
         </div>
@@ -266,9 +260,7 @@ function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean;
 
 // ── Cart Drawer ───────────────────────────────────────────────────────────────
 
-function CartDrawer({
-  cart, onClose, onQtyChange, onRemove,
-}: {
+function CartDrawer({ cart, onClose, onQtyChange, onRemove }: {
   cart: CartItem[];
   onClose: () => void;
   onQtyChange: (key: string, qty: number) => void;
@@ -280,7 +272,7 @@ function CartDrawer({
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
-  const subtotal = cart.reduce((sum, item) => sum + item.pack_price * item.qty, 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item as any).pack_price * item.qty, 0);
 
   async function checkout() {
     if (!email.trim()) { setErrMsg("Email is required"); return; }
@@ -291,18 +283,17 @@ function CartDrawer({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          email: email.trim(),
-          name: name.trim(),
+          email: email.trim(), name: name.trim(),
           coupon_code: coupon.trim() || null,
-          items: cart.map((item) => ({
-            type: item.type,
-            id: item.id,
-            name: `${item.name}${item.meta ? ` (${item.meta})` : ""}`,
-            pack_qty: item.pack_qty,
-            qty: item.qty,
-            unit_price: item.unit_price,
-            pack_price: item.pack_price,
-          })),
+          items: cart.map((item) => {
+            const i = item as any;
+            return {
+              type: i.type, id: i.id,
+              name: i.meta ? `${i.name} (${i.meta})` : i.name,
+              pack_qty: i.pack_qty, qty: item.qty,
+              unit_price: i.unit_price, pack_price: i.pack_price,
+            };
+          }),
         }),
       });
       const data = await res.json() as any;
@@ -333,33 +324,33 @@ function CartDrawer({
           <>
             <div className="flex-1 p-5 space-y-3">
               {cart.map((item) => {
-                const key = cartItemKey(item);
+                const i = item as any;
+                const k = cartKey(i.type, i.id);
                 return (
-                  <div key={key} className="flex gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                    {item.image_url && (
+                  <div key={k} className="flex gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                    {i.image_url && (
                       <div className="w-14 h-14 rounded-lg bg-white/5 overflow-hidden shrink-0">
-                        <img src={item.image_url} alt={item.name} className="w-full h-full object-contain p-1" />
+                        <img src={i.image_url} alt={i.name} className="w-full h-full object-contain p-1" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-white leading-snug">{item.name}</div>
-                      {item.meta && <div className="text-[11px] text-white/35">{item.meta}</div>}
-                      <div className="text-xs text-white/25">{packLabel(item)}</div>
+                      <div className="text-sm font-bold text-white leading-snug">{i.name}</div>
+                      {i.meta && <div className="text-[11px] text-white/35">{i.meta}</div>}
+                      <div className="text-xs text-white/25">{packLabel(i.type, i.pack_qty, i.lighted)}</div>
                       <div className="flex items-center gap-2 mt-2">
-                        <button onClick={() => onQtyChange(key, item.qty - 1)} className="w-6 h-6 rounded-md border border-white/10 text-white/50 hover:text-white flex items-center justify-center text-sm">−</button>
+                        <button onClick={() => onQtyChange(k, item.qty - 1)} className="w-6 h-6 rounded-md border border-white/10 text-white/50 hover:text-white flex items-center justify-center text-sm">−</button>
                         <span className="text-sm font-mono text-white w-4 text-center">{item.qty}</span>
-                        <button onClick={() => onQtyChange(key, item.qty + 1)} className="w-6 h-6 rounded-md border border-white/10 text-white/50 hover:text-white flex items-center justify-center text-sm">+</button>
+                        <button onClick={() => onQtyChange(k, item.qty + 1)} className="w-6 h-6 rounded-md border border-white/10 text-white/50 hover:text-white flex items-center justify-center text-sm">+</button>
                       </div>
                     </div>
                     <div className="flex flex-col items-end justify-between shrink-0">
-                      <button onClick={() => onRemove(key)} className="text-white/20 hover:text-red-400 text-xs">✕</button>
-                      <div className="font-mono font-black text-yellow-400 text-sm">${(item.pack_price * item.qty).toFixed(2)}</div>
+                      <button onClick={() => onRemove(k)} className="text-white/20 hover:text-red-400 text-xs">✕</button>
+                      <div className="font-mono font-black text-yellow-400 text-sm">${(i.pack_price * item.qty).toFixed(2)}</div>
                     </div>
                   </div>
                 );
               })}
             </div>
-
             <div className="border-t border-white/10 p-5 space-y-3">
               <div className="flex justify-between text-sm font-bold mb-1">
                 <span className="text-white/50">Subtotal</span>
@@ -388,8 +379,8 @@ function CartDrawer({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ShopPage() {
-  const [shaftGroups, setShaftGroups] = useState<ShaftGroup[]>([]);
-  const [allItems, setAllItems] = useState<ShopItem[]>([]);
+  const [groups, setGroups] = useState<ProductGroup[]>([]);
+  const [flatItems, setFlatItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<CartItemType | "all">("all");
@@ -403,81 +394,98 @@ export default function ShopPage() {
   useEffect(() => {
     fetch("/api/shop")
       .then((r) => r.json())
-      .then((d: any) => {
-        if (d.ok) {
-          const { groups, items } = transformItems(d);
-          setShaftGroups(groups);
-          setAllItems(items);
-        }
+      .then((d: RawCatalog & { ok: boolean }) => {
+        if (!d.ok) return;
+        setGroups([
+          ...toGroups(d.shaft_groups, "shaft"),
+          ...toGroups(d.vane_groups, "vane"),
+          ...toGroups(d.field_point_groups, "field_point"),
+          ...toGroups(d.broadhead_groups, "broadhead"),
+        ]);
+        setFlatItems([
+          ...toItems(d.nocks, "nock"),
+          ...toItems(d.wraps, "wrap"),
+        ]);
       })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { saveCart(cart); }, [cart]);
-  // Reset brand filter when tab changes
   useEffect(() => { setActiveBrand(null); }, [activeTab]);
 
-  function addToCart(item: ShopItem) {
-    const key = cartItemKey(item);
+  function addToCart(item: Omit<CartItem, "qty">) {
+    const k = cartKey((item as any).type, (item as any).id);
     setCart((prev) => {
-      const existing = prev.find((c) => cartItemKey(c) === key);
-      if (existing) return prev.map((c) => cartItemKey(c) === key ? { ...c, qty: c.qty + 1 } : c);
-      return [...prev, { ...item, qty: 1 }];
+      const existing = prev.find((c) => cartKey((c as any).type, (c as any).id) === k);
+      if (existing) return prev.map((c) => cartKey((c as any).type, (c as any).id) === k ? { ...c, qty: c.qty + 1 } : c);
+      return [...prev, { ...item, qty: 1 } as CartItem];
     });
   }
 
-  function setQty(key: string, qty: number) {
-    if (qty < 1) { removeFromCart(key); return; }
-    setCart((prev) => prev.map((c) => cartItemKey(c) === key ? { ...c, qty } : c));
+  function addFlatToCart(item: ShopItem) {
+    addToCart(item as unknown as Omit<CartItem, "qty">);
   }
 
-  function removeFromCart(key: string) {
-    setCart((prev) => prev.filter((c) => cartItemKey(c) !== key));
+  function setQty(k: string, qty: number) {
+    if (qty < 1) { removeFromCart(k); return; }
+    setCart((prev) => prev.map((c) => cartKey((c as any).type, (c as any).id) === k ? { ...c, qty } : c));
+  }
+
+  function removeFromCart(k: string) {
+    setCart((prev) => prev.filter((c) => cartKey((c as any).type, (c as any).id) !== k));
   }
 
   const cartCount = cart.reduce((sum, c) => sum + c.qty, 0);
-  const cartItemKeys = new Set(cart.map(cartItemKey));
+  const cartKeys = new Set(cart.map((c) => cartKey((c as any).type, (c as any).id)));
 
-  // ── Brands for active tab ──────────────────────────────────────────────────
-  const brandsForTab = useMemo<string[]>(() => {
-    if (activeTab === "shaft") {
-      return [...new Set(shaftGroups.map((g) => g.brand))].sort();
-    }
-    if (activeTab === "all") return [];
-    return [...new Set(allItems.filter((i) => i.type === activeTab && i.brand).map((i) => i.brand!))].sort();
-  }, [activeTab, shaftGroups, allItems]);
+  // Tab-filtered groups and flat items
+  const GROUPED_TYPES: CartItemType[] = ["shaft", "vane", "field_point", "broadhead"];
+  const FLAT_TYPES: CartItemType[] = ["nock", "wrap"];
 
-  // ── Filtered + sorted shaft groups ────────────────────────────────────────
-  const visibleGroups = useMemo<ShaftGroup[]>(() => {
-    if (activeTab !== "shaft" && activeTab !== "all") return [];
-    let result = shaftGroups;
+  const filteredGroups = useMemo(() => {
+    let result = activeTab === "all" ? groups
+      : GROUPED_TYPES.includes(activeTab as CartItemType) ? groups.filter((g) => g.type === activeTab)
+      : [];
     if (activeBrand) result = result.filter((g) => g.brand === activeBrand);
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((g) => `${g.brand} ${g.model}`.toLowerCase().includes(q));
-    }
+    if (search) { const q = search.toLowerCase(); result = result.filter((g) => g.name.toLowerCase().includes(q)); }
+    if (sort === "name_asc") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     if (sort === "price_asc") result = [...result].sort((a, b) => Math.min(...a.variants.map(v => v.pack_price)) - Math.min(...b.variants.map(v => v.pack_price)));
     if (sort === "price_desc") result = [...result].sort((a, b) => Math.min(...b.variants.map(v => v.pack_price)) - Math.min(...a.variants.map(v => v.pack_price)));
-    if (sort === "name_asc") result = [...result].sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
     return result;
-  }, [activeTab, shaftGroups, activeBrand, search, sort]);
+  }, [groups, activeTab, activeBrand, search, sort]);
 
-  // ── Filtered + sorted individual items ────────────────────────────────────
-  const visibleItems = useMemo<ShopItem[]>(() => {
-    if (activeTab === "shaft") return [];
-    let result = activeTab === "all" ? allItems : allItems.filter((i) => i.type === activeTab);
+  const filteredFlat = useMemo(() => {
+    let result = activeTab === "all" ? flatItems
+      : FLAT_TYPES.includes(activeTab as CartItemType) ? flatItems.filter((i) => i.type === activeTab)
+      : [];
     if (activeBrand) result = result.filter((i) => i.brand === activeBrand);
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((i) => i.name.toLowerCase().includes(q) || (i.meta ?? "").toLowerCase().includes(q));
-    }
+    if (search) { const q = search.toLowerCase(); result = result.filter((i) => i.name.toLowerCase().includes(q) || (i.meta ?? "").toLowerCase().includes(q)); }
+    if (sort === "name_asc") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     if (sort === "price_asc") result = [...result].sort((a, b) => a.pack_price - b.pack_price);
     if (sort === "price_desc") result = [...result].sort((a, b) => b.pack_price - a.pack_price);
-    if (sort === "name_asc") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     return result;
-  }, [activeTab, allItems, activeBrand, search, sort]);
+  }, [flatItems, activeTab, activeBrand, search, sort]);
 
-  const totalVisible = visibleGroups.length + visibleItems.length;
+  // Brand filter options for current tab
+  const brandsForTab = useMemo(() => {
+    const fromGroups = activeTab === "all" || GROUPED_TYPES.includes(activeTab as CartItemType)
+      ? groups.filter((g) => activeTab === "all" || g.type === activeTab).map((g) => g.brand)
+      : [];
+    const fromFlat = activeTab === "all" || FLAT_TYPES.includes(activeTab as CartItemType)
+      ? flatItems.filter((i) => activeTab === "all" || i.type === activeTab).map((i) => i.brand ?? "")
+      : [];
+    const all = [...new Set([...fromGroups, ...fromFlat].filter(Boolean))].sort();
+    return all.length > 1 ? all : [];
+  }, [groups, flatItems, activeTab]);
+
+  // Tab counts
+  const tabCount = (key: CartItemType | "all") => {
+    if (key === "all") return groups.length + flatItems.length;
+    if (GROUPED_TYPES.includes(key as CartItemType)) return groups.filter((g) => g.type === key).length;
+    return flatItems.filter((i) => i.type === key).length;
+  };
+
+  const totalVisible = filteredGroups.length + filteredFlat.length;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -512,25 +520,15 @@ export default function ShopPage() {
         </Link>
       </div>
 
-      {/* Controls row */}
+      {/* Controls */}
       <div className="flex flex-wrap gap-3 mb-4">
-        {/* Search */}
         <div className="relative flex-1 min-w-48">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">🔍</span>
-          <input
-            type="text"
-            placeholder="Search products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-yellow-400/40"
-          />
+          <input type="text" placeholder="Search products…" value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-yellow-400/40" />
         </div>
-        {/* Sort */}
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
-          className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-yellow-400/40"
-        >
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}
+          className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-yellow-400/40">
           <option value="name_asc">Name A → Z</option>
           <option value="price_asc">Price: Low → High</option>
           <option value="price_desc">Price: High → Low</option>
@@ -540,11 +538,7 @@ export default function ShopPage() {
       {/* Category tabs */}
       <div className="flex flex-wrap gap-2 mb-4">
         {TAB_LABELS.map((tab) => {
-          const count = tab.key === "all"
-            ? shaftGroups.length + allItems.length
-            : tab.key === "shaft"
-            ? shaftGroups.length
-            : allItems.filter((i) => i.type === tab.key).length;
+          const count = tabCount(tab.key);
           return (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors border ${
@@ -560,21 +554,17 @@ export default function ShopPage() {
       </div>
 
       {/* Brand filter */}
-      {brandsForTab.length > 1 && (
+      {brandsForTab.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
-          <button
-            onClick={() => setActiveBrand(null)}
+          <button onClick={() => setActiveBrand(null)}
             className={`rounded-lg px-3 py-1 text-xs font-bold border transition-colors ${
               !activeBrand ? "border-white/30 text-white bg-white/10" : "border-white/10 text-white/40 hover:text-white"
-            }`}
-          >All brands</button>
+            }`}>All brands</button>
           {brandsForTab.map((brand) => (
             <button key={brand} onClick={() => setActiveBrand(brand === activeBrand ? null : brand)}
               className={`rounded-lg px-3 py-1 text-xs font-bold border transition-colors ${
                 activeBrand === brand ? "border-yellow-400/40 bg-yellow-400/15 text-yellow-300" : "border-white/10 text-white/40 hover:text-white"
-              }`}>
-              {brand}
-            </button>
+              }`}>{brand}</button>
           ))}
         </div>
       )}
@@ -587,54 +577,23 @@ export default function ShopPage() {
           {search ? `No products matching "${search}"` : "No products in this category yet."}
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Shaft groups */}
-          {visibleGroups.length > 0 && (
-            <div>
-              {activeTab === "all" && (
-                <div className="text-xs font-bold tracking-[2px] text-white/30 mb-4">SHAFTS</div>
-              )}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {visibleGroups.map((group) => (
-                  <ShaftGroupCard
-                    key={`${group.brand}-${group.model}`}
-                    group={group}
-                    cart={cart}
-                    onAdd={addToCart}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Individual items */}
-          {visibleItems.length > 0 && (
-            <div>
-              {activeTab === "all" && visibleGroups.length > 0 && (
-                <div className="text-xs font-bold tracking-[2px] text-white/30 mb-4">COMPONENTS</div>
-              )}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {visibleItems.map((item) => (
-                  <ProductCard
-                    key={cartItemKey(item)}
-                    item={item}
-                    inCart={cartItemKeys.has(cartItemKey(item))}
-                    onAdd={() => addToCart(item)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {filteredGroups.map((group) => (
+            <VariantGroupCard key={group.key} group={group} cart={cart} onAdd={addToCart} />
+          ))}
+          {filteredFlat.map((item) => (
+            <ProductCard
+              key={`${item.type}-${item.id}`}
+              item={item}
+              inCart={cartKeys.has(cartKey(item.type, item.id))}
+              onAdd={() => addFlatToCart(item)}
+            />
+          ))}
         </div>
       )}
 
       {cartOpen && (
-        <CartDrawer
-          cart={cart}
-          onClose={() => setCartOpen(false)}
-          onQtyChange={setQty}
-          onRemove={removeFromCart}
-        />
+        <CartDrawer cart={cart} onClose={() => setCartOpen(false)} onQtyChange={setQty} onRemove={removeFromCart} />
       )}
     </div>
   );
