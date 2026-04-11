@@ -308,6 +308,13 @@ export default function ArrowBuilderPage() {
         if (pendingRestore.current) {
           setState(pendingRestore.current);
           pendingRestore.current = null;
+        } else {
+          // Pre-select shaft from ?shaft_id= (member recommendation links)
+          const shaftId = parseInt(new URLSearchParams(window.location.search).get("shaft_id") ?? "");
+          if (shaftId && (data as CatalogResponse).shafts?.some((s: Shaft) => s.id === shaftId)) {
+            setState((st) => ({ ...st, shaft_id: shaftId }));
+            setOpenStep(2);
+          }
         }
       } catch (e: any) {
         setCatalogError(e?.message || "Failed to load catalog.");
