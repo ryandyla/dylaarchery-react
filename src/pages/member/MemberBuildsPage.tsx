@@ -36,12 +36,24 @@ type RecommendResult = {
 
 const PURPOSE_ICONS: Record<string, string> = { hunting: "🦌", target: "🎯", "3d": "🌲", tac: "⚡" };
 
+// Brands shown first, in order, before alphabetical remainder
+const PREFERRED_BRANDS = ["Easton", "Victory"];
+
+function sortBrands(brands: string[]): string[] {
+  const preferred = PREFERRED_BRANDS.filter((b) => brands.includes(b));
+  const rest = brands.filter((b) => !PREFERRED_BRANDS.includes(b)).sort();
+  return [...preferred, ...rest];
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function MemberBuildsPage() {
   const { bows } = useOutletContext<MemberOutletContext>();
   const [selectedBowId, setSelectedBowId] = useState<number | null>(bows[0]?.id ?? null);
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [purposeOpen, setPurposeOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedBowId) return;
@@ -98,22 +110,247 @@ export default function MemberBuildsPage() {
       {err && <div className="text-sm text-red-400 py-4">{err}</div>}
 
       {result && (
-        <div className="space-y-6">
-          {/* Inputs summary */}
+        <div className="space-y-5">
+          {/* Bow profile */}
           <InputSummary result={result} />
 
-          {/* Per-purpose cards */}
-          {Object.entries(result.by_purpose).map(([key, p]) => (
-            <PurposeCard key={key} purposeKey={key} data={p} />
-          ))}
+          {/* Purpose targets — collapsed by default */}
+          <div className="rounded-2xl border border-white/8 bg-white/[0.02] overflow-hidden">
+            <button
+              onClick={() => setPurposeOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-xs font-bold tracking-[2px] text-white/40">
+                TARGET SPECS BY PURPOSE
+              </span>
+              <span className="text-white/30 text-sm">{purposeOpen ? "▲" : "▼"}</span>
+            </button>
+            {purposeOpen && (
+              <div className="px-5 pb-5 space-y-4">
+                {Object.entries(result.by_purpose).map(([key, p]) => (
+                  <PurposeCard key={key} purposeKey={key} data={p} />
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Matched shafts */}
-          <ShaftList shafts={result.shafts} idealSpine={result.inputs.ideal_spine} />
+          {/* Shaft selector — the main event */}
+          <ShaftSelector shafts={result.shafts} idealSpine={result.inputs.ideal_spine} />
         </div>
       )}
     </div>
   );
 }
+
+// ── Shaft drill-down selector ─────────────────────────────────────────────────
+
+function ShaftSelector({ shafts, idealSpine }: { shafts: ShaftResult[]; idealSpine: number }) {
+  // Unique spines in range, ideal first then ascending
+  const spines = [...new Set(shafts.map((s) => s.spine))].sort((a, b) => {
+    if (a === idealSpine) return -1;
+    if (b === idealSpine) return 1;
+    return a - b;
+  });
+
+  const [selectedSpine, setSelectedSpine] = useState<number>(idealSpine);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+
+  // Reset brand when spine changes
+  function pickSpine(spine: number) {
+    setSelectedSpine(spine);
+    setSelectedBrand(null);
+  }
+
+  const shaftsAtSpine = shafts.filter((s) => s.spine === selectedSpine);
+  const brands = sortBrands([...new Set(shaftsAtSpine.map((s) => s.brand))]);
+  const modelsForBrand = selectedBrand
+    ? shaftsAtSpine.filter((s) => s.brand === selectedBrand)
+    : [];
+
+  if (shafts.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/30">
+        No shafts in our current catalog match this spine range — contact us and we'll source the right option.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5 space-y-6">
+      <div className="text-xs font-bold tracking-[2px] text-white/40">BUILD YOUR ARROW — START HERE</div>
+
+      {/* Step 1: Spine */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <StepBadge n={1} />
+          <span className="font-bold text-white text-sm">Select a spine</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {spines.map((spine) => {
+            const isIdeal = spine === idealSpine;
+            const isSelected = spine === selectedSpine;
+            return (
+              <button
+                key={spine}
+                onClick={() => pickSpine(spine)}
+                className={`relative rounded-xl px-4 py-2.5 text-sm font-mono font-bold border transition-colors ${
+                  isSelected
+                    ? "bg-yellow-400/20 border-yellow-400/50 text-yellow-300"
+                    : "border-white/10 bg-white/5 text-white/50 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                {spine}
+                {isIdeal && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-yellow-400 px-1.5 text-[8px] font-black text-black whitespace-nowrap">
+                    IDEAL
+                  </span>
+                )}
+                {!isIdeal && (
+                  <span className="block text-[9px] font-sans font-normal text-white/25 mt-0.5">compatible</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Step 2: Brand */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <StepBadge n={2} active={!!selectedSpine} />
+          <span className={`font-bold text-sm ${selectedSpine ? "text-white" : "text-white/30"}`}>
+            Select a brand
+          </span>
+          {selectedBrand && (
+            <button onClick={() => setSelectedBrand(null)} className="ml-auto text-xs text-white/30 hover:text-white/60">
+              ← change
+            </button>
+          )}
+        </div>
+
+        {!selectedBrand ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {brands.map((brand) => {
+              const count = shaftsAtSpine.filter((s) => s.brand === brand).length;
+              const isPreferred = PREFERRED_BRANDS.includes(brand);
+              return (
+                <button
+                  key={brand}
+                  onClick={() => setSelectedBrand(brand)}
+                  className={`relative rounded-xl border px-4 py-3 text-left transition-colors ${
+                    isPreferred
+                      ? "border-yellow-400/25 bg-yellow-400/[0.04] hover:bg-yellow-400/[0.08]"
+                      : "border-white/8 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15"
+                  }`}
+                >
+                  {isPreferred && (
+                    <span className="absolute top-2 right-2 rounded-full bg-yellow-400/20 border border-yellow-400/30 px-1.5 py-0.5 text-[8px] font-black text-yellow-400 tracking-wider">
+                      TOP PICK
+                    </span>
+                  )}
+                  <div className={`font-bold text-sm ${isPreferred ? "text-yellow-100" : "text-white"}`}>
+                    {brand}
+                  </div>
+                  <div className="text-xs text-white/30 mt-0.5">
+                    {count} model{count !== 1 ? "s" : ""} at {selectedSpine} spine
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 ${
+            PREFERRED_BRANDS.includes(selectedBrand)
+              ? "border-yellow-400/30 bg-yellow-400/10"
+              : "border-white/15 bg-white/5"
+          }`}>
+            <span className={`font-bold text-sm ${PREFERRED_BRANDS.includes(selectedBrand) ? "text-yellow-200" : "text-white"}`}>
+              {selectedBrand}
+            </span>
+            {PREFERRED_BRANDS.includes(selectedBrand) && (
+              <span className="rounded-full bg-yellow-400/20 border border-yellow-400/30 px-1.5 py-0.5 text-[8px] font-black text-yellow-400">
+                TOP PICK
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Step 3: Model */}
+      {selectedBrand && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <StepBadge n={3} active />
+            <span className="font-bold text-white text-sm">Select a model</span>
+          </div>
+          <div className="space-y-2">
+            {modelsForBrand.map((s) => (
+              <ModelCard key={s.id} shaft={s} idealSpine={idealSpine} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModelCard({ shaft: s, idealSpine }: { shaft: ShaftResult; idealSpine: number }) {
+  const isIdeal = s.spine === idealSpine;
+  return (
+    <div className={`rounded-2xl border px-5 py-4 ${
+      isIdeal ? "border-yellow-400/20 bg-yellow-400/[0.03]" : "border-white/8 bg-white/[0.02]"
+    }`}>
+      <div className="flex flex-wrap items-start gap-4 justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="font-black text-white">{s.model}</span>
+            <span className="font-mono text-xs text-white/35">{s.spine} SPINE</span>
+            {isIdeal && (
+              <span className="rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5 text-[9px] font-bold tracking-wider text-yellow-400">
+                IDEAL MATCH
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-5 text-xs text-white/40">
+            {s.gpi != null && (
+              <div><span className="text-white/20 font-mono text-[10px] mr-1">GPI</span>{s.gpi}</div>
+            )}
+            {s.outer_diameter != null && (
+              <div><span className="text-white/20 font-mono text-[10px] mr-1">OD</span>{s.outer_diameter}"</div>
+            )}
+            {s.inner_diameter != null && (
+              <div><span className="text-white/20 font-mono text-[10px] mr-1">ID</span>{s.inner_diameter}"</div>
+            )}
+            {s.max_length != null && (
+              <div><span className="text-white/20 font-mono text-[10px] mr-1">MAX</span>{s.max_length}"</div>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="font-mono font-black text-yellow-400">${s.price_per_shaft.toFixed(2)}<span className="text-white/25 text-xs font-normal">/shaft</span></div>
+          <Link
+            to={`/builder?shaft_id=${s.id}`}
+            className="rounded-xl bg-yellow-500 px-4 py-2 text-xs font-extrabold text-black hover:bg-yellow-400 transition-colors"
+          >
+            Start Build →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepBadge({ n, active = true }: { n: number; active?: boolean }) {
+  return (
+    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+      active ? "bg-yellow-400 text-black" : "bg-white/10 text-white/30"
+    }`}>
+      {n}
+    </div>
+  );
+}
+
+// ── Supporting components (unchanged) ─────────────────────────────────────────
 
 function InputSummary({ result }: { result: RecommendResult }) {
   const { bow, inputs } = result;
@@ -144,32 +381,16 @@ function InputSummary({ result }: { result: RecommendResult }) {
 
 function PurposeCard({ purposeKey, data }: { purposeKey: string; data: PurposeData }) {
   const icon = PURPOSE_ICONS[purposeKey] ?? "🏹";
-
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xl">{icon}</span>
-        <span className="font-black text-white text-lg">{data.label}</span>
+    <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">{icon}</span>
+        <span className="font-black text-white">{data.label}</span>
       </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
-        <MetricBox
-          label="Arrow Weight"
-          value={`${data.arrow_weight.min}–${data.arrow_weight.max} gr`}
-          sub={`${data.gpp.min}–${data.gpp.max} GPP`}
-        />
-        <MetricBox
-          label="Target FOC"
-          value={data.foc_target}
-          sub="front of center"
-        />
-        {data.fps && (
-          <MetricBox
-            label="Est. Speed"
-            value={`${data.fps.min}–${data.fps.max} fps`}
-            sub="at target weight"
-          />
-        )}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 mb-3">
+        <MetricBox label="Arrow Weight" value={`${data.arrow_weight.min}–${data.arrow_weight.max} gr`} sub={`${data.gpp.min}–${data.gpp.max} GPP`} />
+        <MetricBox label="Target FOC" value={data.foc_target} sub="front of center" />
+        {data.fps && <MetricBox label="Est. Speed" value={`${data.fps.min}–${data.fps.max} fps`} sub="at target weight" />}
         {data.ke && (
           <MetricBox
             label="Kinetic Energy"
@@ -179,71 +400,7 @@ function PurposeCard({ purposeKey, data }: { purposeKey: string; data: PurposeDa
           />
         )}
       </div>
-
-      <p className="text-xs text-white/45 leading-relaxed">{data.note}</p>
-    </div>
-  );
-}
-
-function ShaftList({ shafts, idealSpine }: { shafts: ShaftResult[]; idealSpine: number }) {
-  if (shafts.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/30">
-        No shafts in our current catalog match this spine range — contact us and we'll source the right option.
-      </div>
-    );
-  }
-
-  // Group by brand
-  const byBrand: Record<string, ShaftResult[]> = {};
-  for (const s of shafts) {
-    (byBrand[s.brand] ??= []).push(s);
-  }
-
-  return (
-    <div>
-      <div className="mb-3 text-xs font-bold tracking-[2px] text-white/40">
-        MATCHED SHAFTS — {shafts.length} option{shafts.length !== 1 ? "s" : ""} in your spine range
-      </div>
-      <div className="space-y-2">
-        {shafts.map((s) => (
-          <ShaftRow key={s.id} shaft={s} ideal={s.spine === idealSpine} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ShaftRow({ shaft: s, ideal }: { shaft: ShaftResult; ideal: boolean }) {
-  return (
-    <div className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${
-      ideal
-        ? "border-yellow-400/25 bg-yellow-400/[0.04]"
-        : "border-white/8 bg-white/[0.02]"
-    }`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-white">{s.brand} {s.model}</span>
-          <span className="font-mono text-xs text-white/40">SPINE {s.spine}</span>
-          {ideal && (
-            <span className="rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5 text-[9px] font-bold tracking-wider text-yellow-400">
-              IDEAL MATCH
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-3 mt-1">
-          <span className="text-xs text-white/35">GPI {s.gpi}</span>
-          {s.outer_diameter && <span className="text-xs text-white/35">OD {s.outer_diameter}"</span>}
-          <span className="text-xs text-white/35">MAX {s.max_length}"</span>
-          <span className="text-xs font-mono text-yellow-400/60">${s.price_per_shaft.toFixed(2)}/shaft</span>
-        </div>
-      </div>
-      <Link
-        to={`/builder?shaft_id=${s.id}`}
-        className="shrink-0 rounded-xl bg-yellow-500 px-4 py-1.5 text-xs font-extrabold text-black hover:bg-yellow-400 transition-colors"
-      >
-        Build →
-      </Link>
+      <p className="text-xs text-white/40 leading-relaxed">{data.note}</p>
     </div>
   );
 }
@@ -257,9 +414,7 @@ function Spec({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MetricBox({ label, value, sub, highlight }: {
-  label: string; value: string; sub?: string; highlight?: "ok" | "warn";
-}) {
+function MetricBox({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: "ok" | "warn" }) {
   const subColor = highlight === "ok" ? "text-green-400" : highlight === "warn" ? "text-yellow-500" : "text-white/30";
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-3">
