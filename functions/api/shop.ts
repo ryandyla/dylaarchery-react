@@ -41,11 +41,11 @@ export const onRequestGet = async ({ env }: any) => {
        FROM shafts WHERE active = 1 ORDER BY brand, model, spine`
     )),
     allRows(DB.prepare(
-      `SELECT id, brand, model, system, style, price_per_arrow, weight_grains
+      `SELECT id, brand, model, system, style, price_per_arrow, weight_grains, colors
        FROM nocks WHERE active = 1 ORDER BY brand, model`
     )),
     allRows(DB.prepare(
-      `SELECT id, brand, model, length, height, weight_grains, price_per_arrow
+      `SELECT id, brand, model, length, height, weight_grains, price_per_arrow, colors
        FROM vanes WHERE active = 1 ORDER BY brand, model, length`
     )),
     allRows(DB.prepare(
@@ -108,6 +108,7 @@ export const onRequestGet = async ({ env }: any) => {
         sublabel: [v.height ? `H ${v.height}"` : null, v.weight_grains ? `${v.weight_grains} gr` : null].filter(Boolean).join(" · "),
         pack_price: round2(Number(v.price_per_arrow) * 12),
         unit_price: Number(v.price_per_arrow),
+        colors: (() => { try { return JSON.parse(v.colors ?? "[]"); } catch { return []; } })(),
       })),
     };
   });
@@ -164,6 +165,7 @@ export const onRequestGet = async ({ env }: any) => {
       meta: [s.system, s.style, s.weight_grains ? `${s.weight_grains} gr` : null].filter(Boolean).join(" · "),
       pack_qty, pack_price: round2(Number(s.price_per_arrow) * pack_qty),
       unit_price: Number(s.price_per_arrow), lighted,
+      colors: (() => { try { return JSON.parse(s.colors ?? "[]"); } catch { return []; } })(),
       image_urls: collectImages(images, "nock", [s.id]),
     };
   });

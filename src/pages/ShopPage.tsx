@@ -12,6 +12,7 @@ type ProductVariant = {
   sublabel?: string;   // shown below selected: "8.9 GPI · OD 0.244\""
   pack_price: number;
   unit_price: number;
+  colors?: string[];   // available color options for this variant
 };
 
 // A product group (brand+model with 1+ variants)
@@ -36,6 +37,7 @@ type ShopItem = {
   pack_price: number;
   unit_price: number;
   image_urls: string[];
+  colors?: string[];
   lighted?: boolean;
 };
 
@@ -49,9 +51,78 @@ type CartItem = {
   pack_price: number;
   unit_price: number;
   image_url?: string | null;
+  color?: string | null;
   lighted?: boolean;
   qty: number;
 };
+
+// ── Color support ─────────────────────────────────────────────────────────────
+
+const COLOR_SWATCH_BG: Record<string, string> = {
+  black: "#1a1a1a", blackout: "#050505", white: "#f0f0f0", silver: "#a8a8a8",
+  gray: "#888888", brown: "#7b4f2e", tan: "#c4a87a", olive: "#4b5320",
+  navy: "#0a1a5c", red: "#cc2222", "neon red": "#ff1133", orange: "#ff6600",
+  "neon orange": "#ff4500", yellow: "#ffd400", "neon yellow": "#ffe000",
+  green: "#22bb44", "neon green": "#39ff14", kiwi: "#8db600", teal: "#009b8d",
+  blue: "#2255cc", "satin blue": "#1e5fa8", purple: "#8833cc", pink: "#ff69b4",
+  "hot pink": "#ff1493", chartreuse: "#80ff00",
+  clear: "rgba(255,255,255,0.12)",
+  "white tiger":   "repeating-linear-gradient(45deg,#e8e8e8 0px,#e8e8e8 4px,#444 4px,#444 7px)",
+  "red tiger":     "repeating-linear-gradient(45deg,#cc2222 0px,#cc2222 4px,#111 4px,#111 7px)",
+  "orange tiger":  "repeating-linear-gradient(45deg,#ff6600 0px,#ff6600 4px,#111 4px,#111 7px)",
+  "yellow tiger":  "repeating-linear-gradient(45deg,#ffd400 0px,#ffd400 4px,#111 4px,#111 7px)",
+  "green tiger":   "repeating-linear-gradient(45deg,#22bb44 0px,#22bb44 4px,#111 4px,#111 7px)",
+  "teal tiger":    "repeating-linear-gradient(45deg,#009b8d 0px,#009b8d 4px,#111 4px,#111 7px)",
+  "pink tiger":    "repeating-linear-gradient(45deg,#ff1493 0px,#ff1493 4px,#111 4px,#111 7px)",
+  "purple tiger":  "repeating-linear-gradient(45deg,#8833cc 0px,#8833cc 4px,#111 4px,#111 7px)",
+  "american flag": "linear-gradient(90deg,#cc2222 0%,#cc2222 33%,#f5f5f5 33%,#f5f5f5 66%,#002868 66%)",
+  "american made": "linear-gradient(90deg,#cc2222 0%,#f5f5f5 50%,#002868 100%)",
+  "don't tread on me": "#e8c800",
+  "fred bear": "#e8e8e8",
+  realtree: "repeating-linear-gradient(30deg,#3a4a2a 0px,#5a6a3a 6px,#2a3520 11px)",
+};
+
+const LIGHT_COLORS = new Set([
+  "white","white tiger","silver","yellow","neon yellow","kiwi","chartreuse",
+  "neon green","tan","don't tread on me","fred bear","american made",
+]);
+
+function ColorSwatchPicker({ colors, selected, onSelect }: {
+  colors: string[];
+  selected: string | null;
+  onSelect: (c: string | null) => void;
+}) {
+  if (colors.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <div className="text-[10px] font-bold tracking-widest text-white/25 mb-1.5">COLOR</div>
+      <div className="flex flex-wrap gap-1.5">
+        {colors.map((c) => {
+          const key = c.toLowerCase();
+          const bg = COLOR_SWATCH_BG[key] ?? "#666";
+          const isSel = selected === c;
+          const isLight = LIGHT_COLORS.has(key);
+          return (
+            <button
+              key={c}
+              title={c}
+              onClick={() => onSelect(isSel ? null : c)}
+              style={{ background: bg }}
+              className={`w-6 h-6 rounded-full border-2 transition-all ${
+                isSel
+                  ? isLight ? "border-black/60 scale-110" : "border-white scale-110"
+                  : "border-transparent hover:scale-105 hover:border-white/40"
+              }`}
+            />
+          );
+        })}
+      </div>
+      {selected && (
+        <div className="text-[10px] text-white/40 mt-1 capitalize">{selected}</div>
+      )}
+    </div>
+  );
+}
 
 const PACK_LABELS: Partial<Record<CartItemType, string>> = {
   shaft: "12-shaft pack",
@@ -114,6 +185,7 @@ function toItems(raw: any[], type: CartItemType): ShopItem[] {
     id: r.id, type, brand: r.brand, name: r.name, meta: r.meta,
     pack_qty: r.pack_qty, pack_price: r.pack_price, unit_price: r.unit_price,
     image_urls: Array.isArray(r.image_urls) ? r.image_urls : (r.image_url ? [r.image_url] : []),
+    colors: Array.isArray(r.colors) ? r.colors : [],
     lighted: r.lighted,
   }));
 }
@@ -168,10 +240,15 @@ function VariantGroupCard({ group, cart, onAdd }: {
   onAdd: (item: Omit<CartItem, "qty">) => void;
 }) {
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const variant = group.variants[selectedIdx] ?? group.variants[0];
   const hasVariants = group.variants.length > 1;
+  const colors = variant.colors ?? [];
   const key = cartKey(group.type, variant.id);
   const inCart = cart.some((c) => cartKey((c as any).type, (c as any).id) === key);
+
+  // Reset color when variant changes
+  const handleVariantChange = (i: number) => { setSelectedIdx(i); setSelectedColor(null); };
 
   // Infer the variant attribute name for the label row
   const variantAttr =
@@ -179,17 +256,20 @@ function VariantGroupCard({ group, cart, onAdd }: {
     group.type === "vane" ? "Length" :
     (group.type === "field_point" || group.type === "broadhead") ? "Weight" : "";
 
+  const metaParts = [hasVariants ? variant.label : (variant.sublabel ?? ""), selectedColor].filter(Boolean);
+
   function handleAdd() {
     onAdd({
       id: variant.id,
       type: group.type,
       brand: group.brand,
       name: group.name,
-      meta: hasVariants ? variant.label : (variant.sublabel ?? ""),
+      meta: metaParts.join(" · "),
       pack_qty: group.pack_qty,
       pack_price: variant.pack_price,
       unit_price: variant.unit_price,
       image_url: group.image_urls[0] ?? null,
+      color: selectedColor,
     });
   }
 
@@ -214,7 +294,7 @@ function VariantGroupCard({ group, cart, onAdd }: {
               {group.variants.map((v, i) => (
                 <button
                   key={v.id}
-                  onClick={() => setSelectedIdx(i)}
+                  onClick={() => handleVariantChange(i)}
                   className={`rounded-lg px-2 py-1 text-xs font-mono font-bold border transition-colors ${
                     i === selectedIdx
                       ? "bg-yellow-400/20 border-yellow-400/40 text-yellow-300"
@@ -236,7 +316,12 @@ function VariantGroupCard({ group, cart, onAdd }: {
           <div className="text-xs text-white/35 mb-3">{variant.sublabel}</div>
         )}
 
-        <div className="mt-auto flex items-center justify-between">
+        {/* Color swatches (vanes) */}
+        {colors.length > 0 && (
+          <ColorSwatchPicker colors={colors} selected={selectedColor} onSelect={setSelectedColor} />
+        )}
+
+        <div className="mt-auto flex items-center justify-between mt-3">
           <div>
             <div className="font-mono font-black text-yellow-400 text-base">
               ${variant.pack_price.toFixed(2)}
@@ -261,7 +346,9 @@ function VariantGroupCard({ group, cart, onAdd }: {
 
 // ── Flat Product Card (nocks, wraps) ──────────────────────────────────────────
 
-function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean; onAdd: () => void }) {
+function ProductCard({ item, onAdd }: { item: ShopItem; inCart: boolean; onAdd: (color: string | null) => void }) {
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const colors = item.colors ?? [];
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.025] flex flex-col overflow-hidden hover:border-white/15 transition-colors">
       <ImageGallery urls={item.image_urls} alt={item.name} />
@@ -271,18 +358,17 @@ function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean;
         </div>
         <div className="font-bold text-white text-sm leading-snug mb-1">{item.name}</div>
         {item.meta && <div className="text-xs text-white/35 mb-3 leading-relaxed">{item.meta}</div>}
-        <div className="mt-auto flex items-center justify-between">
+        {colors.length > 0 && (
+          <ColorSwatchPicker colors={colors} selected={selectedColor} onSelect={setSelectedColor} />
+        )}
+        <div className="mt-auto flex items-center justify-between mt-3">
           <div>
             <div className="font-mono font-black text-yellow-400 text-base">${item.pack_price.toFixed(2)}</div>
             <div className="text-[10px] text-white/25">${item.unit_price.toFixed(2)}/ea</div>
           </div>
-          <button onClick={onAdd}
-            className={`rounded-xl px-3 py-1.5 text-xs font-extrabold transition-colors ${
-              inCart
-                ? "bg-green-500/20 border border-green-400/30 text-green-400 hover:bg-green-500/30"
-                : "bg-yellow-500 text-black hover:bg-yellow-400"
-            }`}>
-            {inCart ? "✓ Added" : "Add to Cart"}
+          <button onClick={() => onAdd(selectedColor)}
+            className="rounded-xl px-3 py-1.5 text-xs font-extrabold transition-colors bg-yellow-500 text-black hover:bg-yellow-400">
+            Add to Cart
           </button>
         </div>
       </div>
@@ -454,8 +540,13 @@ export default function ShopPage() {
     });
   }
 
-  function addFlatToCart(item: ShopItem) {
-    addToCart({ ...item, image_url: item.image_urls[0] ?? null } as unknown as Omit<CartItem, "qty">);
+  function addFlatToCart(item: ShopItem, color: string | null) {
+    addToCart({
+      ...item,
+      image_url: item.image_urls[0] ?? null,
+      color,
+      meta: [item.meta, color].filter(Boolean).join(" · ") || undefined,
+    } as unknown as Omit<CartItem, "qty">);
   }
 
   function setQty(k: string, qty: number) {
@@ -618,7 +709,7 @@ export default function ShopPage() {
               key={`${item.type}-${item.id}`}
               item={item}
               inCart={cartKeys.has(cartKey(item.type, item.id))}
-              onAdd={() => addFlatToCart(item)}
+              onAdd={(color) => addFlatToCart(item, color)}
             />
           ))}
         </div>
