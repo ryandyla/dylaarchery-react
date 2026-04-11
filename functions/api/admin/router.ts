@@ -154,9 +154,17 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
   if (req.method === "GET" && id === undefined) {
     const q = url.searchParams.get("q");
     const { where, args } = buildSearchWhere(t, q);
+    const imgType = IMAGE_TYPE[t];
 
-    // Basic order: show active first, then newest id
-    const sql = `SELECT * FROM ${table} WHERE ${where} ORDER BY active DESC, id DESC LIMIT 250`;
+    // Attach image count from product_images so the UI can show an indicator
+    const sql = `
+      SELECT t.*,
+        (SELECT COUNT(*) FROM product_images pi
+         WHERE pi.product_type = '${imgType}' AND pi.product_id = t.id AND pi.active = 1) AS img_count
+      FROM ${table} t
+      WHERE ${where}
+      ORDER BY t.active DESC, t.id DESC
+      LIMIT 250`;
     const rows = await env.DB.prepare(sql).bind(...args).all();
 
     return json({ ok: true, items: rows.results });

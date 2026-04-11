@@ -18,6 +18,7 @@ type Row = Record<string, any> & {
   price_per_arrow?: number;
   price?: number;
   image_url?: string | null;
+  img_count?: number;
 };
 
 type FieldDef = {
@@ -677,17 +678,16 @@ export default function AdminPage() {
         {items.map((r) => (
           <div key={r.id} className="border-t border-white/10">
             <div className="grid grid-cols-[1.4fr_.9fr_.7fr_.5fr_.8fr_.7fr] gap-2 px-3 py-3 text-sm">
-              <div className="font-semibold">
+              <div className="font-semibold flex items-center gap-1.5 flex-wrap">
                 {titleLabel(r)}
-                {r.image_url && (
-                  <a
-                    href={r.image_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ml-2 text-xs text-yellow-300/90 underline underline-offset-2 hover:text-yellow-200"
+                {(r.img_count ?? 0) > 0 && (
+                  <span
+                    title={`${r.img_count} image${r.img_count === 1 ? "" : "s"}`}
+                    className="inline-flex items-center gap-0.5 rounded-md bg-white/8 border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-white/50"
                   >
-                    img
-                  </a>
+                    <span>🖼</span>
+                    <span>{r.img_count}</span>
+                  </span>
                 )}
               </div>
               <div className="text-white/80">{r.brand || "—"}</div>
