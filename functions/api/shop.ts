@@ -11,6 +11,10 @@ function primaryImage(images: any[], type: string, id: number): string | null {
   return primary.url;
 }
 
+function isLightedNock(model: string): boolean {
+  return /lighted/i.test(model);
+}
+
 export const onRequestGet = async ({ env }: any) => {
   const DB = env.DB;
 
@@ -40,55 +44,81 @@ export const onRequestGet = async ({ env }: any) => {
     )),
   ]);
 
-  // Pack sizes
   const SHAFT_PACK = 12;
-  const NOCK_PACK = 12;
-  const VANE_PACK = 36; // price_per_arrow covers 3 vanes, so ×12 arrows = 36 vanes
+  const NOCK_PACK_STD = 12;
+  const NOCK_PACK_LIGHTED = 3;
+  const VANE_PACK = 36; // price_per_arrow covers 3 vanes → ×12 = 36 vanes
   const WRAP_PACK = 13;
   const FIELD_POINT_PACK = 12;
   const BROADHEAD_PACK = 3;
 
-  const shaftProducts = shafts.map((s: any) => ({
-    ...s,
-    pack_qty: SHAFT_PACK,
-    pack_price: round2(Number(s.price_per_shaft) * SHAFT_PACK),
-    image_url: primaryImage(images, "shaft", s.id),
-  }));
+  // ── Group shafts by brand+model ──────────────────────────────────────────────
+  const shaftGroupMap = new Map<string, any>();
+  for (const s of shafts as any[]) {
+    const key = `${s.brand}||${s.model}`;
+    if (!shaftGroupMap.has(key)) {
+      shaftGroupMap.set(key, {
+        brand: s.brand,
+        model: s.model,
+        pack_qty: SHAFT_PACK,
+        image_url: null as string | null,
+        variants: [] as any[],
+      });
+    }
+    const group = shaftGroupMap.get(key);
+    const img = primaryImage(images, "shaft", s.id);
+    if (!group.image_url && img) group.image_url = img;
+    group.variants.push({
+      id: s.id,
+      spine: s.spine,
+      gpi: s.gpi,
+      outer_diameter: s.outer_diameter,
+      max_length: s.max_length,
+      unit_price: Number(s.price_per_shaft),
+      pack_price: round2(Number(s.price_per_shaft) * SHAFT_PACK),
+    });
+  }
+  const shaft_groups = Array.from(shaftGroupMap.values());
 
-  const nockProducts = nocks.map((s: any) => ({
-    ...s,
-    pack_qty: NOCK_PACK,
-    pack_price: round2(Number(s.price_per_arrow) * NOCK_PACK),
-    image_url: primaryImage(images, "nock", s.id),
-  }));
+  // ── Individual items ─────────────────────────────────────────────────────────
+  const nockProducts = (nocks as any[]).map((s) => {
+    const lighted = isLightedNock(s.model);
+    const pack_qty = lighted ? NOCK_PACK_LIGHTED : NOCK_PACK_STD;
+    return {
+      ...s,
+      lighted,
+      pack_qty,
+      pack_price: round2(Number(s.price_per_arrow) * pack_qty),
+      image_url: primaryImage(images, "nock", s.id),
+    };
+  });
 
-  const vaneProducts = vanes.map((s: any) => ({
+  const vaneProducts = (vanes as any[]).map((s) => ({
     ...s,
     pack_qty: VANE_PACK,
-    // price_per_arrow = cost of 3 vanes on one arrow → ×12 = 36 vanes
-    pack_price: round2(Number(s.price_per_arrow) * 12),
+    pack_price: round2(Number(s.price_per_arrow) * 12), // 3 vanes/arrow × 12 arrows = 36
     image_url: primaryImage(images, "vane", s.id),
   }));
 
-  const wrapProducts = wraps.map((s: any) => ({
+  const wrapProducts = (wraps as any[]).map((s) => ({
     ...s,
     pack_qty: WRAP_PACK,
     pack_price: round2(Number(s.price_per_arrow) * WRAP_PACK),
     image_url: primaryImage(images, "wrap", s.id),
   }));
 
-  const fieldPoints = points
-    .filter((p: any) => p.type === "field")
-    .map((p: any) => ({
+  const fieldPoints = (points as any[])
+    .filter((p) => p.type === "field")
+    .map((p) => ({
       ...p,
       pack_qty: FIELD_POINT_PACK,
       pack_price: round2(Number(p.price) * FIELD_POINT_PACK),
       image_url: primaryImage(images, "point", p.id),
     }));
 
-  const broadheads = points
-    .filter((p: any) => p.type === "broadhead")
-    .map((p: any) => ({
+  const broadheads = (points as any[])
+    .filter((p) => p.type === "broadhead")
+    .map((p) => ({
       ...p,
       pack_qty: BROADHEAD_PACK,
       pack_price: round2(Number(p.price) * BROADHEAD_PACK),
@@ -98,7 +128,7 @@ export const onRequestGet = async ({ env }: any) => {
   return new Response(
     JSON.stringify({
       ok: true,
-      shafts: shaftProducts,
+      shaft_groups,
       nocks: nockProducts,
       vanes: vaneProducts,
       wraps: wrapProducts,
