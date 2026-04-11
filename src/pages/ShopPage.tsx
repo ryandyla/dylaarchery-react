@@ -190,10 +190,73 @@ function toItems(raw: any[], type: CartItemType): ShopItem[] {
   }));
 }
 
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+
+function Lightbox({ urls, alt, startIdx, onClose }: {
+  urls: string[]; alt: string; startIdx: number; onClose: () => void;
+}) {
+  const [idx, setIdx] = useState(startIdx);
+  const clamp = (n: number) => Math.max(0, Math.min(urls.length - 1, n));
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") setIdx((i) => clamp(i - 1));
+      if (e.key === "ArrowRight") setIdx((i) => clamp(i + 1));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [urls.length]);
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+      <div className="relative z-10 flex flex-col items-center max-w-3xl w-full px-4" onClick={(e) => e.stopPropagation()}>
+        {/* Image */}
+        <div className="relative w-full">
+          <img src={urls[idx]} alt={alt} className="w-full max-h-[75vh] object-contain rounded-2xl" />
+          {urls.length > 1 && (
+            <>
+              <button
+                onClick={() => setIdx(clamp(idx - 1))}
+                disabled={idx === 0}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 text-white text-xl flex items-center justify-center hover:bg-black/80 disabled:opacity-20 transition-colors"
+              >‹</button>
+              <button
+                onClick={() => setIdx(clamp(idx + 1))}
+                disabled={idx === urls.length - 1}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 text-white text-xl flex items-center justify-center hover:bg-black/80 disabled:opacity-20 transition-colors"
+              >›</button>
+            </>
+          )}
+        </div>
+        {/* Dot strip + close */}
+        <div className="flex items-center gap-4 mt-4">
+          {urls.length > 1 && (
+            <div className="flex gap-2">
+              {urls.map((_, i) => (
+                <button key={i} onClick={() => setIdx(i)}
+                  className={`w-2 h-2 rounded-full transition-colors ${i === idx ? "bg-yellow-400" : "bg-white/30 hover:bg-white/60"}`} />
+              ))}
+            </div>
+          )}
+          <button onClick={onClose}
+            className="rounded-full border border-white/20 px-4 py-1 text-xs text-white/50 hover:text-white hover:border-white/40 transition-colors">
+            Close
+          </button>
+        </div>
+        <div className="text-[11px] text-white/25 mt-2">{alt}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Image Gallery ─────────────────────────────────────────────────────────────
 
 function ImageGallery({ urls, alt }: { urls: string[]; alt: string }) {
   const [idx, setIdx] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
+
   if (urls.length === 0) {
     return (
       <div className="aspect-square bg-white/5 flex items-center justify-center">
@@ -203,32 +266,38 @@ function ImageGallery({ urls, alt }: { urls: string[]; alt: string }) {
   }
   const clamp = (n: number) => Math.max(0, Math.min(urls.length - 1, n));
   return (
-    <div className="aspect-square bg-white/5 relative group overflow-hidden">
-      <img src={urls[idx]} alt={alt} className="w-full h-full object-contain p-3" />
-      {urls.length > 1 && (
-        <>
-          <button
-            onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx - 1)); }}
-            className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80 disabled:opacity-20"
-            disabled={idx === 0}
-          >‹</button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx + 1)); }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80 disabled:opacity-20"
-            disabled={idx === urls.length - 1}
-          >›</button>
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
-            {urls.map((_, i) => (
-              <button
-                key={i}
-                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-yellow-400" : "bg-white/30 hover:bg-white/60"}`}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    <>
+      <div className="aspect-square bg-white/5 relative group overflow-hidden cursor-zoom-in" onClick={() => setLightbox(true)}>
+        <img src={urls[idx]} alt={alt} className="w-full h-full object-contain p-3" />
+        {urls.length > 1 && (
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx - 1)); }}
+              className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80 disabled:opacity-20"
+              disabled={idx === 0}
+            >‹</button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx + 1)); }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80 disabled:opacity-20"
+              disabled={idx === urls.length - 1}
+            >›</button>
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+              {urls.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-yellow-400" : "bg-white/30 hover:bg-white/60"}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] text-white/60">zoom</div>
+        </div>
+      </div>
+      {lightbox && <Lightbox urls={urls} alt={alt} startIdx={idx} onClose={() => setLightbox(false)} />}
+    </>
   );
 }
 
