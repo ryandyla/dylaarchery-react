@@ -2094,6 +2094,13 @@ const COLOR_HEX: Record<string, string> = {
   "hot pink":      "#ff1493",
   chartreuse:      "#80ff00",
   clear:           "rgba(255,255,255,0.12)",
+  // flo = fluorescent (archery shorthand)
+  "flo yellow":    "#ffe000",
+  "flo orange":    "#ff4500",
+  "flo green":     "#39ff14",
+  "flo red":       "#ff1133",
+  "flo pink":      "#ff1493",
+  "flo chartreuse":"#80ff00",
   // Patterns — solid base color used in SVG diagram
   "white tiger":   "#e8e8e8",
   "red tiger":     "#cc2222",
@@ -2130,6 +2137,7 @@ const COLOR_SWATCH_BG: Record<string, string> = {
 const LIGHT_COLORS = new Set([
   "white","white tiger","silver","yellow","neon yellow","kiwi","chartreuse",
   "neon green","tan","don't tread on me","fred bear","american made",
+  "flo yellow","flo green","flo chartreuse",
 ]);
 
 function parseColors(raw: string | null | undefined): string[] {

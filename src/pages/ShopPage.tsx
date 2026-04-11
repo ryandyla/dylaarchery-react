@@ -66,6 +66,9 @@ const COLOR_SWATCH_BG: Record<string, string> = {
   green: "#22bb44", "neon green": "#39ff14", kiwi: "#8db600", teal: "#009b8d",
   blue: "#2255cc", "satin blue": "#1e5fa8", purple: "#8833cc", pink: "#ff69b4",
   "hot pink": "#ff1493", chartreuse: "#80ff00",
+  // flo = fluorescent (archery shorthand)
+  "flo yellow": "#ffe000", "flo orange": "#ff4500", "flo green": "#39ff14",
+  "flo red": "#ff1133", "flo pink": "#ff1493", "flo chartreuse": "#80ff00",
   clear: "rgba(255,255,255,0.12)",
   "white tiger":   "repeating-linear-gradient(45deg,#e8e8e8 0px,#e8e8e8 4px,#444 4px,#444 7px)",
   "red tiger":     "repeating-linear-gradient(45deg,#cc2222 0px,#cc2222 4px,#111 4px,#111 7px)",
@@ -85,6 +88,7 @@ const COLOR_SWATCH_BG: Record<string, string> = {
 const LIGHT_COLORS = new Set([
   "white","white tiger","silver","yellow","neon yellow","kiwi","chartreuse",
   "neon green","tan","don't tread on me","fred bear","american made",
+  "flo yellow","flo green","flo chartreuse",
 ]);
 
 function ColorSwatchPicker({ colors, selected, onSelect }: {
