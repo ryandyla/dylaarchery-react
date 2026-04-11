@@ -1,6 +1,64 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LeadWidget from "../LeadWidget";
+
+type ActiveSpecial = {
+  id: number;
+  name: string;
+  description: string | null;
+  type: "percent_off" | "fixed_off" | "free_shipping";
+  value: number | null;
+};
+
+function formatSpecial(s: ActiveSpecial): string {
+  if (s.type === "percent_off" && s.value != null) return `${s.value}% off your order`;
+  if (s.type === "fixed_off" && s.value != null) return `$${s.value} off your order`;
+  if (s.type === "free_shipping") return "free shipping on your order";
+  return "";
+}
+
+function SpecialsBanner() {
+  const [special, setSpecial] = useState<ActiveSpecial | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    // Check if already dismissed this session
+    if (sessionStorage.getItem("dyla_banner_dismissed")) return;
+
+    fetch("/api/specials")
+      .then((r) => r.json())
+      .then((d: any) => {
+        if (d.ok && d.specials?.length > 0) setSpecial(d.specials[0]);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!special || dismissed) return null;
+
+  const detail = formatSpecial(special);
+
+  return (
+    <div className="relative bg-yellow-400 px-4 py-2.5 text-center text-sm font-bold text-black">
+      <span className="mr-1">🎉</span>
+      <span className="font-extrabold">{special.name}</span>
+      {detail && (
+        <span className="font-normal"> — Get {detail}
+          {special.description ? `. ${special.description}` : ""}
+        </span>
+      )}
+      <button
+        onClick={() => {
+          sessionStorage.setItem("dyla_banner_dismissed", "1");
+          setDismissed(true);
+        }}
+        aria-label="Dismiss"
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-black/10 transition-colors text-black/60 hover:text-black"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 function MailingListSignup() {
   const [email, setEmail] = useState("");
@@ -72,6 +130,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      <SpecialsBanner />
       <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
