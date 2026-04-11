@@ -389,28 +389,30 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
   }
 
   // -------------------------------------------------------
-  // POST /api/admin/shaft/:id/images/apply-to-model
-  // Copies all image rows from this shaft to every other
-  // shaft with the same brand + model (no R2 upload).
+  // POST /api/admin/:type/:id/images/apply-to-model
+  // Copies image rows from this item to every other variant
+  // sharing the same brand + model (no R2 upload).
+  // Supported: shafts (by spine), vanes (by size), points (by weight).
   // -------------------------------------------------------
-  if (req.method === "POST" && t === "shafts" && typeof id === "number" && rest === "images/apply-to-model") {
-    const imgType = IMAGE_TYPE[t]; // "shaft"
+  const APPLY_SUPPORTED: TypeKey[] = ["shafts", "vanes", "points"];
+  if (req.method === "POST" && APPLY_SUPPORTED.includes(t) && typeof id === "number" && rest === "images/apply-to-model") {
+    const imgType = IMAGE_TYPE[t];
 
-    // 1. Find source shaft's brand + model
-    const source = await env.DB.prepare(`SELECT brand, model FROM shafts WHERE id = ?`)
+    // 1. Find source item's brand + model
+    const source = await env.DB.prepare(`SELECT brand, model FROM ${table} WHERE id = ?`)
       .bind(id)
       .first() as { brand: string; model: string } | null;
-    if (!source) return json({ ok: false, error: "Shaft not found" }, { status: 404 });
+    if (!source) return json({ ok: false, error: "Item not found" }, { status: 404 });
 
-    // 2. Get image rows for source shaft
+    // 2. Get image rows for source item
     const srcImages = await env.DB.prepare(
       `SELECT url, alt, sort, is_primary FROM product_images WHERE product_type = ? AND product_id = ? ORDER BY sort ASC, id ASC`
     ).bind(imgType, id).all();
-    if (!srcImages.results.length) return json({ ok: false, error: "No images on source shaft" }, { status: 400 });
+    if (!srcImages.results.length) return json({ ok: false, error: "No images on source item" }, { status: 400 });
 
-    // 3. Find sibling shaft IDs (same brand + model, different id)
+    // 3. Find sibling IDs (same brand + model, different id)
     const siblings = await env.DB.prepare(
-      `SELECT id FROM shafts WHERE brand = ? AND model = ? AND id != ?`
+      `SELECT id FROM ${table} WHERE brand = ? AND model = ? AND id != ?`
     ).bind(source.brand, source.model, id).all();
 
     let applied = 0;

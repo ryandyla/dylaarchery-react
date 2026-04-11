@@ -291,15 +291,27 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
     }
   }
 
+  const applyLabel =
+    type === "shafts" ? "Apply to all spines" :
+    type === "vanes"  ? "Apply to all sizes"  :
+    type === "points" ? "Apply to all weights" :
+    "Apply to all variants";
+
+  const applyConfirm =
+    type === "shafts" ? "Copy these images to all other spine variants of this model that have no images yet?" :
+    type === "vanes"  ? "Copy these images to all other size variants of this model that have no images yet?"  :
+    type === "points" ? "Copy these images to all other weight variants of this product that have no images yet?" :
+    "Copy these images to all other variants that have no images yet?";
+
   async function applyToModel() {
-    if (!confirm("Copy these images to all other spine variants of this model that have no images yet?")) return;
+    if (!confirm(applyConfirm)) return;
     setApplying(true);
     setErr("");
     try {
       const r = await fetch(`/api/admin/${type}/${rowId}/images/apply-to-model`, { method: "POST" });
       const d: any = await r.json();
       if (!d.ok) throw new Error(d.error || "Failed");
-      alert(`Done — applied to ${d.applied} of ${d.siblings} sibling spine(s).`);
+      alert(`Done — applied to ${d.applied} of ${d.siblings} sibling variant(s).`);
       onUpload();
     } catch (e: any) {
       setErr(e?.message || String(e));
@@ -348,13 +360,13 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
           >
             + Upload
           </button>
-          {type === "shafts" && images.length > 0 && (
+          {(type === "shafts" || type === "vanes" || type === "points") && images.length > 0 && (
             <button
               onClick={applyToModel}
               disabled={applying}
               className="self-start rounded-lg border border-yellow-400/20 bg-yellow-400/5 px-3 py-1.5 text-xs font-bold text-yellow-300/70 hover:bg-yellow-400/10 disabled:opacity-40"
             >
-              {applying ? "Applying…" : "Apply to all spines"}
+              {applying ? "Applying…" : applyLabel}
             </button>
           )}
         </div>
