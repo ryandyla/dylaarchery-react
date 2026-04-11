@@ -96,11 +96,12 @@ const LIGHT_COLORS = new Set([
 // Orange hue ≈ 25°. hue-rotate(X) shifts the vane; white bg is achromatic so unaffected.
 // Colors with no entry show the unmodified orange image.
 const COLOR_IMAGE_FILTER: Record<string, string> = {
-  // Neutrals
-  black:           "grayscale(1) brightness(0.12)",
-  blackout:        "grayscale(1) brightness(0.06)",
-  gray:            "grayscale(1) brightness(0.5)",
-  silver:          "grayscale(1) brightness(0.75)",
+  // Neutrals — grayscale(1) + high contrast keeps white bg white while pushing
+  // the orange vane (luminance ~0.3) toward black. Low brightness darkens the bg.
+  black:           "grayscale(1) contrast(20)",
+  blackout:        "grayscale(1) contrast(50)",
+  gray:            "grayscale(1) contrast(3) brightness(0.85)",
+  silver:          "grayscale(1) brightness(0.95)",
   // Warm
   red:             "hue-rotate(-25deg) saturate(1.3)",
   "neon red":      "hue-rotate(-25deg) saturate(2) brightness(1.1)",
@@ -108,31 +109,31 @@ const COLOR_IMAGE_FILTER: Record<string, string> = {
   orange:          "",
   "neon orange":   "saturate(2) brightness(1.05)",
   "flo orange":    "saturate(2) brightness(1.05)",
-  yellow:          "hue-rotate(35deg) saturate(0.9)",
-  "neon yellow":   "hue-rotate(35deg) saturate(1.6) brightness(1.1)",
-  "flo yellow":    "hue-rotate(35deg) saturate(1.6) brightness(1.1)",
-  chartreuse:      "hue-rotate(60deg) saturate(1.3) brightness(1.05)",
-  "flo chartreuse":"hue-rotate(60deg) saturate(2) brightness(1.1)",
-  kiwi:            "hue-rotate(75deg) saturate(0.9) brightness(0.9)",
+  yellow:          "hue-rotate(30deg) saturate(3) brightness(1.3)",
+  "neon yellow":   "hue-rotate(30deg) saturate(4) brightness(1.4)",
+  "flo yellow":    "hue-rotate(30deg) saturate(4) brightness(1.4)",
+  chartreuse:      "hue-rotate(60deg) saturate(2) brightness(1.15)",
+  "flo chartreuse":"hue-rotate(60deg) saturate(3) brightness(1.2)",
+  kiwi:            "hue-rotate(75deg) saturate(1.2) brightness(1.0)",
   // Greens
   green:           "hue-rotate(95deg) saturate(1.2)",
   "neon green":    "hue-rotate(95deg) saturate(2) brightness(1.1)",
   "flo green":     "hue-rotate(95deg) saturate(2) brightness(1.1)",
-  olive:           "hue-rotate(70deg) saturate(0.55) brightness(0.65)",
-  "od green":      "hue-rotate(78deg) saturate(0.45) brightness(0.55)",
+  olive:           "hue-rotate(70deg) saturate(0.4) brightness(0.88)",
+  "od green":      "hue-rotate(78deg) saturate(0.35) brightness(0.82)",
   // Cool
   teal:            "hue-rotate(155deg) saturate(1.1)",
   turquoise:       "hue-rotate(163deg) saturate(1.15) brightness(1.05)",
-  "satin blue":    "hue-rotate(208deg) saturate(0.9) brightness(0.85)",
+  "satin blue":    "hue-rotate(208deg) saturate(0.9) brightness(0.88)",
   blue:            "hue-rotate(215deg) saturate(1.3)",
-  navy:            "hue-rotate(215deg) saturate(1.0) brightness(0.45)",
+  navy:            "hue-rotate(215deg) saturate(1.2) brightness(0.7) contrast(1.5)",
   purple:          "hue-rotate(255deg) saturate(1.3)",
   pink:            "hue-rotate(328deg) saturate(0.85)",
   "hot pink":      "hue-rotate(330deg) saturate(1.6)",
   "flo pink":      "hue-rotate(330deg) saturate(2) brightness(1.05)",
-  // Earth
-  brown:           "hue-rotate(-12deg) saturate(0.65) brightness(0.55)",
-  tan:             "hue-rotate(-5deg) saturate(0.45) brightness(0.92)",
+  // Earth — avoid brightness < 0.85 or white bg goes visibly gray
+  brown:           "hue-rotate(-8deg) saturate(0.3)",
+  tan:             "hue-rotate(-5deg) saturate(0.4) brightness(1.05)",
   // Clear — show faint outline
   clear:           "saturate(0.1) brightness(1.3) opacity(0.5)",
 };
