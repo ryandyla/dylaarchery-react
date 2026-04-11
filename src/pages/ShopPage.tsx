@@ -21,7 +21,7 @@ type ProductGroup = {
   brand: string;
   name: string;
   pack_qty: number;
-  image_url: string | null;
+  image_urls: string[];
   variants: ProductVariant[];
 };
 
@@ -35,7 +35,7 @@ type ShopItem = {
   pack_qty: number;
   pack_price: number;
   unit_price: number;
-  image_url?: string | null;
+  image_urls: string[];
   lighted?: boolean;
 };
 
@@ -67,7 +67,6 @@ function packLabel(type: CartItemType, pack_qty: number, lighted?: boolean): str
 }
 
 const TAB_LABELS: { key: CartItemType | "all"; label: string }[] = [
-  { key: "all", label: "All" },
   { key: "shaft", label: "Shafts" },
   { key: "nock", label: "Nocks" },
   { key: "vane", label: "Vanes" },
@@ -105,7 +104,7 @@ function toGroups(raw: any[], type: CartItemType): ProductGroup[] {
     brand: g.brand,
     name: g.name,
     pack_qty: g.pack_qty,
-    image_url: g.image_url ?? null,
+    image_urls: Array.isArray(g.image_urls) ? g.image_urls : (g.image_url ? [g.image_url] : []),
     variants: g.variants,
   }));
 }
@@ -114,8 +113,51 @@ function toItems(raw: any[], type: CartItemType): ShopItem[] {
   return raw.map((r) => ({
     id: r.id, type, brand: r.brand, name: r.name, meta: r.meta,
     pack_qty: r.pack_qty, pack_price: r.pack_price, unit_price: r.unit_price,
-    image_url: r.image_url ?? null, lighted: r.lighted,
+    image_urls: Array.isArray(r.image_urls) ? r.image_urls : (r.image_url ? [r.image_url] : []),
+    lighted: r.lighted,
   }));
+}
+
+// ── Image Gallery ─────────────────────────────────────────────────────────────
+
+function ImageGallery({ urls, alt }: { urls: string[]; alt: string }) {
+  const [idx, setIdx] = useState(0);
+  if (urls.length === 0) {
+    return (
+      <div className="aspect-square bg-white/5 flex items-center justify-center">
+        <div className="text-3xl opacity-20">🏹</div>
+      </div>
+    );
+  }
+  const clamp = (n: number) => Math.max(0, Math.min(urls.length - 1, n));
+  return (
+    <div className="aspect-square bg-white/5 relative group overflow-hidden">
+      <img src={urls[idx]} alt={alt} className="w-full h-full object-contain p-3" />
+      {urls.length > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx - 1)); }}
+            className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80 disabled:opacity-20"
+            disabled={idx === 0}
+          >‹</button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx + 1)); }}
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80 disabled:opacity-20"
+            disabled={idx === urls.length - 1}
+          >›</button>
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+            {urls.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-yellow-400" : "bg-white/30 hover:bg-white/60"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ── Variant Group Card ────────────────────────────────────────────────────────
@@ -147,19 +189,14 @@ function VariantGroupCard({ group, cart, onAdd }: {
       pack_qty: group.pack_qty,
       pack_price: variant.pack_price,
       unit_price: variant.unit_price,
-      image_url: group.image_url,
+      image_url: group.image_urls[0] ?? null,
     });
   }
 
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.025] flex flex-col overflow-hidden hover:border-white/15 transition-colors">
       {/* Image */}
-      <div className="aspect-square bg-white/5 flex items-center justify-center overflow-hidden">
-        {group.image_url
-          ? <img src={group.image_url} alt={group.name} className="w-full h-full object-contain p-3" />
-          : <div className="text-3xl opacity-20">🏹</div>
-        }
-      </div>
+      <ImageGallery urls={group.image_urls} alt={group.name} />
 
       <div className="p-4 flex flex-col flex-1">
         <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">
@@ -227,12 +264,7 @@ function VariantGroupCard({ group, cart, onAdd }: {
 function ProductCard({ item, inCart, onAdd }: { item: ShopItem; inCart: boolean; onAdd: () => void }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.025] flex flex-col overflow-hidden hover:border-white/15 transition-colors">
-      <div className="aspect-square bg-white/5 flex items-center justify-center overflow-hidden">
-        {item.image_url
-          ? <img src={item.image_url} alt={item.name} className="w-full h-full object-contain p-3" />
-          : <div className="text-3xl opacity-20">🏹</div>
-        }
-      </div>
+      <ImageGallery urls={item.image_urls} alt={item.name} />
       <div className="p-4 flex flex-col flex-1">
         <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">
           {packLabel(item.type, item.pack_qty, item.lighted).toUpperCase()}
@@ -383,7 +415,7 @@ export default function ShopPage() {
   const [flatItems, setFlatItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<CartItemType | "all">("all");
+  const [activeTab, setActiveTab] = useState<CartItemType | "all">("shaft");
   const [activeBrand, setActiveBrand] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("name_asc");
@@ -423,7 +455,7 @@ export default function ShopPage() {
   }
 
   function addFlatToCart(item: ShopItem) {
-    addToCart(item as unknown as Omit<CartItem, "qty">);
+    addToCart({ ...item, image_url: item.image_urls[0] ?? null } as unknown as Omit<CartItem, "qty">);
   }
 
   function setQty(k: string, qty: number) {

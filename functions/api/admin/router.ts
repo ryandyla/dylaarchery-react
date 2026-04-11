@@ -285,6 +285,22 @@ async function handleAdminInner(req: Request, env: any, ctx: ExecutionContext) {
     return json({ ok: true, images: rows.results });
   }
 
+  // -----------------------------------------------
+  // PATCH /api/admin/:type/:id/images/:imageId
+  // Body: { is_primary: true } — sets as primary
+  // -----------------------------------------------
+  if (req.method === "PATCH" && typeof id === "number" && rest.startsWith("images/")) {
+    const imageId = asInt(rest.split("/")[1]);
+    if (!Number.isFinite(imageId)) return json({ ok: false, error: "Invalid image id" }, { status: 400 });
+    const imgType = IMAGE_TYPE[t];
+    // Clear existing primary, then set this one
+    await env.DB.prepare(`UPDATE product_images SET is_primary = 0 WHERE product_type = ? AND product_id = ?`)
+      .bind(imgType, id).run();
+    await env.DB.prepare(`UPDATE product_images SET is_primary = 1 WHERE id = ?`)
+      .bind(imageId).run();
+    return json({ ok: true });
+  }
+
   // -------------------------------------------
   // DELETE /api/admin/:type/:id/images/:imageId
   // -------------------------------------------

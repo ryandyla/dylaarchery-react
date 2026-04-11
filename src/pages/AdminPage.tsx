@@ -249,6 +249,7 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [settingPrimary, setSettingPrimary] = useState<number | null>(null);
   const [applying, setApplying] = useState(false);
 
   React.useEffect(() => {
@@ -260,6 +261,23 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
       .catch((e) => setErr(e?.message || String(e)))
       .finally(() => setLoading(false));
   }, [type, rowId]);
+
+  async function setPrimary(imgId: number) {
+    setSettingPrimary(imgId);
+    try {
+      const r = await fetch(`/api/admin/${type}/${rowId}/images/${imgId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_primary: true }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setImages((prev) => prev.map((i) => ({ ...i, is_primary: i.id === imgId ? 1 : 0 })));
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setSettingPrimary(null);
+    }
+  }
 
   async function deleteImg(imgId: number) {
     if (!confirm("Delete this image? This also removes it from R2.")) return;
@@ -340,9 +358,17 @@ function ImagePanel({ type, rowId, onUpload }: { type: TypeKey; rowId: number; o
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               </a>
-              <div className="flex items-center gap-1">
-                {!!img.is_primary && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {!!img.is_primary ? (
                   <span className="rounded bg-yellow-400/15 px-1 py-0 text-[9px] font-bold text-yellow-300">PRIMARY</span>
+                ) : (
+                  <button
+                    onClick={() => setPrimary(img.id)}
+                    disabled={settingPrimary === img.id}
+                    className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-bold text-white/40 hover:text-yellow-300 hover:border-yellow-400/20 disabled:opacity-40"
+                  >
+                    {settingPrimary === img.id ? "…" : "Set primary"}
+                  </button>
                 )}
                 <button
                   onClick={() => deleteImg(img.id)}
