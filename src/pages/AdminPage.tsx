@@ -152,6 +152,37 @@ function titleLabel(r: Row) {
 
 // ── Shared form ──────────────────────────────────────────────────────────────
 
+function ColorsInput({ value, placeholder, onChange }: {
+  value: any;
+  placeholder?: string;
+  onChange: (val: any) => void;
+}) {
+  const toDisplay = (v: any) => {
+    if (!v) return "";
+    try { return JSON.parse(v).join(", "); } catch { return v; }
+  };
+  const [local, setLocal] = React.useState(() => toDisplay(value));
+
+  // Sync if parent value changes externally (e.g. switching rows)
+  React.useEffect(() => { setLocal(toDisplay(value)); }, [value]);
+
+  function commit(raw: string) {
+    const arr = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    onChange(arr.length ? JSON.stringify(arr) : null);
+  }
+
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white outline-none focus:border-yellow-400/50"
+    />
+  );
+}
+
 function ItemForm({
   type,
   draft,
@@ -186,20 +217,10 @@ function ItemForm({
                 <span className="text-xs text-white/60">{draft[f.key] ? "Yes" : "No"}</span>
               </div>
             ) : f.type === "colors" ? (
-              <input
-                type="text"
+              <ColorsInput
+                value={draft[f.key]}
                 placeholder={f.placeholder}
-                value={(() => {
-                  const v = draft[f.key];
-                  if (!v) return "";
-                  try { return JSON.parse(v).join(", "); } catch { return v; }
-                })()}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const arr = raw.split(",").map((s: string) => s.trim()).filter(Boolean);
-                  onChange(f.key, arr.length ? JSON.stringify(arr) : null);
-                }}
-                className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-sm text-white outline-none focus:border-yellow-400/50"
+                onChange={(val) => onChange(f.key, val)}
               />
             ) : (
               <input
