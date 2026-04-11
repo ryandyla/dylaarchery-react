@@ -4,23 +4,27 @@
 import { getMember, json, unauthorized } from "../../_utils/member-auth";
 
 // ── Spine selection ───────────────────────────────────────────────────────────
-// AMO/ATA-based: lower spine number = stiffer = for heavier draw weights.
-// Adjustments: +2 lbs per inch of arrow length over 28", lighter point = weaker spine ok.
+// Based on the Easton Arrow Selection Chart (industry standard for compound bows).
+// Corrected peak weight = draw weight
+//   + (arrow length - 28") × 5 lbs/inch
+//   + (point weight - 100gr) / 25gr × 5 lbs
+// Then mapped to the closest standard spine group.
 
 function idealSpine(drawWeight: number, arrowLength: number, pointGrains = 100): number {
-  const lengthAdj = (arrowLength - 28) * 2;      // longer arrow needs stiffer
-  const pointAdj  = (pointGrains - 100) / 25 * 3; // heavier point needs stiffer
+  const lengthAdj = (arrowLength - 28) * 5;       // +5 lbs per inch over 28" (Easton standard)
+  const pointAdj  = (pointGrains - 100) / 25 * 5; // +5 lbs per 25gr of point weight over 100gr
   const adjusted  = drawWeight + lengthAdj + pointAdj;
 
+  // Easton chart cutoffs for compound bows (corrected peak weight → spine)
   if (adjusted <= 35)  return 700;
-  if (adjusted <= 42)  return 600;
-  if (adjusted <= 50)  return 500;
-  if (adjusted <= 55)  return 450;
+  if (adjusted <= 44)  return 600;
+  if (adjusted <= 52)  return 500;
   if (adjusted <= 60)  return 400;
-  if (adjusted <= 65)  return 350;
-  if (adjusted <= 70)  return 300;
-  if (adjusted <= 75)  return 250;
-  if (adjusted <= 82)  return 200;
+  if (adjusted <= 67)  return 350;
+  if (adjusted <= 74)  return 340;
+  if (adjusted <= 83)  return 300;
+  if (adjusted <= 92)  return 250;
+  if (adjusted <= 102) return 200;
   return 150;
 }
 
