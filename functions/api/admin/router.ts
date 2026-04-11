@@ -38,9 +38,9 @@ const COLS: Record<TypeKey, string[]> = {
     "system",
     "image_url",
   ],
-  nocks: ["brand", "model", "system", "style", "price_per_arrow", "active", "image_url", "weight_grains"],
+  nocks: ["brand", "model", "system", "style", "price_per_arrow", "active", "image_url", "weight_grains", "colors"],
   wraps: ["name", "length", "min_outer_diameter", "max_outer_diameter", "price_per_arrow", "active", "weight_grains", "image_url"],
-  vanes: ["brand", "model", "length", "height", "weight_grains", "profile", "compatible_micro", "price_per_arrow", "active", "image_url"],
+  vanes: ["brand", "model", "length", "height", "weight_grains", "profile", "compatible_micro", "price_per_arrow", "active", "image_url", "colors"],
   inserts: [
     "brand",
     "model",
