@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import OrdersSection from "./admin/OrdersSection";
 import CustomersSection from "./admin/CustomersSection";
 import MarketingSection from "./admin/MarketingSection";
+import SpecialsSection from "./admin/SpecialsSection";
 
-type Section = "catalog" | "orders" | "customers" | "marketing";
+type Section = "catalog" | "orders" | "customers" | "marketing" | "specials";
 type TypeKey = "shafts" | "nocks" | "vanes" | "wraps" | "inserts" | "points";
 
 type Row = Record<string, any> & {
@@ -515,7 +516,7 @@ export default function AdminPage() {
 
       {/* Top-level section tabs */}
       <div className="mt-4 flex flex-wrap gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-        {(["orders", "customers", "marketing", "catalog"] as Section[]).map((s) => (
+        {(["orders", "customers", "marketing", "specials", "catalog"] as Section[]).map((s) => (
           <button
             key={s}
             onClick={() => setSection(s)}
@@ -544,6 +545,11 @@ export default function AdminPage() {
       {section === "marketing" && (
         <div className="mt-6">
           <MarketingSection />
+        </div>
+      )}
+      {section === "specials" && (
+        <div className="mt-6">
+          <SpecialsSection />
         </div>
       )}
 

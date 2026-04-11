@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, Link } from "react-router-dom";
-import type { MemberOutletContext, Bow } from "./MemberShell";
+import type { MemberOutletContext } from "./MemberShell";
 
 type PurposeData = {
   label: string;
