@@ -2101,6 +2101,8 @@ const COLOR_HEX: Record<string, string> = {
   "flo red":       "#ff1133",
   "flo pink":      "#ff1493",
   "flo chartreuse":"#80ff00",
+  turquoise:       "#30d5c8",
+  "od green":      "#4a5c2a",
   // Patterns — solid base color used in SVG diagram
   "white tiger":   "#e8e8e8",
   "red tiger":     "#cc2222",

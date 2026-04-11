@@ -69,6 +69,7 @@ const COLOR_SWATCH_BG: Record<string, string> = {
   // flo = fluorescent (archery shorthand)
   "flo yellow": "#ffe000", "flo orange": "#ff4500", "flo green": "#39ff14",
   "flo red": "#ff1133", "flo pink": "#ff1493", "flo chartreuse": "#80ff00",
+  turquoise: "#30d5c8", "od green": "#4a5c2a",
   clear: "rgba(255,255,255,0.12)",
   "white tiger":   "repeating-linear-gradient(45deg,#e8e8e8 0px,#e8e8e8 4px,#444 4px,#444 7px)",
   "red tiger":     "repeating-linear-gradient(45deg,#cc2222 0px,#cc2222 4px,#111 4px,#111 7px)",
