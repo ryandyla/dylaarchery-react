@@ -183,6 +183,40 @@ export async function sendWelcomeDiscount(
   });
 }
 
+export async function sendShopOrderConfirmation(
+  env: any,
+  opts: {
+    to: string;
+    name: string;
+    orderId: number;
+    items: Array<{ name: string; pack_qty: number; qty: number; pack_price: number }>;
+    total: number;
+  }
+) {
+  const { to, name, orderId, items, total } = opts;
+  const rows = items
+    .map((item) => `<tr><td>${item.name}</td><td>Pack of ${item.pack_qty} × ${item.qty}</td><td>$${(item.pack_price * item.qty).toFixed(2)}</td></tr>`)
+    .join("");
+
+  const html = shell(`
+    <p>Hey ${name || "there"},</p>
+    <p>Your order <strong>#${orderId}</strong> is confirmed. Here's what's on its way:</p>
+    <div class="box">
+      <table style="width:100%;border-collapse:collapse">
+        <tr style="font-size:10px;color:#555;font-family:monospace;text-transform:uppercase">
+          <td style="padding:0 0 8px">Item</td><td style="padding:0 0 8px">Quantity</td><td style="padding:0 0 8px">Price</td>
+        </tr>
+        ${rows}
+      </table>
+    </div>
+    <p><strong>Total: $${total.toFixed(2)}</strong></p>
+    <p>We'll get these packed and shipped quickly. Reply to this email with any questions.</p>
+    <p>&mdash; The Dyla Archery Team</p>
+  `);
+
+  return send(env, { from: ORDER_FROM, to, subject: `Order #${orderId} Confirmed — Dyla Archery`, html });
+}
+
 export async function sendAbandonedCartEmail(
   env: any,
   opts: {

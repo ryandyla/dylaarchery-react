@@ -6,6 +6,7 @@ import ArrowBuilderPage from "./ArrowBuilderPage";
 import ProcessPage from "./pages/ProcessPage";
 import ToolsPage from "./pages/ToolsPage";
 import AdminPage from "./pages/AdminPage";
+import ShopPage from "./pages/ShopPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import MemberLoginPage from "./pages/member/MemberLoginPage";
 import MemberShell from "./pages/member/MemberShell";
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
       { path: "/process", element: <ProcessPage /> },
       { path: "/tools", element: <ToolsPage /> },
       { path: "/contact", element: <ContactPage /> },
+      { path: "/shop", element: <ShopPage /> },
       { path: "/admin", element: <AdminPage /> },
       { path: "/order/success", element: <OrderSuccessPage /> },
       { path: "/member", element: <MemberLoginPage /> },

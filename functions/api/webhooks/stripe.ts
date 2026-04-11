@@ -3,7 +3,7 @@
 // Register this URL in your Stripe dashboard: https://yourdomain.com/api/webhooks/stripe
 // Event to subscribe to: checkout.session.completed
 
-import { sendOrderConfirmation } from "../../_utils/email";
+import { sendOrderConfirmation, sendShopOrderConfirmation } from "../../_utils/email";
 
 async function verifyStripeSignature(
   rawBody: string,
@@ -129,37 +129,59 @@ export const onRequest = async ({ request, env }: any) => {
 
   // Send confirmation email
   try {
-    const row = await DB.prepare(`
-      SELECT
-        o.total,
-        c.email as customer_email, c.name as customer_name,
-        ab.cut_length, ab.quantity,
-        s.brand as shaft_brand, s.model as shaft_model, s.spine as shaft_spine,
-        w.name as wrap_name,
-        v.brand as vane_brand, v.model as vane_model,
-        i.brand as insert_brand, i.model as insert_model,
-        p.brand as point_brand, p.model as point_model, p.weight_grains as point_weight, p.type as point_type,
-        n.brand as nock_brand, n.model as nock_model
-      FROM orders o
-      JOIN customers c ON c.id = o.customer_id
-      LEFT JOIN arrow_builds ab ON ab.order_id = o.id
-      LEFT JOIN shafts s ON s.id = ab.shaft_id
-      LEFT JOIN wraps w ON w.id = ab.wrap_id
-      LEFT JOIN vanes v ON v.id = ab.vane_id
-      LEFT JOIN inserts i ON i.id = ab.insert_id
-      LEFT JOIN points p ON p.id = ab.point_id
-      LEFT JOIN nocks n ON n.id = ab.nock_id
-      WHERE o.id = ?
-    `).bind(orderId).first();
+    const orderType = session?.metadata?.order_type;
 
-    if (row?.customer_email) {
-      await sendOrderConfirmation(env, {
-        to: row.customer_email,
-        name: row.customer_name || "",
-        orderId,
-        build: buildLabelsFromRow(row),
-        total: row.total,
-      });
+    if (orderType === "shop") {
+      // Shop order — use shop_items JSON
+      const shopRow = await DB.prepare(
+        `SELECT o.total, o.shop_items, c.email as customer_email, c.name as customer_name
+         FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.id = ?`
+      ).bind(orderId).first();
+
+      if (shopRow?.customer_email && shopRow?.shop_items) {
+        const items = JSON.parse(shopRow.shop_items);
+        await sendShopOrderConfirmation(env, {
+          to: shopRow.customer_email,
+          name: shopRow.customer_name || "",
+          orderId,
+          items,
+          total: shopRow.total,
+        });
+      }
+    } else {
+      // Custom arrow build order
+      const row = await DB.prepare(`
+        SELECT
+          o.total,
+          c.email as customer_email, c.name as customer_name,
+          ab.cut_length, ab.quantity,
+          s.brand as shaft_brand, s.model as shaft_model, s.spine as shaft_spine,
+          w.name as wrap_name,
+          v.brand as vane_brand, v.model as vane_model,
+          i.brand as insert_brand, i.model as insert_model,
+          p.brand as point_brand, p.model as point_model, p.weight_grains as point_weight, p.type as point_type,
+          n.brand as nock_brand, n.model as nock_model
+        FROM orders o
+        JOIN customers c ON c.id = o.customer_id
+        LEFT JOIN arrow_builds ab ON ab.order_id = o.id
+        LEFT JOIN shafts s ON s.id = ab.shaft_id
+        LEFT JOIN wraps w ON w.id = ab.wrap_id
+        LEFT JOIN vanes v ON v.id = ab.vane_id
+        LEFT JOIN inserts i ON i.id = ab.insert_id
+        LEFT JOIN points p ON p.id = ab.point_id
+        LEFT JOIN nocks n ON n.id = ab.nock_id
+        WHERE o.id = ?
+      `).bind(orderId).first();
+
+      if (row?.customer_email) {
+        await sendOrderConfirmation(env, {
+          to: row.customer_email,
+          name: row.customer_name || "",
+          orderId,
+          build: buildLabelsFromRow(row),
+          total: row.total,
+        });
+      }
     }
   } catch (emailErr) {
     console.error("Failed to send order confirmation email:", emailErr);
