@@ -247,11 +247,6 @@ export default function ArrowBuilderPage() {
   const selectedBrand = selectedShaft?.brand ?? openBrand;
   const selectedModel = selectedShaft?.model ?? null;
 
-  const selectedModelGroup = useMemo(() => {
-    const b = grouped.find((x) => x.brand === selectedBrand);
-    if (!b || !selectedModel) return null;
-    return b.models.find((m) => m.model === selectedModel) ?? null;
-  }, [grouped, selectedBrand, selectedModel]);
 
   const [pricing, setPricing] = useState<{ per_arrow?: number; subtotal?: number }>({});
   const [serverErr, setServerErr] = useState<{ field?: string; message: string } | null>(null);
@@ -1991,90 +1986,6 @@ function PointPicker({ fieldPoints, broadheads, selectedId, imagesFor, onSelect 
   );
 }
 
-// ─── ImageCarousel ────────────────────────────────────────────────────────────
-
-function ImageLightbox({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        background: "rgba(0,0,0,.88)", backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "zoom-out",
-      }}
-    >
-      <img
-        src={url}
-        alt={alt}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: "92vw", maxHeight: "88vh",
-          objectFit: "contain", borderRadius: 12,
-          boxShadow: "0 24px 80px rgba(0,0,0,.8)",
-          cursor: "default",
-        }}
-      />
-      <button
-        onClick={onClose}
-        style={{
-          position: "absolute", top: 20, right: 20,
-          background: "rgba(255,255,255,.12)", border: "none",
-          color: "#fff", borderRadius: 999, width: 36, height: 36,
-          fontSize: 18, cursor: "pointer", lineHeight: 1,
-        }}
-      >
-        ×
-      </button>
-    </div>
-  );
-}
-
-function ImageCarousel({ images, height = 200 }: { images: ProductImage[]; height?: number }) {
-  const [i, setI] = useState(0);
-  const [lightbox, setLightbox] = useState(false);
-
-  if (!images?.length) return (
-    <div style={{ height, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(0,0,0,.2)", display: "grid", placeItems: "center", fontSize: 11, color: "rgba(255,255,255,.3)", fontFamily: "ui-monospace, monospace", letterSpacing: "0.5px" }}>
-      NO IMAGE
-    </div>
-  );
-  const cur = images[Math.min(i, images.length - 1)];
-  return (
-    <div>
-      {lightbox && <ImageLightbox url={cur.url} alt={cur.alt ?? ""} onClose={() => setLightbox(false)} />}
-      <div
-        onClick={() => setLightbox(true)}
-        style={{ height, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(0,0,0,.2)", cursor: "zoom-in", display: "flex", alignItems: "center", justifyContent: "center" }}
-      >
-        <img
-          src={cur.url}
-          alt={cur.alt ?? ""}
-          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-          loading="lazy"
-        />
-      </div>
-      {images.length > 1 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
-          <button style={miniBtn()} onClick={() => setI((v) => (v - 1 + images.length) % images.length)}>‹</button>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", fontFamily: "ui-monospace, monospace" }}>{i + 1}/{images.length}</div>
-          <button style={miniBtn()} onClick={() => setI((v) => (v + 1) % images.length)}>›</button>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 5 }}>
-            {images.slice(0, 8).map((_, idx) => (
-              <button key={idx} onClick={() => setI(idx)} style={{ width: 6, height: 6, borderRadius: 999, border: "none", background: idx === i ? GOLD : "rgba(255,255,255,.15)", cursor: "pointer", padding: 0 }} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Small atoms ─────────────────────────────────────────────────────────────
 
@@ -2095,14 +2006,6 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SpecChip({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <span style={{ display: "inline-flex", gap: 3, alignItems: "baseline", fontFamily: "ui-monospace, 'SF Mono', monospace", fontSize: 10, background: accent ? "rgba(255,212,0,.07)" : "rgba(255,255,255,.05)", border: `1px solid ${accent ? "rgba(255,212,0,.2)" : "rgba(255,255,255,.08)"}`, borderRadius: 5, padding: "2px 5px" }}>
-      <span style={{ color: "rgba(255,255,255,.35)", letterSpacing: "0.3px" }}>{label}</span>
-      <span style={{ color: accent ? GOLD : "rgba(255,255,255,.7)", fontWeight: 700 }}>{value}</span>
-    </span>
-  );
-}
 
 function OptionPill({ label, sub, active, onClick }: { label: string; sub?: string; active: boolean; onClick: () => void }) {
   return (
@@ -2413,30 +2316,6 @@ function tabBtnStyle(active: boolean): React.CSSProperties {
   };
 }
 
-function modelCardStyle(selected: boolean): React.CSSProperties {
-  return {
-    textAlign: "left", cursor: "pointer",
-    borderRadius: 12,
-    border: `1px solid ${selected ? "rgba(255,212,0,.4)" : "rgba(255,255,255,.09)"}`,
-    background: selected ? "rgba(255,212,0,.055)" : "rgba(255,255,255,.025)",
-    boxShadow: selected ? "0 0 0 3px rgba(255,212,0,.07)" : "none",
-    padding: "12px 12px",
-    color: "rgba(255,255,255,.92)",
-    transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
-  };
-}
-
-function spinePillStyle(active: boolean): React.CSSProperties {
-  return {
-    borderRadius: 10,
-    border: `1px solid ${active ? "rgba(255,212,0,.5)" : "rgba(255,255,255,.1)"}`,
-    background: active ? "rgba(255,212,0,.10)" : "rgba(255,255,255,.03)",
-    padding: "8px 12px", minWidth: 60, textAlign: "center",
-    color: active ? GOLD : "rgba(255,255,255,.8)",
-    cursor: "pointer",
-    transition: "border-color 0.2s, background 0.2s, color 0.2s",
-  };
-}
 
 function segmentStyle(active: boolean): React.CSSProperties {
   return {
