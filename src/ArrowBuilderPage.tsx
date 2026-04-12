@@ -236,6 +236,7 @@ export default function ArrowBuilderPage() {
   const grouped = useMemo(() => groupShaftsByBrandModel(shafts), [shafts]);
   const [openBrand, setOpenBrand] = useState<string>("Easton");
   const [openVaneBrand, setOpenVaneBrand] = useState<string | null>(null);
+  const [openVaneModel, setOpenVaneModel] = useState<string | null>(null);
   const [openNockBrand, setOpenNockBrand] = useState<string | null>(null);
   const pendingRestore = useRef<BuilderState | null>(null);
 
@@ -377,17 +378,23 @@ export default function ArrowBuilderPage() {
   }, [vanes, selectedShaft]);
 
   const groupedVanes = useMemo(() => {
-    const brands = new Map<string, Vane[]>();
+    const brands = new Map<string, Map<string, Vane[]>>();
     for (const v of compatibleVanes) {
-      if (!brands.has(v.brand)) brands.set(v.brand, []);
-      brands.get(v.brand)!.push(v);
+      if (!brands.has(v.brand)) brands.set(v.brand, new Map());
+      const modelMap = brands.get(v.brand)!;
+      if (!modelMap.has(v.model)) modelMap.set(v.model, []);
+      modelMap.get(v.model)!.push(v);
     }
     return Array.from(brands.entries())
-      .map(([brand, items]) => ({ brand, items }))
+      .map(([brand, modelMap]) => ({
+        brand,
+        models: Array.from(modelMap.entries()).map(([model, sizes]) => ({ model, sizes })),
+      }))
       .sort((a, b) => a.brand.localeCompare(b.brand));
   }, [compatibleVanes]);
 
   const activVaneBrand = openVaneBrand ?? groupedVanes[0]?.brand ?? null;
+  const activeVaneModel = openVaneModel ?? selectedVane?.model ?? null;
 
   const compatibleNocks = useMemo(() => {
     if (!selectedShaft?.inner_diameter) return nocks;
@@ -1016,10 +1023,10 @@ export default function ArrowBuilderPage() {
                     <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                       {groupedVanes.map((g) => {
                         const isActive = activVaneBrand === g.brand;
-                        const hasSel = g.items.some((v) => v.id === state.vane_id);
+                        const hasSel = g.models.some((m) => m.sizes.some((v) => v.id === state.vane_id));
                         return (
                           <button key={g.brand}
-                            onClick={() => setOpenVaneBrand(g.brand)}
+                            onClick={() => { setOpenVaneBrand(g.brand); setOpenVaneModel(null); }}
                             style={brandBtnStyle(isActive || hasSel)}>
                             <BrandLogo brand={g.brand} active={isActive || hasSel} />
                           </button>
@@ -1028,27 +1035,74 @@ export default function ArrowBuilderPage() {
                     </div>
                   )}
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.items ?? compatibleVanes).map((v) => {
-                      const sel = v.id === state.vane_id;
-                      const imgs = imagesFor("vane", v.id);
+                  {/* Vane model cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 14 }}>
+                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.models ?? []).map((m) => {
+                      const isModelSel = activeVaneModel === m.model && m.sizes.some((v) => v.id === state.vane_id);
+                      const isModelOpen = activeVaneModel === m.model;
+                      const lengths = m.sizes.map((v) => v.length).filter(Boolean) as number[];
+                      const lenLabel = lengths.length > 1
+                        ? `${Math.min(...lengths)}"–${Math.max(...lengths)}"`
+                        : lengths.length === 1 ? `${lengths[0]}"` : null;
                       return (
-                        <ComponentCard key={v.id} selected={sel}
-                          onClick={() => setState((s) => ({ ...s, vane_id: v.id, vane_color: null }))}
-                          image={imgs[0]?.url}
-                          title={v.model}
-                          specs={[
-                            v.length ? `${v.length}" L` : null,
-                            v.weight_grains ? `${v.weight_grains}gr` : null,
-                            v.profile || null,
-                            v.compatible_micro ? "Micro ✓" : null,
-                          ].filter(Boolean) as string[]}
-                          price={`+${formatMoney(v.price_per_arrow * state.fletch_count)}/arrow`}
-                          badge={`${state.fletch_count}×`}
-                        />
+                        <button key={m.model}
+                          onClick={() => {
+                            setOpenVaneModel(m.model);
+                            setState((s) => ({ ...s, vane_id: m.sizes[0].id, vane_color: null }));
+                          }}
+                          style={modelCardStyle(isModelSel || isModelOpen)}>
+                          <div style={{ fontWeight: 950, fontSize: 13, letterSpacing: -0.2, color: (isModelSel || isModelOpen) ? GOLD : "rgba(255,255,255,.92)" }}>
+                            {m.model}
+                          </div>
+                          <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                            {lenLabel && <SpecChip label="L" value={lenLabel} accent={isModelSel || isModelOpen} />}
+                            {m.sizes[0].weight_grains && <SpecChip label="WT" value={`${m.sizes[0].weight_grains}gr`} accent={isModelSel || isModelOpen} />}
+                          </div>
+                          {m.sizes.length > 1 && (
+                            <div style={{ marginTop: 6, fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "0.3px" }}>
+                              {m.sizes.length} sizes available
+                            </div>
+                          )}
+                        </button>
                       );
                     })}
                   </div>
+
+                  {/* Size picker — only when selected model has multiple sizes */}
+                  {(() => {
+                    const activeSizes = groupedVanes
+                      .find((g) => g.brand === activVaneBrand)?.models
+                      .find((m) => m.model === activeVaneModel)?.sizes ?? [];
+                    if (activeSizes.length <= 1) return null;
+                    return (
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 8 }}>
+                          SELECT SIZE
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {activeSizes.map((v) => {
+                            const active = state.vane_id === v.id;
+                            return (
+                              <button key={v.id}
+                                onClick={() => setState((s) => ({ ...s, vane_id: v.id, vane_color: null }))}
+                                style={spinePillStyle(active)}>
+                                {v.length && <span style={{ fontWeight: 950, fontSize: 14 }}>{v.length}"</span>}
+                                {v.weight_grains && (
+                                  <span style={{ fontFamily: MONO, fontSize: 10, opacity: 0.7, display: "block", marginTop: 1 }}>
+                                    {v.weight_grains}gr
+                                  </span>
+                                )}
+                                <span style={{ fontFamily: MONO, fontSize: 10, color: active ? GOLD : "rgba(255,255,255,.5)", display: "block" }}>
+                                  {formatMoney(v.price_per_arrow * state.fletch_count)}/arrow
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {state.vane_id && (() => {
                     const selVane = compatibleVanes.find((v) => v.id === state.vane_id);
                     const colors = parseColors(selVane?.colors);
