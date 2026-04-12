@@ -245,7 +245,6 @@ export default function ArrowBuilderPage() {
   );
 
   const selectedBrand = selectedShaft?.brand ?? openBrand;
-  const selectedModel = selectedShaft?.model ?? null;
 
 
   const [pricing, setPricing] = useState<{ per_arrow?: number; subtotal?: number }>({});
@@ -2363,14 +2362,6 @@ function ctaBtn(enabled: boolean): React.CSSProperties {
   };
 }
 
-function miniBtn(): React.CSSProperties {
-  return {
-    borderRadius: 8, border: "1px solid rgba(255,255,255,.1)",
-    background: "rgba(0,0,0,.2)", color: "rgba(255,255,255,.8)",
-    width: 28, height: 28, cursor: "pointer", fontSize: 16,
-    display: "grid", placeItems: "center",
-  };
-}
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
