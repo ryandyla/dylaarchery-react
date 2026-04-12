@@ -106,7 +106,7 @@ export const onRequestGet = async ({ env }: any) => {
         id: v.id,
         label: `${v.length}"`,
         sublabel: [v.height ? `H ${v.height}"` : null, v.weight_grains ? `${v.weight_grains} gr` : null].filter(Boolean).join(" · "),
-        pack_price: round2(Number(v.price_per_arrow) * 12),
+        pack_price: round2(Number(v.price_per_arrow) * VANE_PACK),
         unit_price: Number(v.price_per_arrow),
         colors: (() => { try { return JSON.parse(v.colors ?? "[]"); } catch { return []; } })(),
       })),
