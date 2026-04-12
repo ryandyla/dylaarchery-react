@@ -809,7 +809,7 @@ export default function ArrowBuilderPage() {
                     return (
                       <ProductModelCard key={m.model}
                         title={m.model}
-                        image={imagesFor("shaft", dispSpine.id)[0]?.url}
+                        images={imagesFor("shaft", dispSpine.id).map((x) => x.url)}
                         specs={[`OD ${odVal}"`, gpiRange, `Max ${m.spines[0].max_length}"`]}
                         price={formatMoney(dispSpine.price_per_shaft)}
                         isSelected={isModelSel}
@@ -916,7 +916,7 @@ export default function ArrowBuilderPage() {
                     {(groupedNocks.find((g) => g.brand === activNockBrand)?.items ?? compatibleNocks).map((n) => (
                       <ProductModelCard key={n.id}
                         title={n.model}
-                        image={imagesFor("nock", n.id)[0]?.url}
+                        images={imagesFor("nock", n.id).map((x) => x.url)}
                         specs={[n.system, n.style, `${n.weight_grains}gr`].filter(Boolean) as string[]}
                         price={`+${formatMoney(n.price_per_arrow)}/arrow`}
                         isSelected={state.nock_id === n.id}
@@ -946,7 +946,7 @@ export default function ArrowBuilderPage() {
                 {compatibleWraps.map((w) => (
                   <ProductModelCard key={w.id}
                     title={w.name}
-                    image={imagesFor("wrap", w.id)[0]?.url}
+                    images={imagesFor("wrap", w.id).map((x) => x.url)}
                     specs={[`${w.weight_grains}gr`, `${w.min_outer_diameter}"–${w.max_outer_diameter}" OD`]}
                     price={`+${formatMoney(w.price_per_arrow)}/arrow`}
                     isSelected={state.wrap_id === w.id}
@@ -1005,7 +1005,7 @@ export default function ArrowBuilderPage() {
                       return (
                         <ProductModelCard key={m.model}
                           title={m.model}
-                          image={imagesFor("vane", dispSize.id)[0]?.url}
+                          images={imagesFor("vane", dispSize.id).map((x) => x.url)}
                           specs={[
                             m.sizes.length === 1 && dispSize.length ? `${dispSize.length}"` : null,
                             dispSize.weight_grains ? `${dispSize.weight_grains}gr` : null,
@@ -1795,12 +1795,46 @@ function Step(props: {
   );
 }
 
+// ─── ProductImageLightbox ─────────────────────────────────────────────────────
+
+function ProductImageLightbox({ images, startIdx, onClose }: { images: string[]; startIdx: number; onClose: () => void }) {
+  const [idx, setIdx] = useState(startIdx);
+  const clamp = (n: number) => Math.max(0, Math.min(images.length - 1, n));
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") setIdx((i) => clamp(i - 1));
+      if (e.key === "ArrowRight") setIdx((i) => clamp(i + 1));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const navBtn: React.CSSProperties = { position: "absolute", top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,.5)", border: "1px solid rgba(255,255,255,.15)", color: "#fff", borderRadius: 999, width: 40, height: 40, fontSize: 20, cursor: "pointer", display: "grid", placeItems: "center" };
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,.88)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
+      <img src={images[idx]} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "92vw", maxHeight: "88vh", objectFit: "contain", borderRadius: 12, boxShadow: "0 24px 80px rgba(0,0,0,.8)", cursor: "default" }} />
+      <button onClick={onClose} style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,.12)", border: "none", color: "#fff", borderRadius: 999, width: 36, height: 36, fontSize: 18, cursor: "pointer", display: "grid", placeItems: "center" }}>×</button>
+      {images.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx - 1)); }} disabled={idx === 0} style={{ ...navBtn, left: 16, opacity: idx === 0 ? 0.3 : 1 }}>‹</button>
+          <button onClick={(e) => { e.stopPropagation(); setIdx(clamp(idx + 1)); }} disabled={idx === images.length - 1} style={{ ...navBtn, right: 16, opacity: idx === images.length - 1 ? 0.3 : 1 }}>›</button>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+            {images.map((_, i) => (
+              <button key={i} onClick={() => setIdx(i)} style={{ width: 8, height: 8, borderRadius: 999, border: "none", padding: 0, background: i === idx ? "#fff" : "rgba(255,255,255,.3)", cursor: "pointer" }} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── ProductModelCard ─────────────────────────────────────────────────────────
 
 type CardVariant = { id: number; label: string; sublabel?: string; price?: string };
 
-function ProductModelCard({ title, image, specs, price, badge, isSelected, variants = [], variantLabel, selectedVariantId, colors = [], selectedColor, onActivate, onSelectVariant, onSelectColor }: {
-  title: string; image?: string; specs: string[]; price: string; badge?: string;
+function ProductModelCard({ title, images = [], specs, price, badge, isSelected, variants = [], variantLabel, selectedVariantId, colors = [], selectedColor, onActivate, onSelectVariant, onSelectColor }: {
+  title: string; images?: string[]; specs: string[]; price: string; badge?: string;
   isSelected: boolean;
   variants?: CardVariant[]; variantLabel?: string; selectedVariantId?: number | null;
   colors?: string[]; selectedColor?: string | null;
@@ -1810,7 +1844,9 @@ function ProductModelCard({ title, image, specs, price, badge, isSelected, varia
 }) {
   const MF = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
   const [imgFailed, setImgFailed] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
   const hasExpanded = isSelected && (variants.length > 0 || colors.length > 0);
+  const thumb = images[0];
   return (
     <div onClick={!isSelected ? onActivate : undefined} style={{
       borderRadius: 12, overflow: "hidden",
@@ -1820,11 +1856,14 @@ function ProductModelCard({ title, image, specs, price, badge, isSelected, varia
       cursor: !isSelected ? "pointer" : "default",
       transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
     }}>
+      {lightbox && <ProductImageLightbox images={images} startIdx={0} onClose={() => setLightbox(false)} />}
       {/* Header: image + name/specs */}
       <div style={{ display: "flex" }}>
-        <div style={{ width: 72, minHeight: 72, flexShrink: 0, background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {image && !imgFailed
-            ? <img src={image} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <div
+          onClick={thumb && !imgFailed ? (e) => { e.stopPropagation(); setLightbox(true); } : undefined}
+          style={{ width: 72, minHeight: 72, flexShrink: 0, background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: thumb && !imgFailed ? "zoom-in" : "default" }}>
+          {thumb && !imgFailed
+            ? <img src={thumb} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             : <ComponentCardPlaceholder />}
         </div>
         <div style={{ padding: "10px 10px", flex: 1, minWidth: 0 }}>
@@ -1972,7 +2011,7 @@ function PointPicker({ fieldPoints, broadheads, selectedId, imagesFor, onSelect 
           return (
             <ProductModelCard key={p.id}
               title={label}
-              image={imgs[0]?.url}
+              images={imgs.map((x) => x.url)}
               specs={[`${p.weight_grains}gr`, p.thread || "8-32"]}
               price={`+${formatMoney(p.price)}/arrow`}
               isSelected={p.id === selectedId}
