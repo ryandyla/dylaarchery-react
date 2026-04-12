@@ -803,74 +803,36 @@ export default function ArrowBuilderPage() {
 
               {/* Model cards */}
               {grouped.filter((b) => b.brand === (selectedBrand || openBrand)).map((b) => (
-                <div key={b.brand} style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 14 }}>
+                <div key={b.brand} style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                   {b.models.map((m) => {
-                    const isSelected = selectedBrand === m.brand && selectedModel === m.model;
+                    const isModelSel = m.spines.some((s) => s.id === state.shaft_id);
+                    const selSpine = m.spines.find((s) => s.id === state.shaft_id);
+                    const dispSpine = selSpine ?? m.spines[Math.floor(m.spines.length / 2)];
                     const odVal = m.spines[0].outer_diameter;
                     const gpiRange = m.spines.length > 1
-                      ? `${Math.min(...m.spines.map((x) => x.gpi))}–${Math.max(...m.spines.map((x) => x.gpi))}`
-                      : `${m.spines[0].gpi}`;
+                      ? `${Math.min(...m.spines.map((x) => x.gpi))}–${Math.max(...m.spines.map((x) => x.gpi))} GPI`
+                      : `${m.spines[0].gpi} GPI`;
                     return (
-                      <button key={m.model}
-                        onClick={() => {
+                      <ProductModelCard key={m.model}
+                        title={m.model}
+                        image={imagesFor("shaft", dispSpine.id)[0]?.url}
+                        specs={[`OD ${odVal}"`, gpiRange, `Max ${m.spines[0].max_length}"`]}
+                        price={formatMoney(dispSpine.price_per_shaft)}
+                        isSelected={isModelSel}
+                        variants={m.spines.map((s) => ({ id: s.id, label: String(s.spine), sublabel: `${s.gpi} gpi`, price: formatMoney(s.price_per_shaft) }))}
+                        variantLabel="SPINE"
+                        selectedVariantId={state.shaft_id}
+                        onActivate={() => {
                           const mid = m.spines[Math.floor(m.spines.length / 2)];
                           setState((s) => ({ ...DEFAULT_STATE, shaft_id: mid.id, quantity: s.quantity }));
                           setOpenStep(1);
                         }}
-                        style={modelCardStyle(isSelected)}>
-                        <div style={{ fontWeight: 950, fontSize: 13, letterSpacing: -0.2, color: isSelected ? GOLD : "rgba(255,255,255,.92)" }}>
-                          {m.model}
-                        </div>
-                        <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.4)", marginTop: 2, letterSpacing: "0.3px" }}>
-                          {m.brand.toUpperCase()}
-                        </div>
-                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                          <SpecChip label="OD" value={`${odVal}"`} accent={isSelected} />
-                          <SpecChip label="GPI" value={gpiRange} accent={isSelected} />
-                          <SpecChip label="MAX" value={`${m.spines[0].max_length}"`} accent={isSelected} />
-                        </div>
-                        <div style={{ marginTop: 6, fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "0.3px" }}>
-                          {m.spines.length} spine{m.spines.length !== 1 ? "s" : ""} available
-                        </div>
-                      </button>
+                        onSelectVariant={(id) => setState((s) => ({ ...s, shaft_id: id }))}
+                      />
                     );
                   })}
                 </div>
               ))}
-
-              {/* Spine picker */}
-              {selectedModelGroup && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 8 }}>
-                    SELECT SPINE
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {selectedModelGroup.spines.map((s) => {
-                      const active = state.shaft_id === s.id;
-                      return (
-                        <button key={s.id}
-                          onClick={() => setState((st) => ({ ...st, shaft_id: s.id }))}
-                          style={spinePillStyle(active)}>
-                          <span style={{ fontWeight: 950, fontSize: 14 }}>{s.spine}</span>
-                          <span style={{ fontFamily: MONO, fontSize: 10, opacity: 0.7, display: "block", marginTop: 1 }}>
-                            {s.gpi} gpi
-                          </span>
-                          <span style={{ fontFamily: MONO, fontSize: 10, color: active ? GOLD : "rgba(255,255,255,.5)", display: "block" }}>
-                            {formatMoney(s.price_per_shaft)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Shaft image preview */}
-              {state.shaft_id && imagesFor("shaft", state.shaft_id).length > 0 && (
-                <div style={{ marginBottom: 10 }}>
-                  <ImageCarousel images={imagesFor("shaft", state.shaft_id)} height={160} />
-                </div>
-              )}
 
               {fieldError("shaft_id") && <FieldError msg={fieldError("shaft_id")!} />}
               <div style={{ marginTop: 12 }}>
@@ -952,22 +914,25 @@ export default function ArrowBuilderPage() {
                       })}
                     </div>
                   )}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <div style={{ marginBottom: 8 }}>
                     <OptionPill label="Default / None" active={state.nock_id == null}
                       onClick={() => setState((s) => ({ ...s, nock_id: null, nock_color: null }))} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {(groupedNocks.find((g) => g.brand === activNockBrand)?.items ?? compatibleNocks).map((n) => (
-                      <OptionPill key={n.id}
-                        label={n.model}
-                        sub={`${n.weight_grains}gr · +${formatMoney(n.price_per_arrow)}/ea`}
-                        active={state.nock_id === n.id}
-                        onClick={() => setState((s) => ({ ...s, nock_id: n.id, nock_color: null }))} />
+                      <ProductModelCard key={n.id}
+                        title={n.model}
+                        image={imagesFor("nock", n.id)[0]?.url}
+                        specs={[n.system, n.style, `${n.weight_grains}gr`].filter(Boolean) as string[]}
+                        price={`+${formatMoney(n.price_per_arrow)}/arrow`}
+                        isSelected={state.nock_id === n.id}
+                        colors={parseColors(n.colors)}
+                        selectedColor={state.nock_color}
+                        onActivate={() => setState((s) => ({ ...s, nock_id: n.id, nock_color: null }))}
+                        onSelectColor={(c) => setState((s) => ({ ...s, nock_color: c }))}
+                      />
                     ))}
                   </div>
-                  {state.nock_id != null && (() => {
-                    const selNock = compatibleNocks.find((n) => n.id === state.nock_id);
-                    const colors = parseColors(selNock?.colors);
-                    return <ColorSwatches colors={colors} selected={state.nock_color} onSelect={(c) => setState((s) => ({ ...s, nock_color: c }))} />;
-                  })()}
                 </>
               )}
               <div style={{ marginTop: 12 }}>
@@ -979,15 +944,20 @@ export default function ArrowBuilderPage() {
             <Step n={4} title="Wrap" sub="Optional · filtered by shaft OD"
               open={openStep === 4} done={stepDone[4]} disabled={!stepDone[1]}
               onToggle={() => setOpenStep(openStep === 4 ? 0 : 4)}>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <div style={{ marginBottom: 8 }}>
                 <OptionPill label="No wrap" active={state.wrap_id == null}
                   onClick={() => setState((s) => ({ ...s, wrap_id: null }))} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {compatibleWraps.map((w) => (
-                  <OptionPill key={w.id}
-                    label={w.name}
-                    sub={`${w.weight_grains}gr · +${formatMoney(w.price_per_arrow)}/ea`}
-                    active={state.wrap_id === w.id}
-                    onClick={() => setState((s) => ({ ...s, wrap_id: w.id }))} />
+                  <ProductModelCard key={w.id}
+                    title={w.name}
+                    image={imagesFor("wrap", w.id)[0]?.url}
+                    specs={[`${w.weight_grains}gr`, `${w.min_outer_diameter}"–${w.max_outer_diameter}" OD`]}
+                    price={`+${formatMoney(w.price_per_arrow)}/arrow`}
+                    isSelected={state.wrap_id === w.id}
+                    onActivate={() => setState((s) => ({ ...s, wrap_id: w.id }))}
+                  />
                 ))}
               </div>
               <div style={{ marginTop: 12 }}>
@@ -1033,21 +1003,35 @@ export default function ArrowBuilderPage() {
                     </div>
                   )}
 
-                  {/* Vane model cards — image left, inline size pills + live specs right */}
+                  {/* Vane model cards */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.models ?? []).map((m) => (
-                      <VaneModelCard
-                        key={m.model}
-                        model={m.model}
-                        sizes={m.sizes}
-                        selectedVaneId={state.vane_id}
-                        selectedColor={state.vane_color}
-                        fletchCount={state.fletch_count}
-                        image={imagesFor("vane", m.sizes[0].id)[0]?.url}
-                        onSelectSize={(id) => setState((s) => ({ ...s, vane_id: id, vane_color: null }))}
-                        onSelectColor={(c) => setState((s) => ({ ...s, vane_color: c }))}
-                      />
-                    ))}
+                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.models ?? []).map((m) => {
+                      const selSize = m.sizes.find((v) => v.id === state.vane_id) ?? null;
+                      const dispSize = selSize ?? m.sizes[0];
+                      return (
+                        <ProductModelCard key={m.model}
+                          title={m.model}
+                          image={imagesFor("vane", dispSize.id)[0]?.url}
+                          specs={[
+                            m.sizes.length === 1 && dispSize.length ? `${dispSize.length}"` : null,
+                            dispSize.weight_grains ? `${dispSize.weight_grains}gr` : null,
+                            dispSize.profile || null,
+                            dispSize.compatible_micro ? "Micro ✓" : null,
+                          ].filter(Boolean) as string[]}
+                          price={`+${formatMoney(dispSize.price_per_arrow * state.fletch_count)}/arrow`}
+                          badge={`${state.fletch_count}×`}
+                          isSelected={selSize !== null}
+                          variants={m.sizes.length > 1 ? m.sizes.map((v) => ({ id: v.id, label: v.length ? `${v.length}"` : v.model })) : []}
+                          variantLabel="SIZE"
+                          selectedVariantId={state.vane_id}
+                          colors={parseColors(dispSize.colors)}
+                          selectedColor={state.vane_color}
+                          onActivate={() => setState((s) => ({ ...s, vane_id: m.sizes[0].id, vane_color: null }))}
+                          onSelectVariant={(id) => setState((s) => ({ ...s, vane_id: id, vane_color: null }))}
+                          onSelectColor={(c) => setState((s) => ({ ...s, vane_color: c }))}
+                        />
+                      );
+                    })}
                   </div>
                   {state.fletch_count > 0 && !state.vane_id && (
                     <FieldError msg="Select a vane or switch to bare shaft." />
@@ -1109,11 +1093,7 @@ export default function ArrowBuilderPage() {
                 imagesFor={imagesFor}
                 onSelect={(id) => setState((s) => ({ ...s, point_id: id }))}
               />
-              {state.point_id && imagesFor("point", state.point_id).length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <ImageCarousel images={imagesFor("point", state.point_id)} height={200} />
-                </div>
-              )}
+
               <div style={{ marginTop: 12 }}>
                 <button style={primaryBtn(true)} onClick={() => setOpenStep(8)}>Continue →</button>
               </div>
@@ -1821,101 +1801,85 @@ function Step(props: {
   );
 }
 
-// ─── VaneModelCard ────────────────────────────────────────────────────────────
+// ─── ProductModelCard ─────────────────────────────────────────────────────────
 
-function VaneModelCard({ model, sizes, selectedVaneId, selectedColor, fletchCount, image, onSelectSize, onSelectColor }: {
-  model: string;
-  sizes: Vane[];
-  selectedVaneId: number | null;
-  selectedColor: string | null;
-  fletchCount: 0 | 3 | 4;
-  image?: string;
-  onSelectSize: (id: number) => void;
-  onSelectColor: (color: string | null) => void;
+type CardVariant = { id: number; label: string; sublabel?: string; price?: string };
+
+function ProductModelCard({ title, image, specs, price, badge, isSelected, variants = [], variantLabel, selectedVariantId, colors = [], selectedColor, onActivate, onSelectVariant, onSelectColor }: {
+  title: string; image?: string; specs: string[]; price: string; badge?: string;
+  isSelected: boolean;
+  variants?: CardVariant[]; variantLabel?: string; selectedVariantId?: number | null;
+  colors?: string[]; selectedColor?: string | null;
+  onActivate: () => void;
+  onSelectVariant?: (id: number) => void;
+  onSelectColor?: (color: string | null) => void;
 }) {
-  const MONO_FONT = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+  const MF = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
   const [imgFailed, setImgFailed] = useState(false);
-  const selectedSize = sizes.find((v) => v.id === selectedVaneId) ?? null;
-  const isModelSel = selectedSize !== null;
-  const displaySize = selectedSize ?? sizes[0];
-  const colors = parseColors(displaySize.colors);
-
+  const hasExpanded = isSelected && (variants.length > 0 || colors.length > 0);
   return (
-    <div
-      onClick={!isModelSel ? () => onSelectSize(sizes[0].id) : undefined}
-      style={{
-        borderRadius: 12,
-        border: `1px solid ${isModelSel ? "rgba(255,212,0,.45)" : "rgba(255,255,255,.10)"}`,
-        background: isModelSel ? "rgba(255,212,0,.06)" : "rgba(255,255,255,.025)",
-        boxShadow: isModelSel ? "0 0 0 3px rgba(255,212,0,.08)" : "none",
-        overflow: "hidden",
-        cursor: !isModelSel ? "pointer" : "default",
-        transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
-      }}>
-      {/* Image + header row */}
-      <div style={{ display: "flex", flexDirection: "row" }}>
+    <div onClick={!isSelected ? onActivate : undefined} style={{
+      borderRadius: 12, overflow: "hidden",
+      border: `1px solid ${isSelected ? "rgba(255,212,0,.45)" : "rgba(255,255,255,.10)"}`,
+      background: isSelected ? "rgba(255,212,0,.06)" : "rgba(255,255,255,.025)",
+      boxShadow: isSelected ? "0 0 0 3px rgba(255,212,0,.08)" : "none",
+      cursor: !isSelected ? "pointer" : "default",
+      transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
+    }}>
+      {/* Header: image + name/specs */}
+      <div style={{ display: "flex" }}>
         <div style={{ width: 72, minHeight: 72, flexShrink: 0, background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {image && !imgFailed
             ? <img src={image} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             : <ComponentCardPlaceholder />}
         </div>
-        {/* Name + specs */}
         <div style={{ padding: "10px 10px", flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4, marginBottom: 6 }}>
-            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: -0.1, color: isModelSel ? GOLD : "rgba(255,255,255,.92)", lineHeight: 1.2 }}>
-              {model}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4, marginBottom: 5 }}>
+            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: -0.1, color: isSelected ? GOLD : "rgba(255,255,255,.92)", lineHeight: 1.2 }}>
+              {title}
             </div>
-            <span style={{ fontFamily: MONO_FONT, fontSize: 10, color: GOLD, background: "rgba(255,212,0,.1)", border: "1px solid rgba(255,212,0,.2)", borderRadius: 999, padding: "1px 5px", flexShrink: 0 }}>
-              {fletchCount}×
-            </span>
+            {badge && (
+              <span style={{ fontFamily: MF, fontSize: 10, color: GOLD, background: "rgba(255,212,0,.1)", border: "1px solid rgba(255,212,0,.2)", borderRadius: 999, padding: "1px 5px", flexShrink: 0 }}>
+                {badge}
+              </span>
+            )}
           </div>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-            {[
-              sizes.length === 1 && displaySize.length ? `${displaySize.length}"` : null,
-              displaySize.weight_grains ? `${displaySize.weight_grains}gr` : null,
-              displaySize.profile || null,
-              displaySize.compatible_micro ? "Micro ✓" : null,
-            ].filter(Boolean).map((s, i) => (
-              <span key={i} style={{ fontFamily: MONO_FONT, fontSize: 9.5, color: "rgba(255,255,255,.45)", background: "rgba(255,255,255,.05)", padding: "2px 5px", borderRadius: 4 }}>
-                {s}
-              </span>
+            {specs.map((s, i) => (
+              <span key={i} style={{ fontFamily: MF, fontSize: 9.5, color: "rgba(255,255,255,.45)", background: "rgba(255,255,255,.05)", padding: "2px 5px", borderRadius: 4 }}>{s}</span>
             ))}
           </div>
-          <div style={{ fontFamily: MONO_FONT, fontSize: 10, color: isModelSel ? GOLD : "rgba(255,212,0,.6)" }}>
-            +{formatMoney(displaySize.price_per_arrow * fletchCount)}/arrow
-          </div>
+          <div style={{ fontFamily: MF, fontSize: 10, color: isSelected ? GOLD : "rgba(255,212,0,.6)" }}>{price}</div>
         </div>
       </div>
-
-      {/* Size + color options — revealed when card is active */}
-      {isModelSel && (sizes.length > 1 || colors.length > 0) && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,.07)", padding: "10px 10px 12px" }}
-          onClick={(e) => e.stopPropagation()}>
-          {sizes.length > 1 && (
+      {/* Expanded: variant pills + color swatches */}
+      {hasExpanded && (
+        <div onClick={(e) => e.stopPropagation()} style={{ borderTop: "1px solid rgba(255,255,255,.07)", padding: "10px 10px 12px" }}>
+          {variants.length > 0 && (
             <div style={{ marginBottom: colors.length > 0 ? 10 : 0 }}>
-              <div style={{ fontFamily: MONO_FONT, fontSize: 9, color: "rgba(255,255,255,.3)", letterSpacing: "1.2px", marginBottom: 6 }}>SIZE</div>
+              {variantLabel && <div style={{ fontFamily: MF, fontSize: 9, color: "rgba(255,255,255,.3)", letterSpacing: "1.2px", marginBottom: 6 }}>{variantLabel}</div>}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {sizes.map((v) => {
-                  const active = v.id === selectedVaneId;
+                {variants.map((v) => {
+                  const active = v.id === selectedVariantId;
                   return (
-                    <button key={v.id} onClick={() => onSelectSize(v.id)} style={{
-                      fontFamily: MONO_FONT, fontSize: 11, fontWeight: active ? 900 : 600,
-                      padding: "5px 12px", borderRadius: 8, cursor: "pointer",
+                    <button key={v.id} onClick={() => onSelectVariant?.(v.id)} style={{
+                      fontFamily: MF, cursor: "pointer", textAlign: "center",
+                      padding: "5px 12px", borderRadius: 8,
                       border: `1px solid ${active ? "rgba(255,212,0,.55)" : "rgba(255,255,255,.22)"}`,
                       background: active ? "rgba(255,212,0,.13)" : "rgba(255,255,255,.06)",
                       color: active ? GOLD : "rgba(255,255,255,.75)",
                       transition: "border-color 0.15s, background 0.15s, color 0.15s",
                     }}>
-                      {v.length ? `${v.length}"` : v.model}
+                      <div style={{ fontSize: 13, fontWeight: active ? 900 : 700, lineHeight: 1 }}>{v.label}</div>
+                      {v.sublabel && <div style={{ fontSize: 9.5, opacity: 0.65, marginTop: 2 }}>{v.sublabel}</div>}
+                      {v.price && <div style={{ fontSize: 9.5, color: active ? GOLD : "rgba(255,255,255,.45)", marginTop: 2 }}>{v.price}</div>}
                     </button>
                   );
                 })}
               </div>
             </div>
           )}
-          {colors.length > 0 && (
-            <ColorSwatches colors={colors} selected={selectedColor} onSelect={onSelectColor} />
-          )}
+          {colors.length > 0 && <ColorSwatches colors={colors} selected={selectedColor ?? null} onSelect={(c) => onSelectColor?.(c)} />}
         </div>
       )}
     </div>
@@ -2007,18 +1971,18 @@ function PointPicker({ fieldPoints, broadheads, selectedId, imagesFor, onSelect 
           </button>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {items.map((p) => {
           const label = `${p.brand || ""} ${p.model || ""}`.trim() || (p.type === "field" ? "Field Point" : "Broadhead");
-          const imgs = imagesFor(p.type === "field" ? "point" : "point", p.id);
+          const imgs = imagesFor("point", p.id);
           return (
-            <ComponentCard key={p.id}
-              selected={p.id === selectedId}
-              onClick={() => onSelect(p.id)}
-              image={imgs[0]?.url}
+            <ProductModelCard key={p.id}
               title={label}
-              specs={[`${p.weight_grains}gr`, p.thread || "8-32", p.type === "broadhead" ? "Broadhead" : "Field"]}
+              image={imgs[0]?.url}
+              specs={[`${p.weight_grains}gr`, p.thread || "8-32"]}
               price={`+${formatMoney(p.price)}/arrow`}
+              isSelected={p.id === selectedId}
+              onActivate={() => onSelect(p.id)}
             />
           );
         })}
