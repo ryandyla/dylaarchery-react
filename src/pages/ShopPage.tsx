@@ -92,51 +92,6 @@ const LIGHT_COLORS = new Set([
   "flo yellow","flo green","flo chartreuse",
 ]);
 
-// CSS filter strings to tint an orange-base product image to the target color.
-// Orange hue ≈ 25°. hue-rotate(X) shifts the vane; white bg is achromatic so unaffected.
-// Colors with no entry show the unmodified orange image.
-const COLOR_IMAGE_FILTER: Record<string, string> = {
-  // Neutrals — grayscale(1) + high contrast keeps white bg white while pushing
-  // the orange vane (luminance ~0.3) toward black. Low brightness darkens the bg.
-  black:           "grayscale(1) contrast(20)",
-  blackout:        "grayscale(1) contrast(50)",
-  gray:            "grayscale(1) contrast(3) brightness(0.85)",
-  silver:          "grayscale(1) brightness(0.95)",
-  // Warm
-  red:             "hue-rotate(-25deg) saturate(1.3)",
-  "neon red":      "hue-rotate(-25deg) saturate(2) brightness(1.1)",
-  "flo red":       "hue-rotate(-25deg) saturate(2) brightness(1.1)",
-  orange:          "",
-  "neon orange":   "saturate(2) brightness(1.05)",
-  "flo orange":    "saturate(2) brightness(1.05)",
-  yellow:          "hue-rotate(30deg) saturate(3) brightness(1.3)",
-  "neon yellow":   "hue-rotate(30deg) saturate(4) brightness(1.4)",
-  "flo yellow":    "hue-rotate(30deg) saturate(4) brightness(1.4)",
-  chartreuse:      "hue-rotate(60deg) saturate(2) brightness(1.15)",
-  "flo chartreuse":"hue-rotate(60deg) saturate(3) brightness(1.2)",
-  kiwi:            "hue-rotate(75deg) saturate(1.2) brightness(1.0)",
-  // Greens
-  green:           "hue-rotate(95deg) saturate(1.2)",
-  "neon green":    "hue-rotate(95deg) saturate(2) brightness(1.1)",
-  "flo green":     "hue-rotate(95deg) saturate(2) brightness(1.1)",
-  olive:           "hue-rotate(70deg) saturate(0.4) brightness(0.88)",
-  "od green":      "hue-rotate(78deg) saturate(0.35) brightness(0.82)",
-  // Cool
-  teal:            "hue-rotate(155deg) saturate(1.1)",
-  turquoise:       "hue-rotate(163deg) saturate(1.15) brightness(1.05)",
-  "satin blue":    "hue-rotate(208deg) saturate(0.9) brightness(0.88)",
-  blue:            "hue-rotate(215deg) saturate(1.3)",
-  navy:            "hue-rotate(215deg) saturate(1.2) brightness(0.7) contrast(1.5)",
-  purple:          "hue-rotate(255deg) saturate(1.3)",
-  pink:            "hue-rotate(328deg) saturate(0.85)",
-  "hot pink":      "hue-rotate(330deg) saturate(1.6)",
-  "flo pink":      "hue-rotate(330deg) saturate(2) brightness(1.05)",
-  // Earth — avoid brightness < 0.85 or white bg goes visibly gray
-  brown:           "hue-rotate(-8deg) saturate(0.3)",
-  tan:             "hue-rotate(-5deg) saturate(0.4) brightness(1.05)",
-  // Clear — show faint outline
-  clear:           "saturate(0.1) brightness(1.3) opacity(0.5)",
-};
 
 function ColorSwatchPicker({ colors, selected, onSelect }: {
   colors: string[];
@@ -243,8 +198,8 @@ function toItems(raw: any[], type: CartItemType): ShopItem[] {
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 
-function Lightbox({ urls, alt, startIdx, colorFilter, onClose }: {
-  urls: string[]; alt: string; startIdx: number; colorFilter?: string; onClose: () => void;
+function Lightbox({ urls, alt, startIdx, onClose }: {
+  urls: string[]; alt: string; startIdx: number; onClose: () => void;
 }) {
   const [idx, setIdx] = useState(startIdx);
   const clamp = (n: number) => Math.max(0, Math.min(urls.length - 1, n));
@@ -265,7 +220,7 @@ function Lightbox({ urls, alt, startIdx, colorFilter, onClose }: {
       <div className="relative z-10 flex flex-col items-center max-w-3xl w-full px-4" onClick={(e) => e.stopPropagation()}>
         {/* Image */}
         <div className="relative w-full">
-          <img src={urls[idx]} alt={alt} className="w-full max-h-[75vh] object-contain rounded-2xl" style={colorFilter ? { filter: colorFilter } : undefined} />
+          <img src={urls[idx]} alt={alt} className="w-full max-h-[75vh] object-contain rounded-2xl" />
           {urls.length > 1 && (
             <>
               <button
@@ -304,7 +259,7 @@ function Lightbox({ urls, alt, startIdx, colorFilter, onClose }: {
 
 // ── Image Gallery ─────────────────────────────────────────────────────────────
 
-function ImageGallery({ urls, alt, colorFilter }: { urls: string[]; alt: string; colorFilter?: string }) {
+function ImageGallery({ urls, alt }: { urls: string[]; alt: string }) {
   const [idx, setIdx] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
@@ -319,7 +274,7 @@ function ImageGallery({ urls, alt, colorFilter }: { urls: string[]; alt: string;
   return (
     <>
       <div className="aspect-square bg-white/5 relative group overflow-hidden cursor-zoom-in" onClick={() => setLightbox(true)}>
-        <img src={urls[idx]} alt={alt} className="w-full h-full object-contain p-3" style={colorFilter ? { filter: colorFilter } : undefined} />
+        <img src={urls[idx]} alt={alt} className="w-full h-full object-contain p-3" />
         {urls.length > 1 && (
           <>
             <button
@@ -347,7 +302,7 @@ function ImageGallery({ urls, alt, colorFilter }: { urls: string[]; alt: string;
           <div className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] text-white/60">zoom</div>
         </div>
       </div>
-      {lightbox && <Lightbox urls={urls} alt={alt} startIdx={idx} colorFilter={colorFilter} onClose={() => setLightbox(false)} />}
+      {lightbox && <Lightbox urls={urls} alt={alt} startIdx={idx} onClose={() => setLightbox(false)} />}
     </>
   );
 }
@@ -396,7 +351,7 @@ function VariantGroupCard({ group, cart, onAdd }: {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.025] flex flex-col overflow-hidden hover:border-white/15 transition-colors">
       {/* Image */}
-      <ImageGallery urls={group.image_urls} alt={group.name} colorFilter={selectedColor ? (COLOR_IMAGE_FILTER[selectedColor.toLowerCase()] ?? undefined) : undefined} />
+      <ImageGallery urls={group.image_urls} alt={group.name} />
 
       <div className="p-4 flex flex-col flex-1">
         <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">
@@ -471,7 +426,7 @@ function ProductCard({ item, onAdd }: { item: ShopItem; inCart: boolean; onAdd: 
   const colors = item.colors ?? [];
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.025] flex flex-col overflow-hidden hover:border-white/15 transition-colors">
-      <ImageGallery urls={item.image_urls} alt={item.name} colorFilter={selectedColor ? (COLOR_IMAGE_FILTER[selectedColor.toLowerCase()] ?? undefined) : undefined} />
+      <ImageGallery urls={item.image_urls} alt={item.name} />
       <div className="p-4 flex flex-col flex-1">
         <div className="text-[10px] font-bold tracking-[2px] text-white/30 mb-1">
           {packLabel(item.type, item.pack_qty, item.lighted).toUpperCase()}
