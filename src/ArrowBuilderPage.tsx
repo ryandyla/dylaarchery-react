@@ -326,7 +326,7 @@ export default function ArrowBuilderPage() {
       m.get(key)!.push(img);
     }
     for (const [k, arr] of m.entries()) {
-      arr.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.id - b.id);
+      arr.sort((a, b) => (b.is_primary ?? 0) - (a.is_primary ?? 0) || (a.sort ?? 0) - (b.sort ?? 0) || a.id - b.id);
       m.set(k, arr);
     }
     return m;
