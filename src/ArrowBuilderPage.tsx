@@ -1041,18 +1041,14 @@ export default function ArrowBuilderPage() {
                         model={m.model}
                         sizes={m.sizes}
                         selectedVaneId={state.vane_id}
+                        selectedColor={state.vane_color}
                         fletchCount={state.fletch_count}
                         image={imagesFor("vane", m.sizes[0].id)[0]?.url}
                         onSelectSize={(id) => setState((s) => ({ ...s, vane_id: id, vane_color: null }))}
+                        onSelectColor={(c) => setState((s) => ({ ...s, vane_color: c }))}
                       />
                     ))}
                   </div>
-
-                  {state.vane_id && (() => {
-                    const selVane = compatibleVanes.find((v) => v.id === state.vane_id);
-                    const colors = parseColors(selVane?.colors);
-                    return <ColorSwatches colors={colors} selected={state.vane_color} onSelect={(c) => setState((s) => ({ ...s, vane_color: c }))} />;
-                  })()}
                   {state.fletch_count > 0 && !state.vane_id && (
                     <FieldError msg="Select a vane or switch to bare shaft." />
                   )}
@@ -1827,89 +1823,101 @@ function Step(props: {
 
 // ─── VaneModelCard ────────────────────────────────────────────────────────────
 
-function VaneModelCard({ model, sizes, selectedVaneId, fletchCount, image, onSelectSize }: {
+function VaneModelCard({ model, sizes, selectedVaneId, selectedColor, fletchCount, image, onSelectSize, onSelectColor }: {
   model: string;
   sizes: Vane[];
   selectedVaneId: number | null;
+  selectedColor: string | null;
   fletchCount: 0 | 3 | 4;
   image?: string;
   onSelectSize: (id: number) => void;
+  onSelectColor: (color: string | null) => void;
 }) {
   const MONO_FONT = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
   const [imgFailed, setImgFailed] = useState(false);
   const selectedSize = sizes.find((v) => v.id === selectedVaneId) ?? null;
   const isModelSel = selectedSize !== null;
   const displaySize = selectedSize ?? sizes[0];
+  const colors = parseColors(displaySize.colors);
 
   return (
-    <div style={{
-      borderRadius: 12,
-      border: `1px solid ${isModelSel ? "rgba(255,212,0,.45)" : "rgba(255,255,255,.10)"}`,
-      background: isModelSel ? "rgba(255,212,0,.06)" : "rgba(255,255,255,.025)",
-      boxShadow: isModelSel ? "0 0 0 3px rgba(255,212,0,.08)" : "none",
-      overflow: "hidden",
-      display: "flex", flexDirection: "row",
-      transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
-    }}>
-      {/* Image */}
-      <div style={{ width: 72, flexShrink: 0, background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {image && !imgFailed
-          ? <img src={image} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          : <ComponentCardPlaceholder />}
-      </div>
-      {/* Content */}
-      <div style={{ padding: "10px 10px", flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4, marginBottom: 6 }}>
-          <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: -0.1, color: isModelSel ? GOLD : "rgba(255,255,255,.92)", lineHeight: 1.2 }}>
-            {model}
-          </div>
-          <span style={{ fontFamily: MONO_FONT, fontSize: 10, color: GOLD, background: "rgba(255,212,0,.1)", border: "1px solid rgba(255,212,0,.2)", borderRadius: 999, padding: "1px 5px", flexShrink: 0 }}>
-            {fletchCount}×
-          </span>
+    <div
+      onClick={!isModelSel ? () => onSelectSize(sizes[0].id) : undefined}
+      style={{
+        borderRadius: 12,
+        border: `1px solid ${isModelSel ? "rgba(255,212,0,.45)" : "rgba(255,255,255,.10)"}`,
+        background: isModelSel ? "rgba(255,212,0,.06)" : "rgba(255,255,255,.025)",
+        boxShadow: isModelSel ? "0 0 0 3px rgba(255,212,0,.08)" : "none",
+        overflow: "hidden",
+        cursor: !isModelSel ? "pointer" : "default",
+        transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
+      }}>
+      {/* Image + header row */}
+      <div style={{ display: "flex", flexDirection: "row" }}>
+        <div style={{ width: 72, minHeight: 72, flexShrink: 0, background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {image && !imgFailed
+            ? <img src={image} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            : <ComponentCardPlaceholder />}
         </div>
-        {/* Size pills — only when there are multiple sizes */}
-        {sizes.length > 1 && (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-            {sizes.map((v) => {
-              const active = v.id === selectedVaneId;
-              return (
-                <button key={v.id} onClick={() => onSelectSize(v.id)} style={{
-                  fontFamily: MONO_FONT, fontSize: 10, fontWeight: active ? 900 : 600,
-                  padding: "2px 7px", borderRadius: 999, cursor: "pointer",
-                  border: `1px solid ${active ? "rgba(255,212,0,.5)" : "rgba(255,255,255,.15)"}`,
-                  background: active ? "rgba(255,212,0,.12)" : "rgba(255,255,255,.04)",
-                  color: active ? GOLD : "rgba(255,255,255,.6)",
-                  transition: "border-color 0.15s, background 0.15s, color 0.15s",
-                }}>
-                  {v.length ? `${v.length}"` : v.model}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {/* Specs from selected/default size */}
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-          {[
-            sizes.length === 1 && displaySize.length ? `${displaySize.length}"` : null,
-            displaySize.weight_grains ? `${displaySize.weight_grains}gr` : null,
-            displaySize.profile || null,
-            displaySize.compatible_micro ? "Micro ✓" : null,
-          ].filter(Boolean).map((s, i) => (
-            <span key={i} style={{ fontFamily: MONO_FONT, fontSize: 9.5, color: "rgba(255,255,255,.45)", background: "rgba(255,255,255,.05)", padding: "2px 5px", borderRadius: 4 }}>
-              {s}
-            </span>
-          ))}
-        </div>
-        {/* Price / tap-to-select for single-size models */}
-        {sizes.length === 1
-          ? <button onClick={() => onSelectSize(sizes[0].id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO_FONT, fontSize: 10, color: isModelSel ? GOLD : "rgba(255,212,0,.6)" }}>
-              +{formatMoney(displaySize.price_per_arrow * fletchCount)}/arrow
-            </button>
-          : <div style={{ fontFamily: MONO_FONT, fontSize: 10, color: isModelSel ? GOLD : "rgba(255,212,0,.6)" }}>
-              +{formatMoney(displaySize.price_per_arrow * fletchCount)}/arrow
+        {/* Name + specs */}
+        <div style={{ padding: "10px 10px", flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4, marginBottom: 6 }}>
+            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: -0.1, color: isModelSel ? GOLD : "rgba(255,255,255,.92)", lineHeight: 1.2 }}>
+              {model}
             </div>
-        }
+            <span style={{ fontFamily: MONO_FONT, fontSize: 10, color: GOLD, background: "rgba(255,212,0,.1)", border: "1px solid rgba(255,212,0,.2)", borderRadius: 999, padding: "1px 5px", flexShrink: 0 }}>
+              {fletchCount}×
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
+            {[
+              sizes.length === 1 && displaySize.length ? `${displaySize.length}"` : null,
+              displaySize.weight_grains ? `${displaySize.weight_grains}gr` : null,
+              displaySize.profile || null,
+              displaySize.compatible_micro ? "Micro ✓" : null,
+            ].filter(Boolean).map((s, i) => (
+              <span key={i} style={{ fontFamily: MONO_FONT, fontSize: 9.5, color: "rgba(255,255,255,.45)", background: "rgba(255,255,255,.05)", padding: "2px 5px", borderRadius: 4 }}>
+                {s}
+              </span>
+            ))}
+          </div>
+          <div style={{ fontFamily: MONO_FONT, fontSize: 10, color: isModelSel ? GOLD : "rgba(255,212,0,.6)" }}>
+            +{formatMoney(displaySize.price_per_arrow * fletchCount)}/arrow
+          </div>
+        </div>
       </div>
+
+      {/* Size + color options — revealed when card is active */}
+      {isModelSel && (sizes.length > 1 || colors.length > 0) && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,.07)", padding: "10px 10px 12px" }}
+          onClick={(e) => e.stopPropagation()}>
+          {sizes.length > 1 && (
+            <div style={{ marginBottom: colors.length > 0 ? 10 : 0 }}>
+              <div style={{ fontFamily: MONO_FONT, fontSize: 9, color: "rgba(255,255,255,.3)", letterSpacing: "1.2px", marginBottom: 6 }}>SIZE</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {sizes.map((v) => {
+                  const active = v.id === selectedVaneId;
+                  return (
+                    <button key={v.id} onClick={() => onSelectSize(v.id)} style={{
+                      fontFamily: MONO_FONT, fontSize: 11, fontWeight: active ? 900 : 600,
+                      padding: "5px 12px", borderRadius: 8, cursor: "pointer",
+                      border: `1px solid ${active ? "rgba(255,212,0,.55)" : "rgba(255,255,255,.22)"}`,
+                      background: active ? "rgba(255,212,0,.13)" : "rgba(255,255,255,.06)",
+                      color: active ? GOLD : "rgba(255,255,255,.75)",
+                      transition: "border-color 0.15s, background 0.15s, color 0.15s",
+                    }}>
+                      {v.length ? `${v.length}"` : v.model}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {colors.length > 0 && (
+            <ColorSwatches colors={colors} selected={selectedColor} onSelect={onSelectColor} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
