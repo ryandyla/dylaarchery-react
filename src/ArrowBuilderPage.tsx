@@ -236,7 +236,6 @@ export default function ArrowBuilderPage() {
   const grouped = useMemo(() => groupShaftsByBrandModel(shafts), [shafts]);
   const [openBrand, setOpenBrand] = useState<string>("Easton");
   const [openVaneBrand, setOpenVaneBrand] = useState<string | null>(null);
-  const [openVaneModel, setOpenVaneModel] = useState<string | null>(null);
   const [openNockBrand, setOpenNockBrand] = useState<string | null>(null);
   const pendingRestore = useRef<BuilderState | null>(null);
 
@@ -394,7 +393,6 @@ export default function ArrowBuilderPage() {
   }, [compatibleVanes]);
 
   const activVaneBrand = openVaneBrand ?? groupedVanes[0]?.brand ?? null;
-  const activeVaneModel = openVaneModel ?? selectedVane?.model ?? null;
 
   const compatibleNocks = useMemo(() => {
     if (!selectedShaft?.inner_diameter) return nocks;
@@ -1026,7 +1024,7 @@ export default function ArrowBuilderPage() {
                         const hasSel = g.models.some((m) => m.sizes.some((v) => v.id === state.vane_id));
                         return (
                           <button key={g.brand}
-                            onClick={() => { setOpenVaneBrand(g.brand); setOpenVaneModel(null); }}
+                            onClick={() => setOpenVaneBrand(g.brand)}
                             style={brandBtnStyle(isActive || hasSel)}>
                             <BrandLogo brand={g.brand} active={isActive || hasSel} />
                           </button>
@@ -1045,7 +1043,7 @@ export default function ArrowBuilderPage() {
                         selectedVaneId={state.vane_id}
                         fletchCount={state.fletch_count}
                         image={imagesFor("vane", m.sizes[0].id)[0]?.url}
-                        onSelectSize={(id) => { setOpenVaneModel(m.model); setState((s) => ({ ...s, vane_id: id, vane_color: null })); }}
+                        onSelectSize={(id) => setState((s) => ({ ...s, vane_id: id, vane_color: null }))}
                       />
                     ))}
                   </div>
