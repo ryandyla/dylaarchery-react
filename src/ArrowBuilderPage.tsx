@@ -1035,73 +1035,20 @@ export default function ArrowBuilderPage() {
                     </div>
                   )}
 
-                  {/* Vane model cards */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 14 }}>
-                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.models ?? []).map((m) => {
-                      const isModelSel = activeVaneModel === m.model && m.sizes.some((v) => v.id === state.vane_id);
-                      const isModelOpen = activeVaneModel === m.model;
-                      const lengths = m.sizes.map((v) => v.length).filter(Boolean) as number[];
-                      const lenLabel = lengths.length > 1
-                        ? `${Math.min(...lengths)}"–${Math.max(...lengths)}"`
-                        : lengths.length === 1 ? `${lengths[0]}"` : null;
-                      return (
-                        <button key={m.model}
-                          onClick={() => {
-                            setOpenVaneModel(m.model);
-                            setState((s) => ({ ...s, vane_id: m.sizes[0].id, vane_color: null }));
-                          }}
-                          style={modelCardStyle(isModelSel || isModelOpen)}>
-                          <div style={{ fontWeight: 950, fontSize: 13, letterSpacing: -0.2, color: (isModelSel || isModelOpen) ? GOLD : "rgba(255,255,255,.92)" }}>
-                            {m.model}
-                          </div>
-                          <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                            {lenLabel && <SpecChip label="L" value={lenLabel} accent={isModelSel || isModelOpen} />}
-                            {m.sizes[0].weight_grains && <SpecChip label="WT" value={`${m.sizes[0].weight_grains}gr`} accent={isModelSel || isModelOpen} />}
-                          </div>
-                          {m.sizes.length > 1 && (
-                            <div style={{ marginTop: 6, fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "0.3px" }}>
-                              {m.sizes.length} sizes available
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                  {/* Vane model cards — image left, inline size pills + live specs right */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+                    {(groupedVanes.find((g) => g.brand === activVaneBrand)?.models ?? []).map((m) => (
+                      <VaneModelCard
+                        key={m.model}
+                        model={m.model}
+                        sizes={m.sizes}
+                        selectedVaneId={state.vane_id}
+                        fletchCount={state.fletch_count}
+                        image={imagesFor("vane", m.sizes[0].id)[0]?.url}
+                        onSelectSize={(id) => { setOpenVaneModel(m.model); setState((s) => ({ ...s, vane_id: id, vane_color: null })); }}
+                      />
+                    ))}
                   </div>
-
-                  {/* Size picker — only when selected model has multiple sizes */}
-                  {(() => {
-                    const activeSizes = groupedVanes
-                      .find((g) => g.brand === activVaneBrand)?.models
-                      .find((m) => m.model === activeVaneModel)?.sizes ?? [];
-                    if (activeSizes.length <= 1) return null;
-                    return (
-                      <div style={{ marginBottom: 14 }}>
-                        <div style={{ fontFamily: MONO, fontSize: 10, color: "rgba(255,255,255,.35)", letterSpacing: "1px", marginBottom: 8 }}>
-                          SELECT SIZE
-                        </div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {activeSizes.map((v) => {
-                            const active = state.vane_id === v.id;
-                            return (
-                              <button key={v.id}
-                                onClick={() => setState((s) => ({ ...s, vane_id: v.id, vane_color: null }))}
-                                style={spinePillStyle(active)}>
-                                {v.length && <span style={{ fontWeight: 950, fontSize: 14 }}>{v.length}"</span>}
-                                {v.weight_grains && (
-                                  <span style={{ fontFamily: MONO, fontSize: 10, opacity: 0.7, display: "block", marginTop: 1 }}>
-                                    {v.weight_grains}gr
-                                  </span>
-                                )}
-                                <span style={{ fontFamily: MONO, fontSize: 10, color: active ? GOLD : "rgba(255,255,255,.5)", display: "block" }}>
-                                  {formatMoney(v.price_per_arrow * state.fletch_count)}/arrow
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
 
                   {state.vane_id && (() => {
                     const selVane = compatibleVanes.find((v) => v.id === state.vane_id);
@@ -1876,6 +1823,95 @@ function Step(props: {
           Complete step {props.n - 1} first.
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── VaneModelCard ────────────────────────────────────────────────────────────
+
+function VaneModelCard({ model, sizes, selectedVaneId, fletchCount, image, onSelectSize }: {
+  model: string;
+  sizes: Vane[];
+  selectedVaneId: number | null;
+  fletchCount: 0 | 3 | 4;
+  image?: string;
+  onSelectSize: (id: number) => void;
+}) {
+  const MONO_FONT = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+  const [imgFailed, setImgFailed] = useState(false);
+  const selectedSize = sizes.find((v) => v.id === selectedVaneId) ?? null;
+  const isModelSel = selectedSize !== null;
+  const displaySize = selectedSize ?? sizes[0];
+
+  return (
+    <div style={{
+      borderRadius: 12,
+      border: `1px solid ${isModelSel ? "rgba(255,212,0,.45)" : "rgba(255,255,255,.10)"}`,
+      background: isModelSel ? "rgba(255,212,0,.06)" : "rgba(255,255,255,.025)",
+      boxShadow: isModelSel ? "0 0 0 3px rgba(255,212,0,.08)" : "none",
+      overflow: "hidden",
+      display: "flex", flexDirection: "row",
+      transition: "border-color 0.2s, background 0.2s, box-shadow 0.2s",
+    }}>
+      {/* Image */}
+      <div style={{ width: 72, flexShrink: 0, background: "rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {image && !imgFailed
+          ? <img src={image} alt="" onError={() => setImgFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          : <ComponentCardPlaceholder />}
+      </div>
+      {/* Content */}
+      <div style={{ padding: "10px 10px", flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4, marginBottom: 6 }}>
+          <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: -0.1, color: isModelSel ? GOLD : "rgba(255,255,255,.92)", lineHeight: 1.2 }}>
+            {model}
+          </div>
+          <span style={{ fontFamily: MONO_FONT, fontSize: 10, color: GOLD, background: "rgba(255,212,0,.1)", border: "1px solid rgba(255,212,0,.2)", borderRadius: 999, padding: "1px 5px", flexShrink: 0 }}>
+            {fletchCount}×
+          </span>
+        </div>
+        {/* Size pills — only when there are multiple sizes */}
+        {sizes.length > 1 && (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+            {sizes.map((v) => {
+              const active = v.id === selectedVaneId;
+              return (
+                <button key={v.id} onClick={() => onSelectSize(v.id)} style={{
+                  fontFamily: MONO_FONT, fontSize: 10, fontWeight: active ? 900 : 600,
+                  padding: "2px 7px", borderRadius: 999, cursor: "pointer",
+                  border: `1px solid ${active ? "rgba(255,212,0,.5)" : "rgba(255,255,255,.15)"}`,
+                  background: active ? "rgba(255,212,0,.12)" : "rgba(255,255,255,.04)",
+                  color: active ? GOLD : "rgba(255,255,255,.6)",
+                  transition: "border-color 0.15s, background 0.15s, color 0.15s",
+                }}>
+                  {v.length ? `${v.length}"` : v.model}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {/* Specs from selected/default size */}
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
+          {[
+            sizes.length === 1 && displaySize.length ? `${displaySize.length}"` : null,
+            displaySize.weight_grains ? `${displaySize.weight_grains}gr` : null,
+            displaySize.profile || null,
+            displaySize.compatible_micro ? "Micro ✓" : null,
+          ].filter(Boolean).map((s, i) => (
+            <span key={i} style={{ fontFamily: MONO_FONT, fontSize: 9.5, color: "rgba(255,255,255,.45)", background: "rgba(255,255,255,.05)", padding: "2px 5px", borderRadius: 4 }}>
+              {s}
+            </span>
+          ))}
+        </div>
+        {/* Price / tap-to-select for single-size models */}
+        {sizes.length === 1
+          ? <button onClick={() => onSelectSize(sizes[0].id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO_FONT, fontSize: 10, color: isModelSel ? GOLD : "rgba(255,212,0,.6)" }}>
+              +{formatMoney(displaySize.price_per_arrow * fletchCount)}/arrow
+            </button>
+          : <div style={{ fontFamily: MONO_FONT, fontSize: 10, color: isModelSel ? GOLD : "rgba(255,212,0,.6)" }}>
+              +{formatMoney(displaySize.price_per_arrow * fletchCount)}/arrow
+            </div>
+        }
+      </div>
     </div>
   );
 }
