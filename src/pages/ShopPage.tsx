@@ -138,8 +138,7 @@ const PACK_LABELS: Partial<Record<CartItemType, string>> = {
   broadhead: "3-pack",
 };
 
-function packLabel(type: CartItemType, pack_qty: number, lighted?: boolean): string {
-  if (type === "nock") return lighted ? "3-pack" : "12-pack";
+function packLabel(type: CartItemType, pack_qty: number, _lighted?: boolean): string {
   return PACK_LABELS[type] ?? `${pack_qty}-pack`;
 }
 
@@ -170,7 +169,7 @@ type RawCatalog = {
   vane_groups: any[];
   field_point_groups: any[];
   broadhead_groups: any[];
-  nocks: any[];
+  nock_groups: any[];
   wraps: any[];
 };
 
@@ -329,6 +328,7 @@ function VariantGroupCard({ group, cart, onAdd }: {
   const variantAttr =
     group.type === "shaft" ? "Spine" :
     group.type === "vane" ? "Length" :
+    group.type === "nock" ? "Size" :
     (group.type === "field_point" || group.type === "broadhead") ? "Weight" : "";
 
   const metaParts = [hasVariants ? variant.label : (variant.sublabel ?? ""), selectedColor].filter(Boolean);
@@ -594,9 +594,9 @@ export default function ShopPage() {
           ...toGroups(d.vane_groups, "vane"),
           ...toGroups(d.field_point_groups, "field_point"),
           ...toGroups(d.broadhead_groups, "broadhead"),
+          ...toGroups(d.nock_groups, "nock"),
         ]);
         setFlatItems([
-          ...toItems(d.nocks, "nock"),
           ...toItems(d.wraps, "wrap"),
         ]);
       })
@@ -637,8 +637,8 @@ export default function ShopPage() {
   const cartKeys = new Set(cart.map((c) => cartKey((c as any).type, (c as any).id)));
 
   // Tab-filtered groups and flat items
-  const GROUPED_TYPES: CartItemType[] = ["shaft", "vane", "field_point", "broadhead"];
-  const FLAT_TYPES: CartItemType[] = ["nock", "wrap"];
+  const GROUPED_TYPES: CartItemType[] = ["shaft", "vane", "field_point", "broadhead", "nock"];
+  const FLAT_TYPES: CartItemType[] = ["wrap"];
 
   const filteredGroups = useMemo(() => {
     let result = activeTab === "all" ? groups

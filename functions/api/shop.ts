@@ -41,7 +41,7 @@ export const onRequestGet = async ({ env }: any) => {
        FROM shafts WHERE active = 1 ORDER BY brand, model, spine`
     )),
     allRows(DB.prepare(
-      `SELECT id, brand, model, system, style, price_per_arrow, weight_grains, colors
+      `SELECT id, brand, model, system, style, price_per_arrow, weight_grains, colors, shaft_id_in
        FROM nocks WHERE active = 1 ORDER BY brand, model`
     )),
     allRows(DB.prepare(
@@ -155,18 +155,28 @@ export const onRequestGet = async ({ env }: any) => {
     };
   });
 
-  // ── Flat products ─────────────────────────────────────────────────────────
-  const nock_products = (nocks as any[]).map((s) => {
-    const lighted = isLightedNock(s.model);
+  // ── Nock groups ───────────────────────────────────────────────────────────
+  const nock_groups = Array.from(
+    groupBy(nocks as any[], (n) => `${n.brand}||${n.model}`).values()
+  ).map((rows) => {
+    const first = rows[0];
+    const lighted = isLightedNock(first.model);
     const pack_qty = lighted ? NOCK_PACK_LIGHTED : NOCK_PACK_STD;
+    const ids = rows.map((r) => r.id);
     return {
-      id: s.id, brand: s.brand,
-      name: `${s.brand} ${s.model}`,
-      meta: [s.system, s.style, s.weight_grains ? `${s.weight_grains} gr` : null].filter(Boolean).join(" · "),
-      pack_qty, pack_price: round2(Number(s.price_per_arrow) * pack_qty),
-      unit_price: Number(s.price_per_arrow), lighted,
-      colors: (() => { try { return JSON.parse(s.colors ?? "[]"); } catch { return []; } })(),
-      image_urls: collectImages(images, "nock", [s.id]),
+      brand: first.brand,
+      name: `${first.brand} ${first.model}`,
+      pack_qty,
+      lighted,
+      image_urls: collectImages(images, "nock", ids),
+      variants: rows.map((n) => ({
+        id: n.id,
+        label: n.shaft_id_in != null ? `${n.shaft_id_in}"` : "Universal",
+        sublabel: [n.system, n.style, n.weight_grains ? `${n.weight_grains} gr` : null].filter(Boolean).join(" · "),
+        pack_price: round2(Number(n.price_per_arrow) * pack_qty),
+        unit_price: Number(n.price_per_arrow),
+        colors: (() => { try { return JSON.parse(n.colors ?? "[]"); } catch { return []; } })(),
+      })),
     };
   });
 
@@ -179,7 +189,7 @@ export const onRequestGet = async ({ env }: any) => {
   }));
 
   return new Response(
-    JSON.stringify({ ok: true, shaft_groups, vane_groups, field_point_groups, broadhead_groups, nocks: nock_products, wraps: wrap_products }),
+    JSON.stringify({ ok: true, shaft_groups, vane_groups, field_point_groups, broadhead_groups, nock_groups, wraps: wrap_products }),
     { headers: { "content-type": "application/json", "cache-control": "no-store" } }
   );
 };
