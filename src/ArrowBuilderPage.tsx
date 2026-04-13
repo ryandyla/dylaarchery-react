@@ -405,13 +405,18 @@ export default function ArrowBuilderPage() {
   }, [nocks, selectedShaft]);
 
   const groupedNocks = useMemo(() => {
-    const brands = new Map<string, Nock[]>();
+    const brands = new Map<string, Map<string, Nock[]>>();
     for (const n of compatibleNocks) {
-      if (!brands.has(n.brand)) brands.set(n.brand, []);
-      brands.get(n.brand)!.push(n);
+      if (!brands.has(n.brand)) brands.set(n.brand, new Map());
+      const modelMap = brands.get(n.brand)!;
+      if (!modelMap.has(n.model)) modelMap.set(n.model, []);
+      modelMap.get(n.model)!.push(n);
     }
     return Array.from(brands.entries())
-      .map(([brand, items]) => ({ brand, items }))
+      .map(([brand, modelMap]) => ({
+        brand,
+        models: Array.from(modelMap.entries()).map(([model, sizes]) => ({ model, sizes })),
+      }))
       .sort((a, b) => {
         const preferred = selectedShaft?.brand ?? "";
         if (a.brand === preferred) return -1;
@@ -897,7 +902,7 @@ export default function ArrowBuilderPage() {
                     <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                       {groupedNocks.map((g) => {
                         const isActive = activNockBrand === g.brand;
-                        const hasSel = g.items.some((n) => n.id === state.nock_id);
+                        const hasSel = g.models.some((m) => m.sizes.some((n) => n.id === state.nock_id));
                         return (
                           <button key={g.brand}
                             onClick={() => setOpenNockBrand(g.brand)}
@@ -913,19 +918,30 @@ export default function ArrowBuilderPage() {
                       onClick={() => setState((s) => ({ ...s, nock_id: null, nock_color: null }))} />
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {(groupedNocks.find((g) => g.brand === activNockBrand)?.items ?? compatibleNocks).map((n) => (
-                      <ProductModelCard key={n.id}
-                        title={n.model}
-                        images={imagesFor("nock", n.id).map((x) => x.url)}
-                        specs={[n.system, n.style, `${n.weight_grains}gr`].filter(Boolean) as string[]}
-                        price={`+${formatMoney(n.price_per_arrow)}/arrow`}
-                        isSelected={state.nock_id === n.id}
-                        colors={parseColors(n.colors)}
-                        selectedColor={state.nock_color}
-                        onActivate={() => setState((s) => ({ ...s, nock_id: n.id, nock_color: null }))}
-                        onSelectColor={(c) => setState((s) => ({ ...s, nock_color: c }))}
-                      />
-                    ))}
+                    {(groupedNocks.find((g) => g.brand === activNockBrand)?.models ?? []).map((m) => {
+                      const selSize = m.sizes.find((n) => n.id === state.nock_id) ?? null;
+                      const dispSize = selSize ?? m.sizes[0];
+                      return (
+                        <ProductModelCard key={m.model}
+                          title={m.model}
+                          images={imagesFor("nock", dispSize.id).map((x) => x.url)}
+                          specs={[dispSize.system, dispSize.style, `${dispSize.weight_grains}gr`].filter(Boolean) as string[]}
+                          price={`+${formatMoney(dispSize.price_per_arrow)}/arrow`}
+                          isSelected={selSize !== null}
+                          variants={m.sizes.length > 1 ? m.sizes.map((n) => ({
+                            id: n.id,
+                            label: n.shaft_id_in != null ? `${n.shaft_id_in}"` : "Universal",
+                          })) : []}
+                          variantLabel="SIZE"
+                          selectedVariantId={state.nock_id}
+                          colors={parseColors(dispSize.colors)}
+                          selectedColor={state.nock_color}
+                          onActivate={() => setState((s) => ({ ...s, nock_id: m.sizes[0].id, nock_color: null }))}
+                          onSelectVariant={(id) => setState((s) => ({ ...s, nock_id: id, nock_color: null }))}
+                          onSelectColor={(c) => setState((s) => ({ ...s, nock_color: c }))}
+                        />
+                      );
+                    })}
                   </div>
                 </>
               )}
