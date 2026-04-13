@@ -1195,9 +1195,6 @@ export default function ArrowBuilderPage() {
                   disabled={!canProceedToDraft || draftBusy}>
                   {draftBusy ? "Redirecting to checkout…" : "Proceed to Checkout →"}
                 </button>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,.45)", fontFamily: MONO, letterSpacing: "0.3px" }}>
-                  SHAFTS-ONLY BUILDS ACCEPTED
-                </div>
               </div>
 
               {serverErr && !serverErr.field && (
@@ -1301,13 +1298,12 @@ export default function ArrowBuilderPage() {
                   WHAT'S INCLUDED
                 </div>
                 <ul style={{ margin: "0 0 0 14px", padding: 0, fontSize: 12, lineHeight: 1.8, color: "rgba(255,255,255,.7)" }}>
-                  <li>Shafts packed safely</li>
-                  <li>Cut-to-length when selected</li>
-                  <li>Component assembly (when selected)</li>
-                  <li>QC · straightness check · packing</li>
+                  <li>Cut to length</li>
+                  <li>Fletched &amp; assembled to your spec</li>
+                  <li>Straightness checked, packed ready to shoot</li>
                 </ul>
                 <div style={{ marginTop: 8, fontSize: 11, color: "rgba(255,255,255,.45)", lineHeight: 1.55 }}>
-                  Correct spine · FOC-minded builds · broadhead-true tuning.
+                  Spine-matched · FOC-tuned · broadhead-true
                 </div>
               </div>
             </div>
