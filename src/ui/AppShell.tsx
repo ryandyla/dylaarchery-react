@@ -124,43 +124,79 @@ function MailingListSignup() {
 
 export default function AppShell() {
   const linkClass = ({ isActive }: any) =>
-    `px-3 py-2 rounded-lg text-sm font-medium ${
+    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-950 ${
       isActive ? "bg-yellow-500 text-black" : "text-white/80 hover:text-white hover:bg-white/10"
     }`;
+
+  const memberLinkClass = ({ isActive }: any) =>
+    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium border bg-zinc-950 transition-colors ${
+      isActive
+        ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
+        : "border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
+    }`;
+
+  const leftLinks = (
+    <>
+      <NavLink to="/" className={linkClass} end>Home</NavLink>
+      <NavLink to="/shop" className={linkClass}>Shop</NavLink>
+      <NavLink to="/builder" className={linkClass}>Build Your Arrows</NavLink>
+    </>
+  );
+
+  const rightLinks = (
+    <>
+      <NavLink to="/process" className={linkClass}>Our Process</NavLink>
+      <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
+      <NavLink to="/contact" className={linkClass}>Contact</NavLink>
+      <NavLink to="/member" className={memberLinkClass}>My Account</NavLink>
+    </>
+  );
+
+  const brand = (
+    <div className="flex flex-col items-center">
+      <img
+        src="/logo-gold.png"
+        alt="Dyla Archery"
+        className="h-32 w-32 object-contain sm:h-36 sm:w-36 lg:h-44 lg:w-44"
+      />
+      <div className="mt-2 text-[10px] uppercase tracking-[0.35em] text-yellow-200/60">
+        Precision-built custom arrows
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <SpecialsBanner />
 
-      <div className="bg-zinc-950">
-        <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-8 pb-5 sm:pt-10 sm:pb-6">
-          <img
-            src="/logo-gold.png"
-            alt="Dyla Archery"
-            className="h-32 w-32 object-contain sm:h-36 sm:w-36"
-          />
-          <div className="mt-3 text-[11px] uppercase tracking-[0.4em] text-yellow-200/60">
-            Precision-built custom arrows
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex flex-col items-center gap-3 py-3 lg:hidden">
+            {brand}
+            <nav className="flex flex-wrap items-center justify-center gap-1">
+              {leftLinks}
+              {rightLinks}
+            </nav>
+          </div>
+
+          <div className="relative hidden grid-cols-[1fr_auto_1fr] items-center gap-6 py-3 lg:grid">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-1/2 h-px -translate-y-1/2 bg-yellow-500/40" />
+            <div aria-hidden="true" className="pointer-events-none absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-[3px]">
+              <span className="block h-4 w-[2px] rotate-[22deg] bg-yellow-500/50" />
+              <span className="block h-4 w-[2px] rotate-[22deg] bg-yellow-500/45" />
+              <span className="block h-4 w-[2px] rotate-[22deg] bg-yellow-500/40" />
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[6px] border-l-[11px] border-y-transparent border-l-yellow-500/60" />
+
+            <nav className="relative z-10 flex items-center justify-end gap-1 xl:gap-2">
+              {leftLinks}
+            </nav>
+            {brand}
+            <nav className="relative z-10 flex items-center justify-start gap-1 xl:gap-2">
+              {rightLinks}
+            </nav>
           </div>
         </div>
-      </div>
-
-      <header className="sticky top-0 z-10 border-y border-white/10 bg-zinc-950/85 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-1 px-4 py-3 sm:gap-2">
-          <NavLink to="/" className={linkClass} end>Home</NavLink>
-          <NavLink to="/shop" className={linkClass}>Shop</NavLink>
-          <NavLink to="/builder" className={linkClass}>Build Your Arrows</NavLink>
-          <NavLink to="/process" className={linkClass}>Our Process</NavLink>
-          <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
-          <NavLink to="/contact" className={linkClass}>Contact</NavLink>
-          <NavLink to="/member" className={({ isActive }) =>
-            `px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-              isActive
-                ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
-                : "border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
-            }`
-          }>My Account</NavLink>
-        </nav>
       </header>
 
       <main className="mx-auto px-0 py-0">
