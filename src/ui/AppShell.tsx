@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LeadWidget from "../LeadWidget";
 
@@ -123,6 +123,13 @@ function MailingListSignup() {
 }
 
 export default function AppShell() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
   const linkClass = ({ isActive }: any) =>
     `relative z-10 px-3 py-2 rounded-lg text-sm font-medium ${
       isActive
@@ -173,12 +180,34 @@ export default function AppShell() {
 
       <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="flex flex-col items-center gap-3 py-3 lg:hidden">
+          <div className="relative flex flex-col items-center py-3 lg:hidden">
             {brand}
-            <nav className="flex flex-wrap items-center justify-center gap-1">
-              {leftLinks}
-              {rightLinks}
-            </nav>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+              className="absolute right-0 top-3 z-20 rounded-lg p-2 text-yellow-400/80 hover:bg-white/5 hover:text-yellow-400"
+            >
+              {menuOpen ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="4" y1="7" x2="20" y2="7" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="17" x2="20" y2="17" />
+                </svg>
+              )}
+            </button>
+            {menuOpen && (
+              <nav className="mt-4 flex w-full flex-col items-center gap-2 border-t border-white/10 pt-4">
+                {leftLinks}
+                {rightLinks}
+              </nav>
+            )}
           </div>
 
           <div className="relative hidden grid-cols-[1fr_auto_1fr] items-center gap-6 py-3 lg:grid">
