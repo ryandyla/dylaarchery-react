@@ -131,36 +131,36 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <SpecialsBanner />
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3 -ml-2">
-            <img
-              src="/logo.png"
-              alt="Dyla Archery"
-              className="h-36 w-auto shrink-0"
-            />
-            <div className="leading-tight">
-              <div className="text-3xl font-semibold uppercase tracking-[0.15em] text-amber-400">Dyla Archery</div>
-              <div className="text-xs text-white/60">Precision-built custom arrows</div>
-            </div>
-          </div>
 
-          <nav className="flex items-center gap-2">
-            <NavLink to="/" className={linkClass} end>Home</NavLink>
-            <NavLink to="/shop" className={linkClass}>Shop</NavLink>
-            <NavLink to="/builder" className={linkClass}>Build Your Arrows</NavLink>
-            <NavLink to="/process" className={linkClass}>Our Process</NavLink>
-            <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
-            <NavLink to="/contact" className={linkClass}>Contact</NavLink>
-            <NavLink to="/member" className={({ isActive }) =>
-              `px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                isActive
-                  ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
-                  : "border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
-              }`
-            }>My Account</NavLink>
-          </nav>
+      <div className="bg-zinc-950">
+        <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-8 pb-5 sm:pt-10 sm:pb-6">
+          <img
+            src="/logo-gold.png"
+            alt="Dyla Archery"
+            className="h-32 w-32 object-contain sm:h-36 sm:w-36"
+          />
+          <div className="mt-3 text-[11px] uppercase tracking-[0.4em] text-yellow-200/60">
+            Precision-built custom arrows
+          </div>
         </div>
+      </div>
+
+      <header className="sticky top-0 z-10 border-y border-white/10 bg-zinc-950/85 backdrop-blur">
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-1 px-4 py-3 sm:gap-2">
+          <NavLink to="/" className={linkClass} end>Home</NavLink>
+          <NavLink to="/shop" className={linkClass}>Shop</NavLink>
+          <NavLink to="/builder" className={linkClass}>Build Your Arrows</NavLink>
+          <NavLink to="/process" className={linkClass}>Our Process</NavLink>
+          <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
+          <NavLink to="/contact" className={linkClass}>Contact</NavLink>
+          <NavLink to="/member" className={({ isActive }) =>
+            `px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              isActive
+                ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
+                : "border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
+            }`
+          }>My Account</NavLink>
+        </nav>
       </header>
 
       <main className="mx-auto px-0 py-0">
