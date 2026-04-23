@@ -124,31 +124,33 @@ function MailingListSignup() {
 
 export default function AppShell() {
   const linkClass = ({ isActive }: any) =>
-    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-950 ${
-      isActive ? "bg-yellow-500 text-black" : "text-white/80 hover:text-white hover:bg-white/10"
+    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium ${
+      isActive
+        ? "bg-yellow-500 text-black"
+        : "bg-zinc-950 text-white/80 hover:text-white hover:bg-white/10"
     }`;
 
   const memberLinkClass = ({ isActive }: any) =>
-    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium border bg-zinc-950 transition-colors ${
+    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
       isActive
         ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
-        : "border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
+        : "bg-zinc-950 border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
     }`;
 
   const leftLinks = (
     <>
       <NavLink to="/" className={linkClass} end>Home</NavLink>
       <NavLink to="/shop" className={linkClass}>Shop</NavLink>
-      <NavLink to="/builder" className={linkClass}>Build Your Arrows</NavLink>
+      <NavLink to="/builder" className={linkClass}>Builder</NavLink>
     </>
   );
 
   const rightLinks = (
     <>
-      <NavLink to="/process" className={linkClass}>Our Process</NavLink>
-      <NavLink to="/tools" className={linkClass}>Tools and Calculators</NavLink>
+      <NavLink to="/process" className={linkClass}>Process</NavLink>
+      <NavLink to="/tools" className={linkClass}>Tools</NavLink>
       <NavLink to="/contact" className={linkClass}>Contact</NavLink>
-      <NavLink to="/member" className={memberLinkClass}>My Account</NavLink>
+      <NavLink to="/member" className={memberLinkClass}>Account</NavLink>
     </>
   );
 
@@ -188,11 +190,11 @@ export default function AppShell() {
             </div>
             <div aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[6px] border-l-[11px] border-y-transparent border-l-yellow-500/60" />
 
-            <nav className="relative z-10 flex items-center justify-end gap-1 xl:gap-2">
+            <nav className="relative z-10 flex items-center justify-end gap-2 xl:gap-3">
               {leftLinks}
             </nav>
             {brand}
-            <nav className="relative z-10 flex items-center justify-start gap-1 xl:gap-2">
+            <nav className="relative z-10 flex items-center justify-start gap-2 xl:gap-3">
               {rightLinks}
             </nav>
           </div>
