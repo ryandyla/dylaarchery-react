@@ -124,24 +124,34 @@ function MailingListSignup() {
 
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const isHome = location.pathname === "/";
+  const expanded = isHome && !scrolled;
 
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const linkClass = ({ isActive }: any) =>
-    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium ${
+    `inline-flex items-center justify-center px-4 py-2 rounded-md uppercase tracking-[0.15em] text-xs font-bold border transition-colors ${
       isActive
-        ? "bg-yellow-500 text-black"
-        : "bg-zinc-950 text-white/80 hover:text-white hover:bg-white/10"
+        ? "bg-yellow-500 border-yellow-500 text-black"
+        : "bg-white/5 border-white/10 text-white/85 hover:bg-white/10 hover:border-white/25 hover:text-white"
     }`;
 
   const memberLinkClass = ({ isActive }: any) =>
-    `relative z-10 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+    `inline-flex items-center justify-center px-4 py-2 rounded-md uppercase tracking-[0.15em] text-xs font-bold border transition-colors ${
       isActive
-        ? "bg-yellow-500/20 border-yellow-400/30 text-yellow-400"
-        : "bg-zinc-950 border-yellow-400/20 text-yellow-400/80 hover:bg-yellow-400/10 hover:text-yellow-400"
+        ? "bg-yellow-500/20 border-yellow-400 text-yellow-400"
+        : "bg-white/5 border-yellow-400/40 text-yellow-400/90 hover:bg-yellow-400/10 hover:border-yellow-400 hover:text-yellow-400"
     }`;
 
   const leftLinks = (
@@ -161,33 +171,32 @@ export default function AppShell() {
     </>
   );
 
-  const brand = (
-    <div className="flex flex-col items-center">
-      <img
-        src="/logo-gold.png"
-        alt="Dyla Archery"
-        className="h-32 w-32 object-contain sm:h-36 sm:w-36 lg:h-44 lg:w-44"
-      />
-      <div className="mt-2 text-[10px] uppercase tracking-[0.35em] text-yellow-200/60">
-        Precision-built custom arrows
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <SpecialsBanner />
+      <div className="fixed inset-x-0 top-0 z-30">
+        <SpecialsBanner />
 
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-zinc-950">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="relative flex flex-col items-center py-3 lg:hidden">
-            {brand}
+        <header
+          className={`transition-colors duration-300 ${
+            expanded
+              ? "bg-transparent"
+              : "border-b border-white/10 bg-zinc-950/85 backdrop-blur"
+          }`}
+        >
+          <div className="relative flex flex-col items-center px-4 py-3 lg:hidden">
+            <img
+              src="/logo-gold.png"
+              alt="Dyla Archery"
+              className={`object-contain transition-all duration-300 ${
+                expanded ? "h-28 w-28" : "h-14 w-14"
+              }`}
+            />
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
-              className="absolute right-0 top-3 z-20 rounded-lg p-2 text-yellow-400/80 hover:bg-white/5 hover:text-yellow-400"
+              className="absolute right-3 top-3 z-20 rounded-lg p-2 text-yellow-400/80 hover:bg-white/5 hover:text-yellow-400"
             >
               {menuOpen ? (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -203,34 +212,43 @@ export default function AppShell() {
               )}
             </button>
             {menuOpen && (
-              <nav className="mt-4 flex w-full flex-col items-center gap-2 border-t border-white/10 pt-4">
+              <nav className="mt-4 flex w-full flex-col items-center gap-2 border-t border-white/10 bg-zinc-950/90 pt-4">
                 {leftLinks}
                 {rightLinks}
               </nav>
             )}
           </div>
 
-          <div className="relative hidden grid-cols-[1fr_auto_1fr] items-center gap-6 py-3 lg:grid">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-1/2 h-px -translate-y-1/2 bg-yellow-500/40" />
-            <div aria-hidden="true" className="pointer-events-none absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-[3px]">
-              <span className="block h-4 w-[2px] rotate-[22deg] bg-yellow-500/50" />
-              <span className="block h-4 w-[2px] rotate-[22deg] bg-yellow-500/45" />
-              <span className="block h-4 w-[2px] rotate-[22deg] bg-yellow-500/40" />
+          <div className="hidden flex-col items-center lg:flex">
+            <div
+              className={`flex justify-center transition-all duration-300 ${
+                expanded ? "pb-3 pt-6" : "pb-1 pt-2"
+              }`}
+            >
+              <img
+                src="/logo-gold.png"
+                alt="Dyla Archery"
+                className={`object-contain transition-all duration-300 ${
+                  expanded ? "h-44 w-44" : "h-12 w-12"
+                }`}
+              />
             </div>
-            <div aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[6px] border-l-[11px] border-y-transparent border-l-yellow-500/60" />
 
-            <nav className="relative z-10 flex items-center justify-end gap-2 xl:gap-3">
-              {leftLinks}
-            </nav>
-            {brand}
-            <nav className="relative z-10 flex items-center justify-start gap-2 xl:gap-3">
-              {rightLinks}
-            </nav>
+            <div
+              className={`w-full border-y border-white/10 backdrop-blur-sm transition-all duration-300 ${
+                expanded ? "bg-black/30 py-3" : "bg-zinc-950/40 py-2"
+              }`}
+            >
+              <nav className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 xl:gap-3">
+                {leftLinks}
+                {rightLinks}
+              </nav>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
-      <main className="mx-auto px-0 py-0">
+      <main className={`mx-auto px-0 py-0 ${isHome ? "" : "pt-28 lg:pt-36"}`}>
         <Outlet />
       </main>
 
