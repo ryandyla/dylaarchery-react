@@ -252,7 +252,15 @@ export default function AppShell() {
         </header>
       </div>
 
-      <main className={`mx-auto px-0 py-0 ${isHome ? "" : "pt-28 lg:pt-36"}`}>
+      <main
+        className={`mx-auto px-0 py-0 transition-[padding] duration-300 ${
+          isHome
+            ? ""
+            : expanded
+              ? "pt-36 lg:pt-48"
+              : "pt-24 lg:pt-32"
+        }`}
+      >
         <Outlet />
       </main>
 
