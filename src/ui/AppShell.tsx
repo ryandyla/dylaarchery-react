@@ -222,21 +222,21 @@ export default function AppShell() {
           <div className="hidden flex-col items-center lg:flex">
             <div
               className={`flex justify-center transition-all duration-300 ${
-                expanded ? "pb-3 pt-6" : "pb-1 pt-2"
+                expanded ? "pb-2 pt-3" : "pb-1 pt-2"
               }`}
             >
               <img
                 src="/logo-gold.png"
                 alt="Dyla Archery"
                 className={`object-contain transition-all duration-300 ${
-                  expanded ? "h-44 w-44" : "h-12 w-12"
+                  expanded ? "h-28 w-28" : "h-12 w-12"
                 }`}
               />
             </div>
 
             <div
               className={`w-full border-y border-white/10 backdrop-blur-sm transition-all duration-300 ${
-                expanded ? "bg-black/30 py-3" : "bg-zinc-950/40 py-2"
+                expanded ? "bg-black/30 py-2" : "bg-zinc-950/40 py-2"
               }`}
             >
               <nav className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 xl:gap-3">
