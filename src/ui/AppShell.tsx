@@ -127,7 +127,7 @@ export default function AppShell() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
-  const expanded = isHome && !scrolled;
+  const expanded = !scrolled;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -221,7 +221,7 @@ export default function AppShell() {
 
           <div className="hidden flex-col items-center lg:flex">
             <div
-              className={`flex w-full justify-center bg-zinc-950 transition-all duration-300 ${
+              className={`flex w-full items-center justify-center gap-4 bg-zinc-950 transition-all duration-300 ${
                 expanded ? "pb-2 pt-3" : "pb-1 pt-2"
               }`}
             >
@@ -232,6 +232,10 @@ export default function AppShell() {
                   expanded ? "h-28 w-28" : "h-12 w-12"
                 }`}
               />
+              <div className="text-left text-[11px] font-semibold uppercase leading-[1.5] tracking-[0.3em] text-yellow-200/70">
+                <div>Precision-built</div>
+                <div>custom arrows</div>
+              </div>
             </div>
 
             <div
