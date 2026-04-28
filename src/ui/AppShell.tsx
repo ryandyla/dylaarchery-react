@@ -183,7 +183,7 @@ export default function AppShell() {
               : "border-b border-white/10 bg-zinc-950/85 backdrop-blur"
           }`}
         >
-          <div className="relative flex flex-col items-center px-4 py-3 lg:hidden">
+          <div className="relative flex flex-col items-center bg-zinc-950 px-4 py-3 lg:hidden">
             <img
               src="/logo-gold.png"
               alt="Dyla Archery"
@@ -221,7 +221,7 @@ export default function AppShell() {
 
           <div className="hidden flex-col items-center lg:flex">
             <div
-              className={`flex justify-center transition-all duration-300 ${
+              className={`flex w-full justify-center bg-zinc-950 transition-all duration-300 ${
                 expanded ? "pb-2 pt-3" : "pb-1 pt-2"
               }`}
             >
